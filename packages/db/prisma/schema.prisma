@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  provider     String
+  providerId   String
+  nickname     String
+  avatarUrl    String?
+  dongCode     String?
+  todosPublic  Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sessions     FocusSession[]
+  forestObjects ForestObject[]
+
+  @@unique([provider, providerId])
+  @@index([dongCode])
+}
+
+model FocusSession {
+  id          String        @id @default(uuid())
+  userId      String
+  dongCode    String
+  startedAt   DateTime      @default(now())
+  endedAt     DateTime?
+  durationSec Int
+  actualSec   Int?
+  todos       Json          @default("[]")
+  status      SessionStatus @default(RUNNING)
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  forestObject ForestObject?
+
+  @@index([userId])
+  @@index([dongCode])
+  @@index([status])
+}
+
+model ForestObject {
+  id           String      @id @default(uuid())
+  userId       String
+  sessionId    String      @unique
+  dongCode     String
+  forestX      Int
+  forestY      Int
+  creatureType String
+  harvestedAt  DateTime    @default(now())
+  date         String
+
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session FocusSession @relation(fields: [sessionId], references: [id])
+
+  @@index([dongCode])
+  @@index([dongCode, date])
+  @@index([userId])
+}
+
+model Dong {
+  code        String  @id
+  name        String
+  sigunguCode String
+  sidoCode    String
+  lat         Float
+  lng         Float
+
+  @@index([sigunguCode])
+  @@index([sidoCode])
+}
+
+enum SessionStatus {
+  RUNNING
+  PAUSED
+  COMPLETED
+  HARVESTED
+  ABANDONED
+}
