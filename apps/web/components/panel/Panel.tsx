@@ -1,27 +1,96 @@
 'use client';
 
+import { useMapStore } from '@/store';
 import { useTimerStore } from '@/store';
+import { Icon } from '@/components/ui/Icon';
+import { SloganSection } from './SloganSection';
+import { CreatureSection } from './CreatureSection';
+import { TimerSection } from './TimerSection';
+import { TaskList } from './TaskList';
+import { NeighborhoodStats } from './NeighborhoodStats';
+import { NeighborhoodSearch } from './NeighborhoodSearch';
+
+// ------- Mock constants (replace with real data from API / SSE) --------
+const MY_DONG_CODE = 'mock-my-dong';
+const MY_DONG_NAME = '망원동';
+const WATER_THRESHOLD_SEC = 2 * 60 * 60; // 2 hours per water
+// -----------------------------------------------------------------------
 
 export function Panel() {
-  const { status, elapsedSec, durationSec, todos } = useTimerStore();
-  const remaining = durationSec - elapsedSec;
-  const mm = String(Math.floor(remaining / 60)).padStart(2, '0');
-  const ss = String(remaining % 60).padStart(2, '0');
+  const { focusedDongCode, focusDong } = useMapStore();
+  const { status, elapsedSec, todos, addTodo, toggleTodo, setStatus } = useTimerStore();
+
+  const isPeeking = focusedDongCode !== null && focusedDongCode !== MY_DONG_CODE;
+
+  // TODO: derive from server session / user store
+  const neighborhoodName = isPeeking ? '연남동' : MY_DONG_NAME;
+  const waterCount = 1;       // replace with real water count from server
+  const growthPercent = 74;   // replace with real neighborhood XP %
+  const creatureStage = 1 as 0 | 1 | 2 | 3;  // replace with server-derived stage
+
+  function handleStart() { setStatus('RUNNING'); }
+  function handleStop() { setStatus('PAUSED'); }
+  function handleWater() { /* TODO: call POST /water API */ }
+  function handleDongSelect(dongCode: string) { focusDong(dongCode); }
 
   return (
-    <div className="flex flex-col h-full p-4 gap-6">
-      <div className="text-center">
-        <div className="text-5xl font-mono font-bold tracking-widest">{mm}:{ss}</div>
-        <div className="text-sm text-gray-400 mt-1">{status}</div>
-      </div>
+    <aside className="w-[420px] flex-shrink-0 bg-surface-container border-r border-outline-variant flex flex-col h-full overflow-y-auto">
+      <div className="flex flex-col gap-xl p-lg flex-1">
 
-      <ul className="flex-1 overflow-y-auto space-y-2">
-        {todos.map((todo) => (
-          <li key={todo.id} className="flex items-center gap-2 text-sm">
-            <span className={todo.done ? 'line-through text-gray-500' : ''}>{todo.text}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
+        {/* ── Peek mode banner ── */}
+        {isPeeking && (
+          <button
+            onClick={() => focusDong(null)}
+            className="flex items-center gap-sm p-sm bg-primary-fixed text-on-primary-fixed font-mono text-label uppercase tracking-wider w-full border border-primary active:translate-y-px transition-none"
+          >
+            <Icon name="arrow_back" size={16} />
+            내 동네로 돌아가기
+          </button>
+        )}
+
+        {/* ── Slogan ── */}
+        <SloganSection neighborhoodName={neighborhoodName} />
+
+        {/* ── Creature + water ── */}
+        <CreatureSection
+          stage={creatureStage}
+          waterCount={waterCount}
+          canWater={!isPeeking && status === 'RUNNING'}
+          onWater={handleWater}
+        />
+
+        {/* ── Timer (내 동네 모드만) ── */}
+        {!isPeeking && (
+          <TimerSection
+            status={status}
+            elapsedSec={elapsedSec}
+            thresholdSec={WATER_THRESHOLD_SEC}
+            onStart={handleStart}
+            onStop={handleStop}
+          />
+        )}
+
+        {/* ── Task list (내 동네 모드만) ── */}
+        {!isPeeking && (
+          <TaskList
+            todos={todos}
+            onToggle={toggleTodo}
+            onAdd={addTodo}
+          />
+        )}
+
+        {/* ── Neighborhood stats ── */}
+        <NeighborhoodStats
+          neighborhoodName={neighborhoodName}
+          growthPercent={growthPercent}
+        />
+
+        {/* ── Spacer + search (bottom) ── */}
+        <div className="mt-auto pt-md border-t border-outline-variant">
+          <NeighborhoodSearch onSelect={handleDongSelect} />
+        </div>
+
+      </div>
+    </aside>
   );
 }

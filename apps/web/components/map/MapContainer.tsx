@@ -102,7 +102,7 @@ export function MapContainer() {
   const mapTransform = `translate(${t.tx}px, ${t.ty}px) scale(${t.scale})`;
 
   return (
-    <div ref={containerRef} className="relative w-full h-full overflow-hidden bg-gray-950 cursor-grab active:cursor-grabbing select-none">
+    <div ref={containerRef} className="relative w-full h-full overflow-hidden bg-inverse-surface cursor-grab active:cursor-grabbing select-none">
       {/* 공통 transform 래퍼 */}
       <div
         style={{

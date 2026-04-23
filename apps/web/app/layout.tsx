@@ -1,5 +1,20 @@
 import type { Metadata } from 'next';
+import { IBM_Plex_Mono, Inter } from 'next/font/google';
 import './globals.css';
+
+const monoFont = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-mono',
+  display: 'swap',
+});
+
+const sansFont = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-sans',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: '우리 동네 픽셀 숲',
@@ -8,8 +23,16 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko">
-      <body>{children}</body>
+    <html lang="ko" className={`${monoFont.variable} ${sansFont.variable}`}>
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"
+        />
+      </head>
+      <body className="bg-background text-on-background font-sans selection:bg-primary-fixed selection:text-on-primary-fixed min-h-screen">
+        {children}
+      </body>
     </html>
   );
 }

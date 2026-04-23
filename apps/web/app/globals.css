@@ -1,3 +1,25 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  /* Material Symbols default variation settings */
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    user-select: none;
+  }
+
+  /* Pixel-art image rendering */
+  .image-pixelated {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  /* Pixel grid background pattern */
+  .pixel-grid {
+    background-size: 20px 20px;
+    background-image:
+      linear-gradient(to right, #e8e4dc 1px, transparent 1px),
+      linear-gradient(to bottom, #e8e4dc 1px, transparent 1px);
+  }
+}

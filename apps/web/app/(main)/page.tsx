@@ -1,16 +1,27 @@
+import { TopAppBar } from '@/components/ui/TopAppBar';
+import { Panel } from '@/components/panel/Panel';
 import { MapContainer } from '@/components/map/MapContainer';
+import { MapOverlay } from '@/components/map/MapOverlay';
+
+// TODO: fetch real active user count from SSE / API
+const MOCK_ACTIVE_USERS = 1249;
 
 export default function MainPage() {
   return (
-    <main className="flex h-screen overflow-hidden">
-      {/* 왼쪽 패널 — 타이머, 할 일 */}
-      <aside className="w-80 flex-shrink-0 bg-gray-900 text-white p-4">
-        {/* <Panel /> */}
-      </aside>
-      {/* 맵 영역 */}
-      <section className="flex-1 relative">
-        <MapContainer />
-      </section>
-    </main>
+    <>
+      <TopAppBar />
+
+      {/* pt-[49px] = header height (py-sm * 2 + icon) */}
+      <main className="pt-[49px] flex h-screen overflow-hidden">
+        {/* Left panel: profile, creature, timer, todos */}
+        <Panel />
+
+        {/* Map area */}
+        <section className="relative flex-1 bg-inverse-surface overflow-hidden">
+          <MapContainer />
+          <MapOverlay activeUsers={MOCK_ACTIVE_USERS} />
+        </section>
+      </main>
+    </>
   );
 }
