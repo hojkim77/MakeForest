@@ -36,9 +36,6 @@ export function MapOverlay({ activeUsers }: MapOverlayProps) {
           </div>
         ))}
       </div>
-
-      {/* Pixel grid texture */}
-      <div className="absolute inset-0 pixel-grid opacity-10 pointer-events-none z-0" />
     </>
   );
 }

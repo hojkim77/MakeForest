@@ -8,10 +8,17 @@ import { useActivityStream } from '@/hooks/useActivityStream';
 const PIXEL_SIZE = 4;
 const MAX_COUNT = 20;
 
+// Sea color: cool light blue-gray — distinguishable from warm cream background (#fdf9f1)
+const SEA_COLOR = '#b4cdd8';
+// Inactive land: M3 outline token (#707972) — matches the "Soil" legend entry
+const SOIL_COLOR = '#707972';
+
 function dongColor(count: number): string {
-  if (count === 0) return '#374151';
-  const lightness = 30 + Math.min(count / MAX_COUNT, 1) * 30;
-  return `hsl(142,76%,${lightness.toFixed(0)}%)`;
+  if (count === 0) return SOIL_COLOR;
+  // Active: M3 green scale — primary-fixed (#b0f1ca, L≈81%) → primary (#226143, L≈25%)
+  const t = Math.min(count / MAX_COUNT, 1);
+  const l = 81 - t * 56;
+  return `hsl(148,60%,${l.toFixed(0)}%)`;
 }
 
 interface Tooltip {
@@ -40,7 +47,6 @@ export function PixelMap() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     for (const cell of pixelMap.cells) {
@@ -92,7 +98,7 @@ export function PixelMap() {
   );
 
   return (
-    <div className="relative w-full h-full bg-gray-950 overflow-hidden">
+    <div className="relative w-full h-full overflow-hidden" style={{ backgroundColor: SEA_COLOR }}>
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
           지도 로딩 중…
@@ -103,18 +109,20 @@ export function PixelMap() {
         width={pixelMap.w * PIXEL_SIZE}
         height={pixelMap.h * PIXEL_SIZE}
         className="w-full h-full cursor-crosshair"
+        // 확대 시에도 픽셀 번짐을 막는다.
+        style={{ imageRendering: 'pixelated' }}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setTooltip(null)}
         onClick={handleClick}
       />
       {tooltip && (
         <div
-          className="pointer-events-none absolute z-10 rounded bg-gray-800 px-2 py-1 text-xs text-white shadow-lg"
+          className="pointer-events-none absolute z-10 bg-inverse-surface px-2 py-1 font-mono text-label text-inverse-on-surface border border-outline"
           style={{ left: tooltip.x + 12, top: tooltip.y - 8 }}
         >
           <span className="font-medium">{tooltip.name}</span>
           {tooltip.count > 0 && (
-            <span className="ml-1 text-green-400">{tooltip.count}명 집중 중</span>
+            <span className="ml-1 text-primary-fixed">{tooltip.count}명 집중 중</span>
           )}
         </div>
       )}
