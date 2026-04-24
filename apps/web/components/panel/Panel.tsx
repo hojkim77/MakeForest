@@ -1,8 +1,9 @@
 'use client';
 
-import { useMapStore } from '@/store';
-import { useTimerStore } from '@/store';
+import { useSession } from 'next-auth/react';
+import { useMapStore, useTimerStore } from '@/store';
 import { Icon } from '@/components/ui/Icon';
+import { LoginPrompt } from './LoginPrompt';
 import { SloganSection } from './SloganSection';
 import { CreatureSection } from './CreatureSection';
 import { TimerSection } from './TimerSection';
@@ -10,27 +11,26 @@ import { TaskList } from './TaskList';
 import { NeighborhoodStats } from './NeighborhoodStats';
 import { NeighborhoodSearch } from './NeighborhoodSearch';
 
-// ------- Mock constants (replace with real data from API / SSE) --------
-const MY_DONG_CODE = 'mock-my-dong';
-const MY_DONG_NAME = '망원동';
-const WATER_THRESHOLD_SEC = 2 * 60 * 60; // 2 hours per water
-// -----------------------------------------------------------------------
+const WATER_THRESHOLD_SEC = 2 * 60 * 60;
 
 export function Panel() {
+  const { data: session, status } = useSession();
   const { focusedDongCode, focusDong } = useMapStore();
-  const { status, elapsedSec, todos, addTodo, toggleTodo, setStatus } = useTimerStore();
+  const { status: timerStatus, elapsedSec, todos, addTodo, toggleTodo, setStatus } = useTimerStore();
 
-  const isPeeking = focusedDongCode !== null && focusedDongCode !== MY_DONG_CODE;
+  const isLoggedIn = status === 'authenticated' && !!session?.user?.id;
+  const myDongCode = session?.user?.dongCode ?? null;
+  const isPeeking = focusedDongCode !== null && focusedDongCode !== myDongCode;
 
-  // TODO: derive from server session / user store
-  const neighborhoodName = isPeeking ? '연남동' : MY_DONG_NAME;
-  const waterCount = 1;       // replace with real water count from server
-  const growthPercent = 74;   // replace with real neighborhood XP %
-  const creatureStage = 1 as 0 | 1 | 2 | 3;  // replace with server-derived stage
+  // TODO: replace mock values with server/SSE data
+  const neighborhoodName = isPeeking ? '연남동' : (myDongCode ?? '내 동네');
+  const waterCount = 1;
+  const growthPercent = 74;
+  const creatureStage = 1 as 0 | 1 | 2 | 3;
 
   function handleStart() { setStatus('RUNNING'); }
   function handleStop() { setStatus('PAUSED'); }
-  function handleWater() { /* TODO: call POST /water API */ }
+  function handleWater() { /* TODO: POST /water */ }
   function handleDongSelect(dongCode: string) { focusDong(dongCode); }
 
   return (
@@ -55,28 +55,34 @@ export function Panel() {
         <CreatureSection
           stage={creatureStage}
           waterCount={waterCount}
-          canWater={!isPeeking && status === 'RUNNING'}
+          canWater={isLoggedIn && !isPeeking && timerStatus === 'RUNNING'}
           onWater={handleWater}
         />
 
-        {/* ── Timer (내 동네 모드만) ── */}
-        {!isPeeking && (
-          <TimerSection
-            status={status}
-            elapsedSec={elapsedSec}
-            thresholdSec={WATER_THRESHOLD_SEC}
-            onStart={handleStart}
-            onStop={handleStop}
-          />
-        )}
+        {/* ── Auth gate: timer + tasks only for logged-in users ── */}
+        {isLoggedIn ? (
+          <>
+            {!isPeeking && (
+              <TimerSection
+                status={timerStatus}
+                elapsedSec={elapsedSec}
+                thresholdSec={WATER_THRESHOLD_SEC}
+                onStart={handleStart}
+                onStop={handleStop}
+              />
+            )}
 
-        {/* ── Task list (내 동네 모드만) ── */}
-        {!isPeeking && (
-          <TaskList
-            todos={todos}
-            onToggle={toggleTodo}
-            onAdd={addTodo}
-          />
+            {!isPeeking && (
+              <TaskList
+                todos={todos}
+                onToggle={toggleTodo}
+                onAdd={addTodo}
+              />
+            )}
+          </>
+        ) : (
+          /* ── Login prompt in-panel (no popup) ── */
+          !isPeeking && <LoginPrompt />
         )}
 
         {/* ── Neighborhood stats ── */}

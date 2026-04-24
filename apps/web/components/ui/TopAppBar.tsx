@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Icon } from './Icon';
+import { signOut, useSession } from 'next-auth/react';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', href: '/dashboard' },
@@ -57,6 +58,8 @@ export function TopAppBar() {
           <button
             className="p-xs text-on-surface-variant hover:bg-surface-container-high transition-none"
             aria-label="내 계정"
+            // TEST
+            onClick={() => signOut()}
           >
             <Icon name="account_circle" />
           </button>

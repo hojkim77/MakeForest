@@ -14,11 +14,15 @@ const nextAuth = NextAuth({
       clientSecret: process.env.AUTH_KAKAO_SECRET ?? '',
     }),
   ],
+  pages: {
+    signIn: '/login',
+  },
+  session: { strategy: 'jwt' },
   callbacks: {
     async signIn({ user, account }) {
-      if (!account || !user.email) return false;
+      if (!account) return false;
 
-      await prisma.user.upsert({
+      const dbUser = await prisma.user.upsert({
         where: {
           provider_providerId: {
             provider: account.provider,
@@ -32,36 +36,38 @@ const nextAuth = NextAuth({
           nickname: user.name ?? '새 유저',
           avatarUrl: user.image ?? null,
         },
+        select: { id: true, dongCode: true },
       });
+
+      // Attach to user so jwt callback picks it up without another DB round-trip
+      user.id = dbUser.id;
+      (user as Record<string, unknown>).dongCode = dbUser.dongCode ?? undefined;
 
       return true;
     },
-    async session({ session, token }) {
-      if (token.sub) {
-        const dbUser = await prisma.user.findFirst({
-          where: {
-            provider: token.provider as string,
-            providerId: token.providerId as string,
-          },
+
+    async jwt({ token, user, trigger }) {
+      if (user?.id) {
+        token.id = user.id;
+        token.dongCode = (user as Record<string, unknown>).dongCode as string | undefined;
+      }
+
+      if (trigger === 'update' && token.id) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { dongCode: true },
         });
-        if (dbUser) {
-          session.user.id = dbUser.id;
-          if (dbUser.dongCode) session.user.dongCode = dbUser.dongCode;
-        }
+        token.dongCode = dbUser?.dongCode ?? undefined;
       }
-      return session;
-    },
-    async jwt({ token, account }) {
-      if (account) {
-        token.provider = account.provider;
-        token.providerId = account.providerAccountId;
-      }
+
       return token;
     },
-  },
-  pages: {
-    signIn: '/login',
-    newUser: '/onboarding',
+
+    session({ session, token }) {
+      if (token.id) session.user.id = token.id as string;
+      if (token.dongCode) session.user.dongCode = token.dongCode as string;
+      return session;
+    },
   },
 });
 
@@ -69,6 +75,7 @@ export const handlers = nextAuth.handlers;
 export const auth: typeof nextAuth.auth = nextAuth.auth;
 export const signIn: typeof nextAuth.signIn = nextAuth.signIn;
 export const signOut: typeof nextAuth.signOut = nextAuth.signOut;
+export const unstable_update: typeof nextAuth.unstable_update = nextAuth.unstable_update;
 
 declare module 'next-auth' {
   interface Session {

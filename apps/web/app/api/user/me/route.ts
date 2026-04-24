@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { auth, unstable_update } from '@/auth';
 import { prisma } from '@makeforest/db';
 
 export async function GET() {
@@ -26,6 +26,11 @@ export async function PATCH(req: NextRequest) {
     where: { id: session.user.id },
     data: body,
   });
+
+  // dongCode가 변경된 경우 JWT 쿠키를 서버 사이드에서 즉시 갱신
+  if (body.dongCode) {
+    await unstable_update({ user: { dongCode: updated.dongCode ?? undefined } });
+  }
 
   return NextResponse.json(updated);
 }
