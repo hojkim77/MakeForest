@@ -214,6 +214,69 @@ async function main() {
     }
   }
 
+  // 0셀 피처: 픽셀이 없는 동 → 가장 가까운 이웃 동코드로 별칭 매핑 (그리드 수정 없음)
+  const pixelCounts = new Map<number, number>();
+  for (let i = 0; i < grid.length; i++) {
+    const fi = grid[i] as number;
+    if (fi !== -1) pixelCounts.set(fi, (pixelCounts.get(fi) ?? 0) + 1);
+  }
+
+  const aliasMap: Record<string, string> = {};
+  let aliasCount = 0;
+
+  for (let fi = 0; fi < prepared.length; fi++) {
+    if (pixelCounts.has(fi)) continue;
+
+    const f = prepared[fi]!;
+    const ring = f.polygons[0]![0]!;
+    let lngSum = 0, latSum = 0;
+    for (const pt of ring as [number, number][]) { lngSum += pt[0]!; latSum += pt[1]!; }
+    const { px: cx, py: cy } = toPixelCoord(latSum / ring.length, lngSum / ring.length);
+
+    // 센트로이드에서 스파이럴 서치
+    // 1패스: 같은 시군구(앞 5자리) 우선
+    // 2패스: 시군구 무관 최근접 폴백
+    const mySgg = f.code.substring(0, 5);
+    let found = false;
+
+    for (let r = 1; r <= 30 && !found; r++) {
+      for (let dy = -r; dy <= r && !found; dy++) {
+        for (let dx = -r; dx <= r && !found; dx++) {
+          if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue;
+          const px = Math.max(0, Math.min(GRID_W - 1, cx + dx));
+          const py = Math.max(0, Math.min(GRID_H - 1, cy + dy));
+          const existing = grid[py * GRID_W + px] as number;
+          if (existing !== -1 && prepared[existing]!.code.substring(0, 5) === mySgg) {
+            aliasMap[f.code] = prepared[existing]!.code;
+            found = true;
+          }
+        }
+      }
+    }
+
+    if (!found) {
+      for (let r = 1; r <= 30 && !found; r++) {
+        for (let dy = -r; dy <= r && !found; dy++) {
+          for (let dx = -r; dx <= r && !found; dx++) {
+            if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue;
+            const px = Math.max(0, Math.min(GRID_W - 1, cx + dx));
+            const py = Math.max(0, Math.min(GRID_H - 1, cy + dy));
+            const existing = grid[py * GRID_W + px] as number;
+            if (existing !== -1) {
+              aliasMap[f.code] = prepared[existing]!.code;
+              found = true;
+            }
+          }
+        }
+      }
+    }
+    aliasCount++;
+  }
+
+  const aliasPath = resolve(__dirname, '../apps/web/public/dong-alias.json');
+  writeFileSync(aliasPath, JSON.stringify(aliasMap));
+  console.log(`\n     별칭 맵: ${aliasCount}개 동 → ${aliasPath}`);
+
   // 결과 직렬화: 셀 배열 (빈 셀 제외)
   const cells: Array<{ x: number; y: number; code: string; name: string }> = [];
   for (let py = 0; py < GRID_H; py++) {
