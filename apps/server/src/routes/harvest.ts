@@ -113,6 +113,13 @@ harvestRouter.post('/:sessionId', async (req: Request, res: Response) => {
       data: { status: 'HARVESTED', actualSec },
     });
 
+    // DailySession 집중 시간 누적
+    await tx.dailySession.upsert({
+      where: { userId_date: { userId, date: today } },
+      update: { elapsedSec: { increment: actualSec } },
+      create: { userId, date: today, elapsedSec: actualSec, waterCount: 0 },
+    });
+
     return obj;
   });
 

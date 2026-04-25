@@ -7,18 +7,23 @@ import { useActivityStream } from '@/hooks/useActivityStream';
 
 const PIXEL_SIZE = 4;
 const MAX_COUNT = 20;
+const HOVER_DELAY_MS = 1000;
 
-// Sea color: cool light blue-gray — distinguishable from warm cream background (#fdf9f1)
 const SEA_COLOR = '#b4cdd8';
-// Inactive land: M3 outline token (#707972) — matches the "Soil" legend entry
 const SOIL_COLOR = '#707972';
+
+// 오늘의 생명체 단계 — 실제 API 연결 전까지 코드 해시로 결정
+const STAGES = ['🌱', '🌿', '🌳', '🌲'] as const;
 
 function dongColor(count: number): string {
   if (count === 0) return SOIL_COLOR;
-  // Active: M3 green scale — primary-fixed (#b0f1ca, L≈81%) → primary (#226143, L≈25%)
   const t = Math.min(count / MAX_COUNT, 1);
   const l = 81 - t * 56;
   return `hsl(148,60%,${l.toFixed(0)}%)`;
+}
+
+function hashCode(s: string): number {
+  return s.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
 }
 
 interface Tooltip {
@@ -26,6 +31,8 @@ interface Tooltip {
   y: number;
   name: string;
   count: number;
+  stage: string;
+  water: number;
 }
 
 export function PixelMap() {
@@ -35,7 +42,10 @@ export function PixelMap() {
   const activity = useActivityStream();
   const [tooltip, setTooltip] = useState<Tooltip | null>(null);
 
-  // (x, y) → cell 역산 맵
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoveredCodeRef = useRef<string | null>(null);
+  const pendingRef = useRef<Tooltip | null>(null);
+
   const gridMap = useMemo(() => {
     const m = new Map<string, { code: string; name: string }>();
     for (const cell of pixelMap.cells) m.set(`${cell.x},${cell.y}`, cell);
@@ -48,7 +58,6 @@ export function PixelMap() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
     for (const cell of pixelMap.cells) {
       const count = activity[cell.code] ?? 0;
       ctx.fillStyle = dongColor(count);
@@ -66,25 +75,62 @@ export function PixelMap() {
       const canvas = canvasRef.current;
       if (!canvas) return null;
       const rect = canvas.getBoundingClientRect();
-      const cx = Math.floor(((e.clientX - rect.left) * (canvas.width / rect.width)) / PIXEL_SIZE);
-      const cy = Math.floor(((e.clientY - rect.top) * (canvas.height / rect.height)) / PIXEL_SIZE);
-      return { cx, cy, screenX: e.clientX - rect.left, screenY: e.clientY - rect.top };
+      // canvas.width/rect.width = 1/scale → viewport px → CSS px (parent space)
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const cssX = (e.clientX - rect.left) * scaleX;
+      const cssY = (e.clientY - rect.top) * scaleY;
+      const cx = Math.floor(cssX / PIXEL_SIZE);
+      const cy = Math.floor(cssY / PIXEL_SIZE);
+      return { cx, cy, cssX, cssY };
     },
     [],
   );
 
+  const clearHover = useCallback(() => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    hoveredCodeRef.current = null;
+    pendingRef.current = null;
+    setTooltip(null);
+  }, []);
+
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       const hit = getCellFromEvent(e);
-      if (!hit) return;
+      if (!hit) { clearHover(); return; }
       const cell = gridMap.get(`${hit.cx},${hit.cy}`);
-      if (cell) {
-        setTooltip({ x: hit.screenX, y: hit.screenY, name: cell.name, count: activity[cell.code] ?? 0 });
-      } else {
+      if (!cell) { clearHover(); return; }
+
+      const h = hashCode(cell.code);
+      const next: Tooltip = {
+        x: hit.cssX,
+        y: hit.cssY,
+        name: cell.name,
+        count: activity[cell.code] ?? 0,
+        stage: STAGES[h % 4] as string,
+        water: h % 4,
+      };
+
+      if (cell.code !== hoveredCodeRef.current) {
+        // 새로운 동 진입 → 타이머 리셋
+        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+        hoveredCodeRef.current = cell.code;
+        pendingRef.current = next;
         setTooltip(null);
+        hoverTimerRef.current = setTimeout(() => {
+          setTooltip(pendingRef.current);
+          hoverTimerRef.current = null;
+        }, HOVER_DELAY_MS);
+      } else {
+        // 같은 동 위에서 마우스 이동 → 포지션만 업데이트
+        pendingRef.current = next;
+        setTooltip((prev) => (prev ? { ...prev, x: hit.cssX, y: hit.cssY } : null));
       }
     },
-    [getCellFromEvent, gridMap, activity],
+    [getCellFromEvent, gridMap, activity, clearHover],
   );
 
   const handleClick = useCallback(
@@ -109,20 +155,23 @@ export function PixelMap() {
         width={pixelMap.w * PIXEL_SIZE}
         height={pixelMap.h * PIXEL_SIZE}
         className="w-full h-full cursor-crosshair"
-        // 확대 시에도 픽셀 번짐을 막는다.
         style={{ imageRendering: 'pixelated' }}
         onMouseMove={handleMouseMove}
-        onMouseLeave={() => setTooltip(null)}
+        onMouseLeave={clearHover}
         onClick={handleClick}
       />
       {tooltip && (
         <div
-          className="pointer-events-none absolute z-10 bg-inverse-surface px-2 py-1 font-mono text-label text-inverse-on-surface border border-outline"
-          style={{ left: tooltip.x + 12, top: tooltip.y - 8 }}
+          className="pointer-events-none absolute z-10 bg-inverse-surface px-2 py-1.5 font-mono text-label text-inverse-on-surface border border-outline"
+          style={{ left: tooltip.x + 14, top: tooltip.y - 10 }}
         >
-          <span className="font-medium">{tooltip.name}</span>
+          <div className="font-medium">{tooltip.name}</div>
+          <div className="mt-0.5 text-xs">
+            <span className="text-primary-fixed">{tooltip.stage}</span>
+            <span className="ml-1 text-outline-variant">{'💧'.repeat(tooltip.water)}{'🩶'.repeat(3 - tooltip.water)}</span>
+          </div>
           {tooltip.count > 0 && (
-            <span className="ml-1 text-primary-fixed">{tooltip.count}명 집중 중</span>
+            <div className="mt-0.5 text-xs text-secondary-fixed">{tooltip.count}명 집중 중</div>
           )}
         </div>
       )}

@@ -8,7 +8,7 @@ import { ForestMap } from './ForestMap';
 const CANVAS_W = 250 * 4;   // 1000 canvas-px
 const CANVAS_H = 290 * 4;   // 1160 canvas-px
 const MAX_SCALE = 4;
-const FOREST_THRESHOLD = 1; // scale < 1 → forest mode; ≥ 1 → pixel mode
+const FOREST_THRESHOLD = 1.5; // scale < threshold → pixel mode (전국 조감); ≥ threshold → forest mode (시/구 줌인)
 
 function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
@@ -43,7 +43,8 @@ export function MapContainer() {
   const minScaleRef = useRef(0.1);
 
   const [t, setT] = useState<Transform>({ scale: 0.1, tx: 0, ty: 0 });
-  const isPixel = t.scale >= FOREST_THRESHOLD;
+  const isForest = t.scale >= FOREST_THRESHOLD;
+  const isPixel = !isForest;
 
   // ── Fill viewport at minimum zoom; re-constrain on resize ────────────
   useEffect(() => {
@@ -65,8 +66,8 @@ export function MapContainer() {
 
   // ── Forest ↔ Pixel mode sync ─────────────────────────────────────────
   useEffect(() => {
-    setMapMode(isPixel ? 'pixel' : 'forest');
-  }, [isPixel, setMapMode]);
+    setMapMode(isForest ? 'forest' : 'pixel');
+  }, [isForest, setMapMode]);
 
   // ── Wheel zoom (cursor-centric) ───────────────────────────────────────
   // No external deps: reads minScaleRef directly, gets viewport from getBoundingClientRect.
@@ -150,7 +151,7 @@ export function MapContainer() {
       >
         <div
           className="absolute inset-0 transition-opacity duration-300"
-          style={{ opacity: isPixel ? 0 : 1, pointerEvents: isPixel ? 'none' : 'auto' }}
+          style={{ opacity: isForest ? 1 : 0, pointerEvents: isForest ? 'auto' : 'none' }}
         >
           <ForestMap dongCode={focusedDongCode ?? ''} />
         </div>
@@ -166,7 +167,7 @@ export function MapContainer() {
 
       {process.env.NODE_ENV === 'development' && (
         <div className="absolute bottom-2 left-2 z-20 bg-black/50 px-2 py-0.5 font-mono text-label text-gray-400">
-          scale {t.scale.toFixed(2)} · {isPixel ? 'pixel' : 'forest'}
+          scale {t.scale.toFixed(2)} · {isForest ? 'forest' : 'pixel'}
         </div>
       )}
     </div>

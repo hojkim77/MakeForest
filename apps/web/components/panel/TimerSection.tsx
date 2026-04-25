@@ -5,9 +5,7 @@ import type { SessionStatus } from '@makeforest/types';
 
 interface TimerSectionProps {
   status: SessionStatus | 'IDLE';
-  /** Seconds accumulated toward next water (max 7200 = 2h) */
   elapsedSec: number;
-  /** Seconds required per water threshold */
   thresholdSec: number;
   onStart: () => void;
   onStop: () => void;
@@ -24,27 +22,27 @@ function formatTime(sec: number) {
 
 export function TimerSection({ status, elapsedSec, thresholdSec, onStart, onStop }: TimerSectionProps) {
   const isRunning = status === 'RUNNING';
+  // 현재 2시간 주기 내 진행도 (물주기 후 리셋된 값 기준)
+  const progress = Math.min(elapsedSec / thresholdSec, 1);
 
   return (
     <div className="flex flex-col gap-sm border-t border-outline-variant pt-md">
-      {/* Progress toward next water */}
       <div className="flex justify-between items-center font-mono text-pixel-stat">
         <span className="text-on-surface-variant text-label uppercase tracking-wider">
           다음 물주기까지
         </span>
         <span className="text-primary">
-          {formatTime(elapsedSec)} / {formatTime(thresholdSec)}
+          {formatTime(Math.min(elapsedSec, thresholdSec))} / {formatTime(thresholdSec)}
         </span>
       </div>
 
       <div className="w-full h-1.5 bg-surface-variant overflow-hidden">
         <div
           className="h-full bg-primary transition-all duration-1000"
-          style={{ width: `${Math.min((elapsedSec / thresholdSec) * 100, 100)}%` }}
+          style={{ width: `${progress * 100}%` }}
         />
       </div>
 
-      {/* Start / Stop */}
       <button
         onClick={isRunning ? onStop : onStart}
         className={[

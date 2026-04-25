@@ -4,28 +4,46 @@ import type { SessionStatus, Todo } from '@makeforest/types';
 interface TimerState {
   sessionId: string | null;
   status: SessionStatus | 'IDLE';
-  durationSec: number;
   elapsedSec: number;
   todos: Todo[];
-  setSession: (id: string, durationSec: number) => void;
-  setStatus: (status: SessionStatus | 'IDLE') => void;
+  setSession: (id: string) => void;
+  start: () => void;
+  pause: () => void;
   tick: () => void;
+  resetWaterProgress: () => void;
   addTodo: (text: string) => void;
   toggleTodo: (id: string) => void;
   removeTodo: (id: string) => void;
   reset: () => void;
 }
 
-export const useTimerStore = create<TimerState>((set) => ({
+let _interval: ReturnType<typeof setInterval> | null = null;
+
+export const useTimerStore = create<TimerState>((set, get) => ({
   sessionId: null,
   status: 'IDLE',
-  durationSec: 25 * 60,
   elapsedSec: 0,
   todos: [],
 
-  setSession: (id, durationSec) => set({ sessionId: id, durationSec, elapsedSec: 0 }),
-  setStatus: (status) => set({ status }),
+  setSession: (id) => set({ sessionId: id }),
+
+  start: () => {
+    set({ status: 'RUNNING' });
+    if (_interval) clearInterval(_interval);
+    _interval = setInterval(() => get().tick(), 1000);
+  },
+
+  pause: () => {
+    set({ status: 'PAUSED' });
+    if (_interval) { clearInterval(_interval); _interval = null; }
+  },
+
   tick: () => set((s) => ({ elapsedSec: s.elapsedSec + 1 })),
+
+  // 물주기 성공 후 다음 2시간 주기 리셋
+  resetWaterProgress: () => set((s) => ({
+    elapsedSec: Math.max(0, s.elapsedSec - 7200),
+  })),
 
   addTodo: (text) =>
     set((s) => ({
@@ -38,6 +56,8 @@ export const useTimerStore = create<TimerState>((set) => ({
   removeTodo: (id) =>
     set((s) => ({ todos: s.todos.filter((t) => t.id !== id) })),
 
-  reset: () =>
-    set({ sessionId: null, status: 'IDLE', elapsedSec: 0, todos: [] }),
+  reset: () => {
+    if (_interval) { clearInterval(_interval); _interval = null; }
+    set({ sessionId: null, status: 'IDLE', elapsedSec: 0, todos: [] });
+  },
 }));
