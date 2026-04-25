@@ -1,19 +1,52 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useMapStore } from '@/store';
 import { usePixelMapData } from '@/hooks/usePixelMapData';
 import { useActivityStream } from '@/hooks/useActivityStream';
 
 const PIXEL_SIZE = 4;
 const MAX_COUNT = 20;
-const HOVER_DELAY_MS = 1000;
+const HOVER_DELAY_MS = 500;
+const HL_ALPHA_MAX = 0.34;
 
 const SEA_COLOR = '#b4cdd8';
 const SOIL_COLOR = '#707972';
 
-// 오늘의 생명체 단계 — 실제 API 연결 전까지 코드 해시로 결정
-const STAGES = ['🌱', '🌿', '🌳', '🌲'] as const;
+// 특별시/광역시/특별자치시 → 시 전체를 단위로
+const METROPOLITAN = new Set(['11', '26', '27', '28', '29', '30', '31', '36']);
+
+export interface RegionBounds {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+}
+
+// "고양시덕양구" → "고양시", "부천시소사구" → "부천시", "고성군" → null
+function cityFromSigungu(sigungu: string): string | null {
+  const m = sigungu.match(/^(.+시)[가-힣]+구$/);
+  return m ? (m[1] ?? null) : null;
+}
+
+// 각 동 픽셀의 호버 단위(시/군)를 결정하는 키
+export function regionOf(code: string, name: string): string {
+  const sido = code.substring(0, 2);
+  if (METROPOLITAN.has(sido)) return sido;
+  const sigungu = name.split(' ')[1] ?? code.substring(0, 5);
+  const city = cityFromSigungu(sigungu);
+  return `${sido}:${city ?? sigungu}`;
+}
+
+function regionDisplayName(sampleName: string, regionCode: string): string {
+  if (!regionCode.includes(':')) {
+    // 특별시/광역시: "서울특별시"
+    return sampleName.split(' ')[0] ?? sampleName;
+  }
+  const parts = sampleName.split(' ');
+  const sigungu = parts[1] ?? '';
+  const city = cityFromSigungu(sigungu);
+  return city ? `${parts[0] ?? ''} ${city}` : `${parts[0] ?? ''} ${sigungu}`;
+}
 
 function dongColor(count: number): string {
   if (count === 0) return SOIL_COLOR;
@@ -26,25 +59,68 @@ function hashCode(s: string): number {
   return s.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
 }
 
-interface Tooltip {
-  x: number;
-  y: number;
-  name: string;
-  count: number;
+const STAGES = ['🌱', '🌿', '🌳', '🌲'] as const;
+
+interface TooltipStats {
   stage: string;
   water: number;
+  totalUsers: number;
 }
 
-export function PixelMap() {
+interface HoverLabel {
+  regionCode: string;
+  displayName: string;
+  x: number;
+  y: number;
+}
+
+interface PixelMapProps {
+  onRegionClick: (regionCode: string, bounds: RegionBounds) => void;
+}
+
+export function PixelMap({ onRegionClick }: PixelMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { focusDong } = useMapStore();
   const { data: pixelMap, loading } = usePixelMapData();
   const activity = useActivityStream();
-  const [tooltip, setTooltip] = useState<Tooltip | null>(null);
 
-  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hoveredCodeRef = useRef<string | null>(null);
-  const pendingRef = useRef<Tooltip | null>(null);
+  const [hoverLabel, setHoverLabel] = useState<HoverLabel | null>(null);
+  const [tooltipStats, setTooltipStats] = useState<TooltipStats | null>(null);
+
+  // ── 지역 메타데이터 (pixelMap 변경 시만 재계산) ──────────────────────
+  const regionMeta = useMemo(() => {
+    const cells = new Map<string, typeof pixelMap.cells>();
+    const bounds = new Map<string, RegionBounds>();
+    const firstName = new Map<string, string>(); // sampleName
+
+    for (const cell of pixelMap.cells) {
+      const rc = regionOf(cell.code, cell.name);
+      if (!cells.has(rc)) {
+        cells.set(rc, []);
+        firstName.set(rc, cell.name);
+      }
+      cells.get(rc)!.push(cell);
+
+      const b = bounds.get(rc) ?? { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
+      bounds.set(rc, {
+        minX: Math.min(b.minX, cell.x),
+        maxX: Math.max(b.maxX, cell.x),
+        minY: Math.min(b.minY, cell.y),
+        maxY: Math.max(b.maxY, cell.y),
+      });
+    }
+    return { cells, bounds, firstName };
+  }, [pixelMap.cells]);
+
+  // 활성도 집계 (activity 변경 시 재계산)
+  const regionStats = useMemo(() => {
+    const m = new Map<string, { totalUsers: number; sampleName: string }>();
+    for (const [rc, cellList] of regionMeta.cells) {
+      let total = 0;
+      for (const c of cellList) total += activity[c.code] ?? 0;
+      m.set(rc, { totalUsers: total, sampleName: regionMeta.firstName.get(rc) ?? '' });
+    }
+    return m;
+  }, [regionMeta, activity]);
 
   const gridMap = useMemo(() => {
     const m = new Map<string, { code: string; name: string }>();
@@ -52,50 +128,88 @@ export function PixelMap() {
     return m;
   }, [pixelMap]);
 
+  // ── 캔버스 하이라이트 애니메이션 ─────────────────────────────────────
+  const hlRegionRef = useRef<string | null>(null); // 렌더할 지역
+  const hlAlphaRef = useRef(0);
+  const hlTargetRef = useRef(0);
+  const hlAnimRef = useRef<number | null>(null);
+
+  const renderRef = useRef<() => void>(() => {});
+
+  const startHlAnim = useCallback(() => {
+    if (hlAnimRef.current !== null) return; // 이미 실행 중 — 알아서 새 target에 수렴
+    const step = () => {
+      const diff = hlTargetRef.current - hlAlphaRef.current;
+      if (Math.abs(diff) < 0.003) {
+        hlAlphaRef.current = hlTargetRef.current;
+        if (hlTargetRef.current === 0) hlRegionRef.current = null;
+        renderRef.current();
+        hlAnimRef.current = null;
+        return;
+      }
+      hlAlphaRef.current += diff * 0.16; // ease-out
+      renderRef.current();
+      hlAnimRef.current = requestAnimationFrame(step);
+    };
+    hlAnimRef.current = requestAnimationFrame(step);
+  }, []);
+
   const render = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     for (const cell of pixelMap.cells) {
-      const count = activity[cell.code] ?? 0;
-      ctx.fillStyle = dongColor(count);
+      ctx.fillStyle = dongColor(activity[cell.code] ?? 0);
       ctx.fillRect(cell.x * PIXEL_SIZE, cell.y * PIXEL_SIZE, PIXEL_SIZE - 1, PIXEL_SIZE - 1);
     }
-  }, [pixelMap, activity]);
+
+    if (hlRegionRef.current && hlAlphaRef.current > 0) {
+      ctx.fillStyle = `rgba(180,255,200,${hlAlphaRef.current.toFixed(3)})`;
+      for (const cell of regionMeta.cells.get(hlRegionRef.current) ?? []) {
+        ctx.fillRect(cell.x * PIXEL_SIZE, cell.y * PIXEL_SIZE, PIXEL_SIZE - 1, PIXEL_SIZE - 1);
+      }
+    }
+  }, [pixelMap.cells, activity, regionMeta.cells]);
+
+  useEffect(() => { renderRef.current = render; }, [render]);
 
   useEffect(() => {
-    const id = requestAnimationFrame(render);
+    const id = requestAnimationFrame(() => renderRef.current());
     return () => cancelAnimationFrame(id);
   }, [render]);
+
+  // ── 호버 상태 ────────────────────────────────────────────────────────
+  const activeRegionRef = useRef<string | null>(null); // 현재 마우스가 위치한 지역
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getCellFromEvent = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       const canvas = canvasRef.current;
       if (!canvas) return null;
       const rect = canvas.getBoundingClientRect();
-      // canvas.width/rect.width = 1/scale → viewport px → CSS px (parent space)
       const scaleX = canvas.width / rect.width;
       const scaleY = canvas.height / rect.height;
-      const cssX = (e.clientX - rect.left) * scaleX;
-      const cssY = (e.clientY - rect.top) * scaleY;
-      const cx = Math.floor(cssX / PIXEL_SIZE);
-      const cy = Math.floor(cssY / PIXEL_SIZE);
-      return { cx, cy, cssX, cssY };
+      return {
+        cx: Math.floor((e.clientX - rect.left) * scaleX / PIXEL_SIZE),
+        cy: Math.floor((e.clientY - rect.top) * scaleY / PIXEL_SIZE),
+        screenX: e.clientX - rect.left,
+        screenY: e.clientY - rect.top,
+      };
     },
     [],
   );
 
   const clearHover = useCallback(() => {
-    if (hoverTimerRef.current) {
-      clearTimeout(hoverTimerRef.current);
-      hoverTimerRef.current = null;
-    }
-    hoveredCodeRef.current = null;
-    pendingRef.current = null;
-    setTooltip(null);
-  }, []);
+    if (hoverTimerRef.current) { clearTimeout(hoverTimerRef.current); hoverTimerRef.current = null; }
+    activeRegionRef.current = null;
+    setHoverLabel(null);
+    setTooltipStats(null);
+    hlTargetRef.current = 0;
+    startHlAnim();
+  }, [startHlAnim]);
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -104,33 +218,39 @@ export function PixelMap() {
       const cell = gridMap.get(`${hit.cx},${hit.cy}`);
       if (!cell) { clearHover(); return; }
 
-      const h = hashCode(cell.code);
-      const next: Tooltip = {
-        x: hit.cssX,
-        y: hit.cssY,
-        name: cell.name,
-        count: activity[cell.code] ?? 0,
-        stage: STAGES[h % 4] as string,
-        water: h % 4,
-      };
+      const rc = regionOf(cell.code, cell.name);
 
-      if (cell.code !== hoveredCodeRef.current) {
-        // 새로운 동 진입 → 타이머 리셋
+      if (rc !== activeRegionRef.current) {
+        // 새 지역 진입
         if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-        hoveredCodeRef.current = cell.code;
-        pendingRef.current = next;
-        setTooltip(null);
+        activeRegionRef.current = rc;
+
+        // 캔버스 하이라이트 즉시 전환 후 페이드인
+        hlRegionRef.current = rc;
+        hlTargetRef.current = HL_ALPHA_MAX;
+        startHlAnim();
+
+        // 지역명 즉시 표시
+        const stats = regionStats.get(rc) ?? { totalUsers: 0, sampleName: cell.name };
+        setHoverLabel({ regionCode: rc, displayName: regionDisplayName(stats.sampleName, rc), x: hit.screenX, y: hit.screenY });
+        setTooltipStats(null);
+
+        // 0.5초 후 상세 스탯
+        const h = hashCode(rc);
         hoverTimerRef.current = setTimeout(() => {
-          setTooltip(pendingRef.current);
+          setTooltipStats({
+            stage: STAGES[h % 4] as string,
+            water: h % 4,
+            totalUsers: regionStats.get(rc)?.totalUsers ?? 0,
+          });
           hoverTimerRef.current = null;
         }, HOVER_DELAY_MS);
       } else {
-        // 같은 동 위에서 마우스 이동 → 포지션만 업데이트
-        pendingRef.current = next;
-        setTooltip((prev) => (prev ? { ...prev, x: hit.cssX, y: hit.cssY } : null));
+        // 같은 지역 내 이동 — 라벨 위치만 갱신
+        setHoverLabel((prev) => prev ? { ...prev, x: hit.screenX, y: hit.screenY } : null);
       }
     },
-    [getCellFromEvent, gridMap, activity, clearHover],
+    [getCellFromEvent, gridMap, regionStats, clearHover, startHlAnim],
   );
 
   const handleClick = useCallback(
@@ -138,9 +258,13 @@ export function PixelMap() {
       const hit = getCellFromEvent(e);
       if (!hit) return;
       const cell = gridMap.get(`${hit.cx},${hit.cy}`);
-      if (cell) focusDong(cell.code);
+      if (!cell) return;
+      const rc = regionOf(cell.code, cell.name);
+      const bounds = regionMeta.bounds.get(rc);
+      if (!bounds || bounds.minX === Infinity) return;
+      onRegionClick(rc, bounds);
     },
-    [getCellFromEvent, gridMap, focusDong],
+    [getCellFromEvent, gridMap, regionMeta.bounds, onRegionClick],
   );
 
   return (
@@ -160,18 +284,25 @@ export function PixelMap() {
         onMouseLeave={clearHover}
         onClick={handleClick}
       />
-      {tooltip && (
+
+      {/* 호버 라벨 — 지역명 즉시, 스탯은 0.5초 후 */}
+      {hoverLabel && (
         <div
-          className="pointer-events-none absolute z-10 bg-inverse-surface px-2 py-1.5 font-mono text-label text-inverse-on-surface border border-outline"
-          style={{ left: tooltip.x + 14, top: tooltip.y - 10 }}
+          key={hoverLabel.regionCode}
+          className="pointer-events-none absolute z-10 animate-fade-in-up bg-inverse-surface px-2 py-1.5 font-mono text-label text-inverse-on-surface border border-outline"
+          style={{ left: hoverLabel.x + 14, top: hoverLabel.y - 10 }}
         >
-          <div className="font-medium">{tooltip.name}</div>
-          <div className="mt-0.5 text-xs">
-            <span className="text-primary-fixed">{tooltip.stage}</span>
-            <span className="ml-1 text-outline-variant">{'💧'.repeat(tooltip.water)}{'🩶'.repeat(3 - tooltip.water)}</span>
-          </div>
-          {tooltip.count > 0 && (
-            <div className="mt-0.5 text-xs text-secondary-fixed">{tooltip.count}명 집중 중</div>
+          <div className="font-medium">{hoverLabel.displayName}</div>
+          {tooltipStats && (
+            <div className="mt-0.5 text-xs animate-fade-in-up">
+              <span className="text-primary-fixed">{tooltipStats.stage}</span>
+              <span className="ml-1 text-outline-variant">
+                {'💧'.repeat(tooltipStats.water)}{'🩶'.repeat(3 - tooltipStats.water)}
+              </span>
+              {tooltipStats.totalUsers > 0 && (
+                <div className="mt-0.5 text-secondary-fixed">{tooltipStats.totalUsers}명 집중 중</div>
+              )}
+            </div>
           )}
         </div>
       )}
