@@ -16,9 +16,10 @@
     "@makeforest/types": "*",
     "next": "14.2.29",
     "next-auth": "^5.0.0-beta.25",
+    "pixi.js": "^7.4.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "pixi.js": "^7.4.2",
+    "recharts": "^3.8.1",
     "zustand": "^5.0.3"
   },
   "devDependencies": {

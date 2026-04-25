@@ -3,13 +3,12 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Icon } from './Icon';
-import { signOut, useSession } from 'next-auth/react';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', href: '/dashboard' },
   { label: 'Community', href: '/community' },
   { label: 'Forest Map', href: '/' },
-  { label: 'Impact', href: '/impact' },
+  { label: 'Stats', href: '/mypage' },
 ] as const;
 
 export function TopAppBar() {
@@ -55,14 +54,13 @@ export function TopAppBar() {
           >
             <Icon name="notifications" />
           </button>
-          <button
+          <Link
+            href="/mypage"
             className="p-xs text-on-surface-variant hover:bg-surface-container-high transition-none"
             aria-label="내 계정"
-            // TEST
-            onClick={() => signOut()}
           >
             <Icon name="account_circle" />
-          </button>
+          </Link>
         </div>
       </div>
     </header>
