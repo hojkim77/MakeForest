@@ -13,7 +13,8 @@ import { NeighborhoodStats } from './NeighborhoodStats';
 import { NeighborhoodSearch } from './NeighborhoodSearch';
 import { WaterToast } from './WaterToast';
 
-const WATER_THRESHOLD_SEC = 2 * 60 * 60;
+const WATER_THRESHOLD_SEC = 30 * 60;
+const MAX_ACCUMULATION_SEC = 2 * 60 * 60;
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
 
 type CreatureStage = 0 | 1 | 2 | 3 | 4;
@@ -22,7 +23,6 @@ export function Panel() {
   const { data: session, status } = useSession();
   const { focusedDongCode, focusDong } = useMapStore();
   const { status: timerStatus, elapsedSec, todos, addTodo, toggleTodo, start, pause } = useTimerStore();
-
   const isLoggedIn = status === 'authenticated' && !!session?.user?.id;
   const myDongCode = session?.user?.dongCode ?? null;
   const isPeeking = focusedDongCode !== null && focusedDongCode !== myDongCode;
@@ -112,7 +112,7 @@ export function Panel() {
       await fetch(`/api/sessions/${sessionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'complete' }),
+        body: JSON.stringify({ action: 'pause' }),
       });
     } catch { /* 실패 시 조용히 무시 */ }
   }
@@ -133,7 +133,7 @@ export function Panel() {
 
   function handleDongSelect(dongCode: string) { focusDong(dongCode); }
 
-  // 물주기 버튼 활성화: 타이머 실행 중 + 2시간 이상 누적
+  // 물주기 버튼 활성화: 타이머 실행 중 + 30분 이상 누적
   const canWater =
     isLoggedIn &&
     !isPeeking &&
@@ -176,7 +176,8 @@ export function Panel() {
               <TimerSection
                 status={timerStatus}
                 elapsedSec={elapsedSec}
-                thresholdSec={WATER_THRESHOLD_SEC}
+                waterThresholdSec={WATER_THRESHOLD_SEC}
+                maxSec={MAX_ACCUMULATION_SEC}
                 onStart={handleStart}
                 onStop={handleStop}
               />

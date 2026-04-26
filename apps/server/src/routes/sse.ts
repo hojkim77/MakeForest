@@ -19,6 +19,19 @@ export function broadcastToAll(event: SSEEvent): void {
   clients.forEach((room) => room.forEach((res) => res.write(payload)));
 }
 
+export async function buildDongUsers(dongCode: string) {
+  const sessionIds = await getActiveDongSessions(dongCode);
+  const users = await Promise.all(
+    sessionIds.map(async (id) => {
+      const s = await getSession(id);
+      if (!s) return null;
+      const elapsedSec = Math.floor((Date.now() - new Date(s.startedAt).getTime()) / 1000);
+      return { nickname: s.userId, elapsedSec, todos: s.todos };
+    }),
+  );
+  return users.filter(Boolean) as NonNullable<(typeof users)[number]>[];
+}
+
 // GET /sse/:dongCode
 sseRouter.get('/:dongCode', async (req: Request, res: Response) => {
   const { dongCode } = req.params as { dongCode: string };
@@ -32,21 +45,8 @@ sseRouter.get('/:dongCode', async (req: Request, res: Response) => {
   clients.get(dongCode)!.add(res);
 
   // 초기 접속 시 현재 동 유저 목록 전송
-  const sessionIds = await getActiveDongSessions(dongCode);
-  const users = await Promise.all(
-    sessionIds.map(async (id) => {
-      const s = await getSession(id);
-      if (!s) return null;
-      const elapsedSec = Math.floor((Date.now() - new Date(s.startedAt).getTime()) / 1000);
-      return { nickname: s.userId, elapsedSec, todos: s.todos };
-    }),
-  );
-
-  const initialEvent: SSEEvent = {
-    type: 'dong:users',
-    data: { dongCode, users: users.filter(Boolean) as NonNullable<(typeof users)[number]>[] },
-  };
-  res.write(`event: dong:users\ndata: ${JSON.stringify(initialEvent.data)}\n\n`);
+  const users = await buildDongUsers(dongCode);
+  res.write(`event: dong:users\ndata: ${JSON.stringify({ dongCode, users })}\n\n`);
 
   // 핑 (30초 간격, 연결 유지)
   const pingInterval = setInterval(() => res.write(': ping\n\n'), 30_000);

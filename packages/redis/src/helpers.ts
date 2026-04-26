@@ -9,9 +9,11 @@ export async function setSession(sessionId: string, data: ActiveSessionCache): P
 }
 
 export async function getSession(sessionId: string): Promise<ActiveSessionCache | null> {
-  const raw = await redis.get<string>(RedisKeys.session(sessionId));
+  const raw = await redis.get<ActiveSessionCache>(RedisKeys.session(sessionId));
   if (!raw) return null;
-  return JSON.parse(raw) as ActiveSessionCache;
+  // Upstash 클라이언트가 JSON을 자동 역직렬화하므로 이미 객체일 수 있음
+  if (typeof raw === 'string') return JSON.parse(raw) as ActiveSessionCache;
+  return raw;
 }
 
 export async function deleteSession(sessionId: string): Promise<void> {

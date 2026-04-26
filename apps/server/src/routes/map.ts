@@ -4,6 +4,14 @@ import { redis, RedisKeys } from '@makeforest/redis';
 
 export const mapRouter = Router();
 
+// activity-stream 구독 클라이언트
+const activityClients = new Set<Response>();
+
+export function broadcastHeatmap(activity: Record<string, number>): void {
+  const payload = `event: heatmap:update\ndata: ${JSON.stringify(activity)}\n\n`;
+  activityClients.forEach((res) => res.write(payload));
+}
+
 // 한반도 위경도 범위 및 그리드 크기
 // 가로:세로 = (131.0-124.6)*cos(36°) : (38.9-33.0) ≈ 5.18 : 5.9 → 250×290
 const LAT_MIN = 33.0, LAT_MAX = 38.9;
@@ -51,6 +59,7 @@ mapRouter.get('/activity-stream', async (req: Request, res: Response) => {
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
+  activityClients.add(res);
 
   const sendSnapshot = async () => {
     const heatmapRaw = await redis.hgetall(RedisKeys.heatmapDong());
@@ -71,5 +80,6 @@ mapRouter.get('/activity-stream', async (req: Request, res: Response) => {
   req.on('close', () => {
     clearInterval(interval);
     clearInterval(ping);
+    activityClients.delete(res);
   });
 });

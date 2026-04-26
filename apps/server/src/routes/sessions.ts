@@ -1,43 +1,71 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
-import type { Prisma } from '@makeforest/db';
-import { setSession, addActiveDong, removeActiveDong } from '@makeforest/redis';
-import { broadcastToDong } from './sse';
+import { redis, RedisKeys, setSession, getSession, addActiveDong, removeActiveDong, getDongActiveCount } from '@makeforest/redis';
+import { broadcastToDong, buildDongUsers } from './sse';
+import { broadcastHeatmap } from './map';
 import type { CreateSessionInput, SessionAction } from '@makeforest/types';
 
 export const sessionsRouter = Router();
 
 // POST /sessions — 새 세션 시작
 sessionsRouter.post('/', async (req: Request, res: Response) => {
-  const { durationSec, dongCode, todos, userId } = req.body as CreateSessionInput & { userId: string };
+  try {
+    const { durationSec, dongCode, todos, userId } = req.body as CreateSessionInput & { userId: string };
 
-  await prisma.focusSession.updateMany({
-    where: { userId, status: 'RUNNING' },
-    data: { status: 'ABANDONED', endedAt: new Date() },
-  });
+    if (!userId || !dongCode) {
+      return res.status(400).json({ error: 'userId and dongCode required' });
+    }
 
-  const session = await prisma.focusSession.create({
-    data: {
-      userId,
-      dongCode,
-      durationSec,
-      todos: todos as unknown as Prisma.InputJsonValue,
-      status: 'RUNNING',
-    },
-  });
+    await prisma.focusSession.updateMany({
+      where: { userId, status: 'RUNNING' },
+      data: { status: 'ABANDONED', endedAt: new Date() },
+    });
 
-  await setSession(session.id, {
-    userId,
-    dongCode,
-    startedAt: session.startedAt.toISOString(),
-    durationSec,
-    todos,
-    status: 'RUNNING',
-  });
+    const session = await prisma.focusSession.create({
+      data: {
+        userId,
+        dongCode,
+        durationSec,
+        todos: todos as unknown as never,
+        status: 'RUNNING',
+      },
+    });
 
-  await addActiveDong(dongCode, session.id);
+    // 세션 생성 완료 — 응답을 먼저 확정
+    const result = { sessionId: session.id, startedAt: session.startedAt };
 
-  res.json({ sessionId: session.id, startedAt: session.startedAt });
+    // Redis 캐싱 + SSE 브로드캐스트 (실패해도 세션 생성은 성공)
+    void (async () => {
+      try {
+        await setSession(session.id, {
+          userId,
+          dongCode,
+          startedAt: session.startedAt.toISOString(),
+          durationSec,
+          todos,
+          status: 'RUNNING',
+        });
+        await addActiveDong(dongCode, session.id);
+
+        const activeCount = await getDongActiveCount(dongCode);
+        await redis.hset(RedisKeys.heatmapDong(), { [dongCode]: activeCount });
+        const heatmapRaw = await redis.hgetall(RedisKeys.heatmapDong()) ?? {};
+        const activity: Record<string, number> = {};
+        for (const [code, cnt] of Object.entries(heatmapRaw)) activity[code] = Number(cnt);
+        broadcastHeatmap(activity);
+
+        const users = await buildDongUsers(dongCode);
+        broadcastToDong(dongCode, { type: 'dong:users', data: { dongCode, users } });
+      } catch (err) {
+        console.error('[sessions] Redis/SSE sync error:', err);
+      }
+    })();
+
+    return res.json(result);
+  } catch (err) {
+    console.error('[sessions] POST error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // GET /sessions/:id
@@ -50,34 +78,67 @@ sessionsRouter.get('/:id', async (req: Request, res: Response) => {
 
 // PATCH /sessions/:id — 상태 변경
 sessionsRouter.patch('/:id', async (req: Request, res: Response) => {
-  const { action } = req.body as { action: SessionAction };
-  const id = String(req.params['id']);
+  try {
+    const { action } = req.body as { action: SessionAction };
+    const id = String(req.params['id']);
 
-  const statusMap: Record<SessionAction, 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'ABANDONED'> = {
-    pause: 'PAUSED',
-    resume: 'RUNNING',
-    abandon: 'ABANDONED',
-    complete: 'COMPLETED',
-  };
+    const statusMap: Record<SessionAction, 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'ABANDONED'> = {
+      pause: 'PAUSED',
+      resume: 'RUNNING',
+      abandon: 'ABANDONED',
+      complete: 'COMPLETED',
+    };
 
-  const newStatus = statusMap[action];
-  const isEnding = action === 'abandon' || action === 'complete';
+    const newStatus = statusMap[action];
+    const isPausing = action === 'pause';
+    const isResuming = action === 'resume';
+    const isEnding = action === 'abandon' || action === 'complete';
+    const isChangingActive = isPausing || isResuming || isEnding;
 
-  const session = await prisma.focusSession.update({
-    where: { id },
-    data: {
-      status: newStatus,
-      ...(isEnding ? { endedAt: new Date() } : {}),
-    },
-  });
-
-  if (isEnding) {
-    await removeActiveDong(session.dongCode, id);
-    broadcastToDong(session.dongCode, {
-      type: 'dong:users',
-      data: { dongCode: session.dongCode, users: [] },
+    const session = await prisma.focusSession.update({
+      where: { id },
+      data: {
+        status: newStatus,
+        ...(isEnding ? { endedAt: new Date() } : {}),
+      },
     });
-  }
 
-  return res.json(session);
+    // Redis 동기화 + SSE 브로드캐스트 (실패해도 DB 상태 변경은 성공)
+    void (async () => {
+      try {
+        if (isChangingActive) {
+          if (isPausing || isEnding) {
+            await removeActiveDong(session.dongCode, id);
+          } else if (isResuming) {
+            await addActiveDong(session.dongCode, id);
+          }
+
+          const activeCount = await getDongActiveCount(session.dongCode);
+          await redis.hset(RedisKeys.heatmapDong(), { [session.dongCode]: activeCount });
+          const heatmapRaw = await redis.hgetall(RedisKeys.heatmapDong()) ?? {};
+          const activity: Record<string, number> = {};
+          for (const [code, cnt] of Object.entries(heatmapRaw)) activity[code] = Number(cnt);
+          broadcastHeatmap(activity);
+
+          const users = await buildDongUsers(session.dongCode);
+          broadcastToDong(session.dongCode, {
+            type: 'dong:users',
+            data: { dongCode: session.dongCode, users },
+          });
+        }
+
+        if (isPausing || isResuming) {
+          const cached = await getSession(id);
+          if (cached) await setSession(id, { ...cached, status: newStatus });
+        }
+      } catch (err) {
+        console.error('[sessions] Redis/SSE sync error:', err);
+      }
+    })();
+
+    return res.json(session);
+  } catch (err) {
+    console.error('[sessions] PATCH error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 });

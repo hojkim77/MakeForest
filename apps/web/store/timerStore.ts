@@ -40,9 +40,9 @@ export const useTimerStore = create<TimerState>((set, get) => ({
 
   tick: () => set((s) => ({ elapsedSec: s.elapsedSec + 1 })),
 
-  // 물주기 성공 후 다음 2시간 주기 리셋
+  // 물주기 성공 후 다음 30분 주기 리셋
   resetWaterProgress: () => set((s) => ({
-    elapsedSec: Math.max(0, s.elapsedSec - 7200),
+    elapsedSec: Math.max(0, s.elapsedSec - 1800),
   })),
 
   addTodo: (text) =>
