@@ -13,6 +13,7 @@ interface CreatureSectionProps {
 export function CreatureSection({ stage, waterCount, canWater, onWater }: CreatureSectionProps) {
   const MAX_WATER = 3;
   const allWatered = waterCount >= MAX_WATER;
+  const percent = Math.min(Math.round((waterCount / MAX_WATER) * 100), 100);
 
   return (
     <div className="flex flex-col items-center gap-md py-lg">
@@ -24,19 +25,20 @@ export function CreatureSection({ stage, waterCount, canWater, onWater }: Creatu
         </span>
       </div>
 
-      {/* 물주기 현황: 최대 3회 */}
+      {/* 물주기 현황: 퍼센테이지 */}
       {!allWatered ? (
         <>
-          <div className="flex items-center gap-sm">
-            {Array.from({ length: MAX_WATER }).map((_, i) => (
-              <Icon
-                key={i}
-                name="water_drop"
-                filled={i < waterCount}
-                size={22}
-                className={i < waterCount ? 'text-primary' : 'text-outline-variant'}
+          <div className="w-full flex flex-col gap-xs">
+            <div className="flex justify-between items-center font-mono text-label text-on-surface-variant uppercase tracking-wider">
+              <span>오늘 물주기</span>
+              <span className="text-primary">{percent}% ({waterCount}/{MAX_WATER})</span>
+            </div>
+            <div className="w-full h-1.5 bg-surface-variant">
+              <div
+                className="h-full bg-primary transition-all duration-300"
+                style={{ width: `${percent}%` }}
               />
-            ))}
+            </div>
           </div>
 
           <button

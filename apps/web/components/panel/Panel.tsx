@@ -126,7 +126,7 @@ export function Panel() {
       setMyWaterCount(data.myWaterCount);
       setCreatureStage(Math.min(data.creature.stage, 4) as CreatureStage);
       setGrowthPercent(Math.min(Math.round((data.creature.waterCount / 45) * 100), 100));
-      // 물주기 후 타이머 진행도 2시간 리셋
+      // 물주기 후 타이머 30분 차감
       useTimerStore.getState().resetWaterProgress();
     } catch { /* 실패 시 조용히 무시 */ }
   }
