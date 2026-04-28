@@ -9,6 +9,7 @@ dist
 .next
 out
 build
+tsconfig.tsbuildinfo
 
 # Turbo
 .turbo
