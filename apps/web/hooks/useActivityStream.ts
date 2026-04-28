@@ -7,6 +7,8 @@ export type ActivityMap = Record<string, number>;
 
 let aliasCache: Record<string, string> | null = null;
 
+export function _resetAliasCache() { aliasCache = null; }
+
 async function loadAlias(): Promise<Record<string, string>> {
   if (aliasCache) return aliasCache;
   try {

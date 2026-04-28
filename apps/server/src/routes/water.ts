@@ -1,31 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
 import { broadcastToDong } from './sse';
+import { calcStage, getKstDateString, checkDailyCapExceeded } from './water.logic';
 
 export const waterRouter = Router();
-
-// 단계 진화 임계값 (동네 전체 누적 물주기 수 기준)
-const STAGE_THRESHOLDS = [0, 5, 12, 25, 45];
-
-function calcStage(totalWaters: number): number {
-  let stage = 0;
-  for (let i = STAGE_THRESHOLDS.length - 1; i >= 0; i--) {
-    if (totalWaters >= STAGE_THRESHOLDS[i]!) {
-      stage = i;
-      break;
-    }
-  }
-  return stage;
-}
-
-function getKstDateString(): string {
-  return new Date().toLocaleDateString('ko-KR', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).replace(/\. /g, '-').replace(/\.$/, '');
-}
 
 // POST /water — 물 주기
 waterRouter.post('/', async (req: Request, res: Response) => {
@@ -41,13 +19,13 @@ waterRouter.post('/', async (req: Request, res: Response) => {
 
   const today = getKstDateString();
 
-  // 오늘 이미 3회 이상 물 줬는지 확인
-  const todayWaters = await prisma.wateringLog.count({
-    where: { userId, date: today },
+  // 오늘 누적 집중 시간이 6시간(21600초)을 초과했는지 확인
+  const daily = await prisma.dailySession.findUnique({
+    where: { userId_date: { userId, date: today } },
   });
 
-  if (todayWaters >= 3) {
-    return res.status(409).json({ error: '오늘 물주기를 모두 사용했습니다.' });
+  if (checkDailyCapExceeded(daily?.elapsedSec ?? 0)) {
+    return res.status(409).json({ error: '오늘 최대 집중 시간에 도달했습니다.' });
   }
 
   // 물주기 기록 생성 + Creature 업데이트 (트랜잭션)
@@ -91,8 +69,9 @@ waterRouter.post('/', async (req: Request, res: Response) => {
     data: { dongCode, stage: creature.stage, waterCount: creature.waterCount },
   });
 
+  const myWaterCount = (daily?.waterCount ?? 0) + 1;
   return res.json({
-    myWaterCount: todayWaters + 1,
+    myWaterCount,
     creature: { stage: creature.stage, waterCount: creature.waterCount },
   });
 });

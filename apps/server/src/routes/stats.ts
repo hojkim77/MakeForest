@@ -1,67 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
+import { getKstDateString, addDays, calcStreak } from './stats.logic';
 
 export const statsRouter = Router();
-
-function getKstDateString(offsetDays = 0): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetDays);
-  return d.toLocaleDateString('ko-KR', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).replace(/\. /g, '-').replace(/\.$/, '');
-}
-
-function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr + 'T00:00:00+09:00');
-  d.setDate(d.getDate() + days);
-  return d.toLocaleDateString('ko-KR', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).replace(/\. /g, '-').replace(/\.$/, '');
-}
-
-function calcStreak(datesWithWater: string[], today: string): { current: number; max: number } {
-  if (datesWithWater.length === 0) return { current: 0, max: 0 };
-
-  const sorted = [...datesWithWater].sort().reverse(); // DESC
-  const yesterday = addDays(today, -1);
-
-  let current = 0;
-  // 연속 스트릭: 오늘 또는 어제부터 거슬러 올라감
-  const startDate = sorted[0] === today || sorted[0] === yesterday ? sorted[0] : null;
-  if (startDate) {
-    let expected = startDate;
-    for (const date of sorted) {
-      if (date === expected) {
-        current++;
-        expected = addDays(expected, -1);
-      } else {
-        break;
-      }
-    }
-  }
-
-  // 역대 최장 스트릭
-  const ascSorted = [...datesWithWater].sort();
-  let max = 0;
-  let run = 1;
-  for (let i = 1; i < ascSorted.length; i++) {
-    if (ascSorted[i] === addDays(ascSorted[i - 1]!, 1)) {
-      run++;
-    } else {
-      max = Math.max(max, run);
-      run = 1;
-    }
-  }
-  max = Math.max(max, run);
-
-  return { current, max };
-}
 
 // GET /stats/me?userId=...&dongCode=...
 statsRouter.get('/me', async (req: Request, res: Response) => {
