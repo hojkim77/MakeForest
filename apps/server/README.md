@@ -1,4 +1,4 @@
-# MakeForest — 백엔드 서버 기술 명세서
+# MakeForest — 백엔드 서버
 
 > `apps/server` — Express + TypeScript 기반 API 서버
 
@@ -10,24 +10,14 @@
 2. [디렉토리 구조](#디렉토리-구조)
 3. [환경변수](#환경변수)
 4. [실행 방법](#실행-방법)
-5. [인증 구조](#인증-구조)
-6. [API 엔드포인트](#api-엔드포인트)
-   - [Sessions (세션)](#sessions-세션)
-   - [Harvest (수확)](#harvest-수확)
-   - [Water (물주기)](#water-물주기)
-   - [Creature (동네 생명체)](#creature-동네-생명체)
-   - [Map (지도)](#map-지도)
-   - [Stats (통계)](#stats-통계)
-   - [SSE (실시간 이벤트)](#sse-실시간-이벤트)
-7. [데이터 모델](#데이터-모델)
-8. [Redis 저장 구조](#redis-저장-구조)
-9. [비즈니스 로직](#비즈니스-로직)
-   - [세션 생명주기](#세션-생명주기)
-   - [생명체 수확 알고리즘](#생명체-수확-알고리즘)
-   - [물주기 및 진화](#물주기-및-진화)
-   - [자정 배치 (Cron)](#자정-배치-cron)
-10. [에러 처리](#에러-처리)
-11. [SSE 브로드캐스트 구조](#sse-브로드캐스트-구조)
+5. [전체 흐름](#전체-흐름)
+6. [인증 구조](#인증-구조)
+7. [API 엔드포인트](#api-엔드포인트)
+8. [SSE 실시간 이벤트](#sse-실시간-이벤트)
+9. [데이터 모델](#데이터-모델)
+10. [Redis 저장 구조](#redis-저장-구조)
+11. [비즈니스 로직](#비즈니스-로직)
+12. [에러 처리](#에러-처리)
 
 ---
 
@@ -37,7 +27,7 @@
 |---|---|
 | 런타임 | Node.js + TypeScript (tsx) |
 | 프레임워크 | Express 4 |
-| 데이터베이스 | Supabase PostgreSQL, Prisma ORM |
+| 데이터베이스 | Supabase PostgreSQL + Prisma ORM |
 | 캐시 / 실시간 상태 | Upstash Redis (HTTP REST) |
 | 실시간 통신 | Server-Sent Events (SSE) |
 | 스케줄러 | node-cron |
@@ -55,15 +45,13 @@ apps/server/
 │   │   └── auth.ts           # x-internal-secret 인증 미들웨어
 │   ├── routes/
 │   │   ├── sessions.ts       # 세션 생성·조회·상태 변경
-│   │   ├── harvest.ts        # 수확 (세션 완료 → 생명체 생성)
 │   │   ├── water.ts          # 물주기 + 동네 생명체 진화
 │   │   ├── creature.ts       # 동네 생명체 조회
-│   │   ├── map.ts            # 픽셀 좌표, 활성도, 활성도 SSE
+│   │   ├── map.ts            # 픽셀 좌표, 활성도 스냅샷, 활성도 SSE
 │   │   ├── stats.ts          # 마이페이지 통계
-│   │   └── sse.ts            # 동네별 SSE 스트림 + 브로드캐스트
+│   │   └── sse.ts            # 동네별 SSE 스트림 + 브로드캐스트 헬퍼
 │   └── cron/
-│       ├── midnight.ts       # 자정 배치 작업
-│       └── CLAUDE.md         # 자정 배치 사양 (미구현 포함)
+│       └── midnight.ts       # 자정 배치 작업 (KST 00:00)
 ├── package.json
 ├── tsconfig.json
 └── .env
@@ -76,7 +64,7 @@ apps/server/
 ```bash
 # 서버
 PORT=4000
-CLIENT_ORIGIN=http://localhost:3000       # CORS 허용 Origin (Next.js)
+CLIENT_ORIGIN=http://localhost:3000        # CORS 허용 Origin (Next.js)
 
 # 데이터베이스 (Supabase PostgreSQL)
 DATABASE_URL=postgresql://...?pgbouncer=true   # 커넥션 풀링 (런타임)
@@ -86,7 +74,7 @@ DIRECT_URL=postgresql://...                     # 직접 연결 (마이그레이
 UPSTASH_REDIS_REST_URL=https://...
 UPSTASH_REDIS_REST_TOKEN=...
 
-# 내부 API 인증 (선택, 개발 환경에서는 미설정 시 자동 통과)
+# 내부 API 인증 (미설정 시 개발 환경에서 자동 통과)
 INTERNAL_API_SECRET=...
 ```
 
@@ -110,42 +98,121 @@ pnpm type-check
 
 ---
 
+## 전체 흐름
+
+### 요청 경로
+
+```
+브라우저 (Next.js :3000)
+  │
+  ├─ 읽기 API (지도, 생명체, 통계) ──────────────→ Express :4000
+  │
+  ├─ 쓰기 API (세션, 물주기, 수확)
+  │    └─ Next.js API Route
+  │         ├─ 세션 쿠키로 userId 검증
+  │         ├─ x-internal-secret 헤더 추가
+  │         └────────────────────────────────────→ Express :4000
+  │
+  └─ SSE 연결 (실시간)
+       ├─ /sse/:dongCode ──────────────────────→ Express :4000
+       └─ /map/activity-stream ──────────────→ Express :4000
+```
+
+### 타이머 시작 → 지도 반영 흐름
+
+```
+① 유저가 타이머 시작 버튼 클릭
+② POST /api/sessions  (Next.js API Route)
+③ POST /sessions      (Express)
+   ├─ DB: FocusSession 생성 (RUNNING)
+   └─ 백그라운드:
+        ├─ Redis: session:{id} 캐시 저장 (TTL 6h)
+        ├─ Redis: dong:{dongCode}:active Set에 sessionId 추가
+        ├─ Redis: heatmap:dong Hash 카운트 갱신
+        ├─ SSE → /map/activity-stream 구독자: heatmap:update 브로드캐스트
+        └─ SSE → /sse/:dongCode 구독자: dong:users 브로드캐스트
+④ 브라우저 EventSource 수신
+   ├─ heatmap:update → 지도 픽셀 색상 즉시 갱신 (초록 명도)
+   └─ dong:users     → 동네 패널 활성 유저 목록 갱신
+```
+
+> Redis·SSE 처리는 DB 응답과 분리된 백그라운드 작업이므로, Redis가 간헐적으로 실패해도 세션 생성 응답(200)에 영향을 주지 않는다.
+
+### 세션 상태별 Redis 동기화
+
+```
+RUNNING ──pause──→ PAUSED     : dong:active에서 제거, 히트맵 -1, SSE 브로드캐스트
+PAUSED ──resume──→ RUNNING    : dong:active에 추가, 히트맵 +1, SSE 브로드캐스트
+RUNNING ──complete──→ COMPLETED : dong:active에서 제거, 히트맵 -1, SSE 브로드캐스트
+ANY ──abandon──→ ABANDONED    : dong:active에서 제거, 히트맵 -1, SSE 브로드캐스트
+```
+
+### 물주기 흐름
+
+```
+① 유저가 물주기 버튼 클릭 (30분 누적 후 활성화)
+② POST /api/water  (Next.js API Route)
+③ POST /water      (Express)
+   └─ DB 트랜잭션:
+        ├─ WateringLog 생성
+        ├─ Creature.waterCount +1, stage 재계산
+        └─ DailySession.waterCount +1
+④ SSE → /sse/:dongCode 구독자:
+   ├─ water:toast     (토스트 알림: "OOO님이 물을 줬어요 💧")
+   └─ creature:update (경험치 바 + 진화 단계 갱신)
+```
+
+### SSE 연결 구조
+
+서버는 SSE 채널을 두 개 운영한다.
+
+| 채널 | 엔드포인트 | 구독 단위 | 전달 데이터 |
+|---|---|---|---|
+| 동네 채널 | `/sse/:dongCode` | 동네별 | dong:users, water:toast, creature:update |
+| 히트맵 채널 | `/map/activity-stream` | 전체 공통 | heatmap:update |
+
+```
+         ┌─────────────────────────────────────┐
+         │           Express SSE               │
+         │                                     │
+sessions ──→ broadcastHeatmap() ──→ /map/activity-stream 구독자들
+         │                                     │
+water    ──→ broadcastToDong()  ──→ /sse/:dongCode 구독자들
+         │                                     │
+         └─────────────────────────────────────┘
+```
+
+---
+
 ## 인증 구조
 
-서버는 두 종류의 API를 운영한다.
+**공개 API** — 인증 없이 접근 (읽기 전용)
 
-**공개 API** — 인증 없이 접근 가능 (읽기 전용)
-- `/sse`, `/map`, `/creature`, `/stats`, `/health`
+```
+GET  /sse/:dongCode
+GET  /map/*
+GET  /creature/:dongCode
+GET  /stats/me
+GET  /health
+```
 
 **내부 API** — `requireInternalAuth` 미들웨어 적용
-- `/sessions`, `/harvest`, `/water`
-- Next.js API Route가 세션을 검증한 뒤 `x-internal-secret` 헤더를 붙여 호출
-- 헤더 값이 `INTERNAL_API_SECRET`과 일치하지 않으면 401 반환
-- 개발 환경(`INTERNAL_API_SECRET` 미설정)에서는 자동 통과
-
-**사용자 신원 전달 방식**
-- Express 서버는 자체적으로 소셜 로그인을 처리하지 않음
-- Next.js가 사용자 신원을 검증한 뒤 `userId`를 요청 body에 포함시켜 전달
 
 ```
-클라이언트 → Next.js (소셜 로그인·세션 쿠키 검증)
-               ↓
-             Express (x-internal-secret + body.userId)
-               ↓
-             PostgreSQL / Redis
+POST   /sessions
+GET    /sessions/:id
+PATCH  /sessions/:id
+POST   /water
+GET    /water/me
 ```
+
+Next.js API Route가 소셜 로그인 세션을 검증한 뒤 `x-internal-secret` 헤더를 추가하고 `userId`를 body에 포함하여 Express를 호출한다. Express는 별도의 사용자 인증을 수행하지 않는다.
 
 ---
 
 ## API 엔드포인트
 
-### Sessions (세션)
-
-> 집중 세션의 생명주기를 관리한다. 모두 내부 API (인증 필요).
-
----
-
-#### `POST /sessions` — 세션 시작
+### `POST /sessions` — 세션 시작
 
 **Request Body**
 
@@ -153,8 +220,8 @@ pnpm type-check
 {
   userId: string
   dongCode: string
-  durationSec: number       // 목표 집중 시간 (초)
-  todos: { text: string }[] // 오늘의 할 일 목록
+  durationSec: number        // 목표 집중 시간 (초)
+  todos: { text: string }[]
 }
 ```
 
@@ -163,20 +230,19 @@ pnpm type-check
 ```ts
 {
   sessionId: string
-  startedAt: string  // ISO 8601
+  startedAt: string   // ISO 8601
 }
 ```
 
 **처리 순서**
-1. 기존 `RUNNING` 세션 → `ABANDONED` 처리 (중복 방지)
-2. DB에 세션 생성 (`status: RUNNING`)
-3. Redis에 세션 캐시 저장 (TTL 6시간)
-4. 동네 활성 세션 목록(`dongActive`)에 추가
-5. `dong:users` SSE 브로드캐스트
+1. 기존 `RUNNING` 세션 → `ABANDONED` (중복 방지)
+2. DB에 `FocusSession` 생성 (`status: RUNNING`)
+3. **응답 반환** ← DB 완료 즉시
+4. 백그라운드: Redis 캐시 + dong:active 갱신 + 히트맵 broadcast + dong:users broadcast
 
 ---
 
-#### `GET /sessions/:id` — 세션 조회
+### `GET /sessions/:id` — 세션 조회
 
 **Response**
 
@@ -186,89 +252,41 @@ pnpm type-check
   userId: string
   dongCode: string
   startedAt: string
+  endedAt: string | null
   durationSec: number
-  actualSec: number | null
-  todos: { text: string; done: boolean }[]
-  status: SessionStatus
+  todos: { id: string; text: string; done: boolean }[]
+  status: 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'ABANDONED'
 }
 ```
 
 ---
 
-#### `PATCH /sessions/:id` — 세션 상태 변경
+### `PATCH /sessions/:id` — 세션 상태 변경
 
 **Request Body**
 
 ```ts
-{
-  action: 'pause' | 'resume' | 'complete' | 'abandon'
-  elapsedSec?: number  // complete 시 필수
-}
+{ action: 'pause' | 'resume' | 'complete' | 'abandon' }
 ```
 
 **상태 전이**
 
 ```
-RUNNING ──pause──→ PAUSED
-PAUSED ──resume──→ RUNNING
-RUNNING ──complete──→ COMPLETED   (수확 가능)
-RUNNING|PAUSED ──abandon──→ ABANDONED
+RUNNING  ──pause────→ PAUSED
+PAUSED   ──resume───→ RUNNING
+RUNNING  ──complete─→ COMPLETED
+RUNNING  ──abandon──→ ABANDONED
+PAUSED   ──abandon──→ ABANDONED
 ```
 
-- `complete` 시 `actualSec`을 DB에 기록, `DailySession.elapsedSec` 누적
-- SSE로 동네에 상태 변경 브로드캐스트
+**처리 순서**
+1. DB `FocusSession.status` 업데이트
+2. **응답 반환** ← DB 완료 즉시
+3. 백그라운드: Redis dong:active 갱신 + 히트맵 broadcast + dong:users broadcast + 세션 캐시 status 동기화
 
 ---
 
-### Harvest (수확)
-
-> 완료된 세션을 바탕으로 생명체를 생성한다. 내부 API (인증 필요).
-
----
-
-#### `POST /harvest/:sessionId` — 수확
-
-**Request Body**
-
-```ts
-{ userId: string }
-```
-
-**Response**
-
-```ts
-{
-  forestObject: {
-    id: string
-    creatureType: string
-    forestX: number
-    forestY: number
-    date: string
-  }
-}
-```
-
-**검증 조건**
-- 세션 `status === 'COMPLETED'` 여야 함
-- `actualSec >= 60` (최소 1분)
-- 오늘(KST) 이미 수확한 `ForestObject`가 없어야 함
-
-**처리 순서 (트랜잭션)**
-1. 빈 좌표 탐색 (동네 100×100 그리드)
-2. 생명체 타입 결정 (집중 시간 + 계절 가중치)
-3. `ForestObject` 생성
-4. 세션 `status → HARVESTED`
-5. SSE로 `forest:new` 브로드캐스트
-
----
-
-### Water (물주기)
-
-> 동네 생명체에 물을 주고 진화 단계를 업데이트한다. 내부 API (인증 필요).
-
----
-
-#### `POST /water` — 물주기
+### `POST /water` — 물주기
 
 **Request Body**
 
@@ -284,217 +302,172 @@ RUNNING|PAUSED ──abandon──→ ABANDONED
 
 ```ts
 {
-  myWaterCount: number      // 오늘 내가 준 물 횟수 (최대 3)
+  myWaterCount: number   // 오늘 내가 준 횟수 (최대 3)
   creature: {
-    stage: number           // 0~4
-    waterCount: number      // 동네 누적 물주기 수
+    stage: number        // 0~4
+    waterCount: number   // 동네 누적 물주기 수
   }
 }
 ```
 
-**검증 조건**
-- 오늘(KST) `WateringLog` 3회 미만이어야 함 → 초과 시 409
+**검증**: 오늘(KST) `WateringLog` 3회 미만 → 초과 시 409
 
-**처리 순서 (트랜잭션)**
-1. `WateringLog` 기록
-2. `Creature.waterCount` +1
-3. stage 재계산 (임계값 기준)
-4. `DailySession.waterCount` +1
-5. SSE `water:toast` + `creature:update` 브로드캐스트
+**처리 순서 (DB 트랜잭션)**
+1. `WateringLog` 생성
+2. `Creature.waterCount` +1, `stage` 재계산
+3. `DailySession.waterCount` +1
+4. SSE `water:toast` + `creature:update` 브로드캐스트
 
 ---
 
-#### `GET /water/me` — 오늘 내 물주기 횟수 조회
+### `GET /water/me` — 오늘 내 물주기 횟수
 
-**Query Params**
+**Query Params**: `userId`, `date` (YYYY-MM-DD, 생략 시 오늘 KST)
 
-```
-userId: string
-date: string  // YYYY-MM-DD (KST)
-```
-
-**Response**
-
-```ts
-{ waterCount: number }
-```
+**Response**: `{ waterCount: number, date: string }`
 
 ---
 
-### Creature (동네 생명체)
-
----
-
-#### `GET /creature/:dongCode` — 동네 생명체 상태 조회
+### `GET /creature/:dongCode` — 동네 생명체 조회
 
 **Response**
 
 ```ts
 {
   stage: number       // 0~4 (없으면 0)
-  waterCount: number  // 동네 누적 물주기 수 (없으면 0)
+  waterCount: number  // 동네 누적 물주기 수
   date: string        // YYYY-MM-DD (KST)
 }
 ```
 
 ---
 
-### Map (지도)
+### `GET /map/pixel-data` — 행정동 픽셀 좌표
 
----
+한반도 위경도(33.0°~38.9°N, 124.6°~131.0°E)를 250×290 그리드로 변환한 좌표를 반환한다.
 
-#### `GET /map/pixel-data` — 행정동 픽셀 좌표 목록
-
-한반도 위경도 범위(33.0°~38.9°N, 124.6°~131.0°E)를 250×290 픽셀 그리드로 변환한 좌표를 반환한다.
-
-**Response**
-
-```ts
-{
-  dongCode: string
-  name: string
-  pixelX: number
-  pixelY: number
-}[]
-```
+**Response**: `{ dongCode, name, pixelX, pixelY }[]`
 
 **캐시**: `Cache-Control: public, max-age=86400` (24시간)
 
 ---
 
-#### `GET /map/activity` — 동네별 활성 유저 수 스냅샷
+### `GET /map/activity` — 활성도 스냅샷
 
-**Response**
+Redis `heatmap:dong` Hash에서 직접 조회한다.
 
-```ts
-{ [dongCode: string]: number }
-```
-
-Redis `heatmap:dong` 해시에서 직접 조회한다.
+**Response**: `{ [dongCode: string]: number }`
 
 ---
 
-#### `GET /map/activity-stream` — 활성도 SSE 스트림
+### `GET /map/activity-stream` — 활성도 SSE
 
 - 연결 즉시 현재 히트맵 전송
 - 이후 10초 간격으로 `heatmap:update` 이벤트 전송
-- 30초 간격으로 핑 전송 (연결 유지)
+- 30초 간격으로 ping 전송 (연결 유지)
 
 ---
 
-### Stats (통계)
+### `GET /stats/me` — 마이페이지 통계
 
----
-
-#### `GET /stats/me` — 마이페이지 통계
-
-**Query Params**
-
-```
-userId: string
-dongCode: string
-```
+**Query Params**: `userId`, `dongCode`
 
 **Response**
 
 ```ts
 {
-  totalFocusSec: number      // 전체 누적 집중 시간 (초)
-  currentStreak: number      // 현재 연속 물주기 일수
-  maxStreak: number          // 역대 최장 스트릭
-  neighborhoodRank: number   // 동네 내 물주기 누적 순위
-  neighborhoodTotal: number  // 동네 전체 유저 수
-  weeklyData: {              // 최근 4주 주간 물주기
-    week: string
-    waterCount: number
-  }[]
-  weeklyAvg: number          // 4주 평균 물주기
-  collection: {              // 생명체 도감
-    seed: number
-    sprout: number
-    grass: number
-    tree: number
-  }
+  totalFocusSec: number       // 전체 누적 집중 시간
+  currentStreak: number       // 현재 연속 물주기 일수
+  maxStreak: number           // 역대 최장 스트릭
+  neighborhoodRank: number    // 동네 내 물주기 순위
+  neighborhoodTotal: number   // 동네 전체 유저 수
+  weeklyData: { week: number; waterCount: number }[]  // 최근 4주
+  weeklyAvg: number
+  collection: { seed: number; sprout: number; grass: number; tree: number }
   dongName: string
 }
 ```
 
 ---
 
-### SSE (실시간 이벤트)
+## SSE 실시간 이벤트
 
----
+### `/sse/:dongCode` — 동네 채널
 
-#### `GET /sse/:dongCode` — 동네 실시간 이벤트 스트림
+연결 시 현재 동네 활성 유저 목록(`dong:users`)을 즉시 전송하고, 이후 이벤트를 push한다.
 
-연결 시 해당 동네의 현재 활성 세션 목록(`dong:users`)을 즉시 전송한다.
-이후 동네에 이벤트 발생 시 서버가 push 한다.
-
-**30초 간격 핑으로 연결 유지.**
-
-**이벤트 종류**
-
-| 이벤트명 | 발신 시점 | 데이터 |
+| 이벤트 | 발신 시점 | 데이터 |
 |---|---|---|
-| `dong:users` | 연결 시, 세션 시작/종료 시 | 동네 활성 유저 목록 |
-| `forest:new` | 수확 완료 시 | 새로 생긴 생명체 정보 |
-| `creature:update` | 물주기 시 | `{ stage, waterCount }` |
-| `water:toast` | 물주기 시 | `{ nickname }` |
-| `heatmap:update` | 활성도 변경 시 | `{ dongCode: count }` |
-| `session:update` | 세션 상태 변경 시 | `{ sessionId, status }` |
+| `dong:users` | 연결 시 / 세션 시작·일시정지·재개·종료 시 | `{ dongCode, users: [{ nickname, elapsedSec, todos }] }` |
+| `water:toast` | 물주기 성공 시 | `{ dongCode, nickname }` |
+| `creature:update` | 물주기 후 단계 변경 시 | `{ dongCode, stage, waterCount }` |
+### `/map/activity-stream` — 히트맵 채널
+
+| 이벤트 | 발신 시점 | 데이터 |
+|---|---|---|
+| `heatmap:update` | 연결 시 / 세션 시작·종료·일시정지·재개 시 / 10초 간격 | `{ [dongCode]: number }` |
+
+> **클라이언트 재연결**: 연결 오류 시 지수 백오프(1s → 2s → ... 최대 30s)로 자동 재연결한다.
 
 ---
 
 ## 데이터 모델
 
-> 전체 스키마 정의는 `packages/db/` 참고.
-
 ```
 User
-  id, provider, providerId, nickname, avatarUrl, dongCode, todosPublic
+  id, provider, providerId, nickname, avatarUrl
+  dongCode        ← 내 동네 행정동 코드
+  todosPublic     ← 할 일 공개 여부
 
-FocusSession
+FocusSession      ← 집중 세션 1회
   id, userId, dongCode
-  startedAt, endedAt
-  durationSec (목표), actualSec (실제)
+  startedAt, endedAt         (UTC)
+  durationSec                 목표 시간
   todos: Json
-  status: RUNNING | PAUSED | COMPLETED | HARVESTED | ABANDONED
+  status: RUNNING | PAUSED | COMPLETED | ABANDONED
 
-ForestObject
-  id, userId, sessionId, dongCode
-  forestX (0~99), forestY (0~99)
-  creatureType, harvestedAt
-  date: YYYY-MM-DD (KST)
+Fossil            ← 자정 cron이 박제한 동네 생명체 (영구 기록)
+  dongCode, date  (unique pair)
+  creatureType, stage  최종 종류·단계
+  fossilX, fossilY    (동네 내 격자 좌표)
 
-Dong
+Dong              ← 행정동 마스터
   code, name, sigunguCode, sidoCode, lat, lng
 
-Creature                              ← 오늘의 동네 생명체
-  id, dongCode, date
+Creature          ← 오늘의 동네 생명체
+  dongCode, date  (unique pair)
   stage (0~4), waterCount
-  UNIQUE(dongCode, date)
+  → 매일 자정 초기화
 
-WateringLog                           ← 물주기 이력
-  id, userId, dongCode, date
+WateringLog       ← 물주기 이력
+  userId, dongCode, date
 
-DailySession                          ← 유저별 날짜별 집계
-  id, userId, date
-  elapsedSec (누적 집중 시간)
-  waterCount (오늘 내가 준 물, 0~3)
-  UNIQUE(userId, date)
+DailySession      ← 유저별 날짜별 집계
+  userId, date    (unique pair)
+  elapsedSec      누적 집중 시간
+  waterCount      오늘 물주기 횟수 (0~3)
 ```
 
 ---
 
 ## Redis 저장 구조
 
-| 키 패턴 | 타입 | 내용 | TTL |
+| 키 | 타입 | 내용 | TTL |
 |---|---|---|---|
-| `session:{sessionId}` | String (JSON) | 세션 캐시 (userId, dongCode, startedAt 등) | 6시간 |
-| `dong:active:{dongCode}` | Set | 동네의 활성 sessionId 목록 | 없음 |
-| `heatmap:dong` | Hash | dongCode → 현재 활성 유저 수 | 없음 |
+| `session:{sessionId}` | String (JSON) | 세션 캐시 (userId, dongCode, startedAt, status 등) | 6시간 |
+| `dong:{dongCode}:active` | Set | 현재 RUNNING 상태인 sessionId 목록 | 없음 |
+| `heatmap:dong` | Hash | `dongCode → 활성 유저 수` | 없음 |
 
-**세션 캐시 용도**: 브라우저 종료 후 재접속 시 복구 (이어하기 안내)
+**세션 캐시 용도**: SSE 연결 시 활성 유저 목록 즉시 조회 + 브라우저 재접속 시 복구 안내
+
+**dong:active Set 동기화 규칙**
+
+| 세션 상태 | Set 처리 |
+|---|---|
+| RUNNING (새 세션) | `SADD` |
+| PAUSED | `SREM` |
+| RUNNING (재개) | `SADD` |
+| COMPLETED / ABANDONED | `SREM` |
 
 ---
 
@@ -503,131 +476,49 @@ DailySession                          ← 유저별 날짜별 집계
 ### 세션 생명주기
 
 ```
-[시작] POST /sessions
+POST /sessions
   → 기존 RUNNING 세션 ABANDONED
-  → 새 세션 DB + Redis 저장
+  → 새 세션 생성 (RUNNING)
 
-[일시정지] PATCH /sessions/:id { action: pause }
-  → status: PAUSED
-
-[재개] PATCH /sessions/:id { action: resume }
-  → status: RUNNING
-
-[완료] PATCH /sessions/:id { action: complete, elapsedSec }
-  → actualSec 기록
-  → DailySession.elapsedSec 누적
-  → status: COMPLETED
-
-[수확] POST /harvest/:sessionId
-  → ForestObject 생성
-  → status: HARVESTED
-
-[자동 만료] Cron (자정)
-  → 24시간 이상 COMPLETED 미수확 → ABANDONED
+PATCH { action: pause }    → PAUSED        (타이머 일시정지)
+PATCH { action: resume }   → RUNNING       (타이머 재개)
+PATCH { action: complete } → COMPLETED     (타이머 종료)
+PATCH { action: abandon }  → ABANDONED     (포기)
 ```
 
----
+### 물주기 진화 임계값
 
-### 생명체 수확 알고리즘
+동네 전체 누적 `waterCount` 기준
 
-집중 시간(actualSec)을 기준으로 생명체 풀을 결정하고, 계절 가중치를 적용해 최종 타입을 선택한다.
-
-| 집중 시간 | 생명체 풀 |
+| waterCount | stage |
 |---|---|
-| < 30분 | 씨앗류 (SEED, SPROUT) |
-| 30분~1시간 | 풀·꽃류 (GRASS, FLOWER_A, FLOWER_B) |
-| 1~2시간 | 작은 나무 (SAPLING, MUSHROOM, ROCK) |
-| 2~3시간 | 중간 나무 (OAK, PINE, BAMBOO) |
-| 3시간+ | 큰 나무·희귀 (BIG_OAK, CHERRY, RARE_ANIMAL) |
-
-**계절 가중치**
-
-| 계절 | 가중치 적용 타입 |
-|---|---|
-| 봄 | FLOWER_A, FLOWER_B, CHERRY |
-| 여름 | GRASS, BAMBOO |
-| 가을 | MUSHROOM, OAK |
-| 겨울 | PINE, BIG_OAK |
-
-- 실제 집중 시간은 최대 5시간(18,000초)으로 캡
-- 빈 좌표 탐색은 트랜잭션 내에서 원자적으로 처리 (동네 100×100 그리드)
-
----
-
-### 물주기 및 진화
-
-**일일 제한**: 유저 1명당 3회 (KST 기준)
-
-**동네 생명체 진화 임계값** (동네 전체 누적 `waterCount` 기준)
-
-| waterCount 범위 | stage |
-|---|---|
-| 0~4 | 0 (씨앗) |
-| 5~11 | 1 (새싹) |
-| 12~24 | 2 (풀) |
-| 25~44 | 3 (나무) |
+| 0 ~ 4 | 0 (씨앗) |
+| 5 ~ 11 | 1 (새싹) |
+| 12 ~ 24 | 2 (풀) |
+| 25 ~ 44 | 3 (나무) |
 | 45+ | 4 (큰 나무) |
-
----
 
 ### 자정 배치 (Cron)
 
-**실행 시각**: 매일 KST 00:00 (= UTC 15:00)
-**스케줄 표현식**: `0 15 * * *`
+**실행**: 매일 KST 00:00 (`0 15 * * *` UTC)
 
-**현재 구현**
-
-- 24시간 이상 `COMPLETED` 상태로 방치된 세션 → `ABANDONED` 일괄 처리
-
-**구현 예정** (spec, `src/cron/CLAUDE.md` 참고)
-
-1. 당일 물주기 미입력 유저 자동 반영
-2. 동네 생명체 최종 단계 확정
-3. 조건 충족 생명체 박제 (stage ≥ 1 이상만, 씨앗 제외)
-4. 날씨 API + 계절 기반 새 생명체 결정 및 생성
-5. DailySession 초기화
+**구현 예정** (`src/cron/CLAUDE.md` 참고)
+- 당일 물주기 미입력 자동 반영
+- 동네 생명체 최종 단계 확정 및 Fossil 박제 (stage ≥ 1)
+- 새 Creature(씨앗) 생성
+- DailySession 초기화
 
 ---
 
 ## 에러 처리
 
-**HTTP 상태 코드 규칙**
-
-| 코드 | 사용 상황 |
+| 코드 | 상황 |
 |---|---|
 | 200 | 정상 처리 |
 | 400 | 필수 파라미터 누락, 최소 집중 시간 미달 |
 | 401 | 내부 API 인증 실패 |
-| 404 | 세션·리소스 없음 |
-| 409 | 비즈니스 규칙 위반 (물주기 초과, 중복 수확) |
+| 404 | 리소스 없음 |
+| 409 | 물주기 3회 초과 |
+| 500 | DB 오류 (Redis·SSE 오류는 백그라운드 처리되어 응답에 영향 없음) |
 
-**응답 형식**
-
-```ts
-{ error: string }
-```
-
-트랜잭션 실패(Prisma 제약 조건 위반 등)는 400으로 반환한다.
-
----
-
-## SSE 브로드캐스트 구조
-
-`src/routes/sse.ts`에서 동코드별로 연결된 클라이언트 목록을 인메모리 Map으로 관리한다.
-
-```ts
-const clients = new Map<string, Set<Response>>()
-// dongCode → 연결된 Response 객체 Set
-```
-
-다른 라우터에서 이벤트를 발행할 때는 공개 함수를 호출한다.
-
-```ts
-// 특정 동네에만 전송
-broadcastToDong(dongCode, { event: 'creature:update', data: { stage, waterCount } })
-
-// 전체 클라이언트에 전송
-broadcastToAll({ event: 'heatmap:update', data: heatmap })
-```
-
-클라이언트 연결 종료 시 Set에서 제거 및 pingInterval 정리가 자동으로 처리된다.
+**응답 형식**: `{ error: string }`

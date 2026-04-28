@@ -21,23 +21,18 @@ export type CreatureType =
 
 export type ForestBaseLevel = 'BARREN' | 'SPROUT' | 'MEADOW' | 'FOREST' | 'DENSE_FOREST';
 
-export interface ForestObject {
+export interface Fossil {
   id: string;
-  userId: string;
-  sessionId: string;
   dongCode: string;
-  forestX: number;
-  forestY: number;
-  creatureType: CreatureType;
-  harvestedAt: Date;
   date: string; // "YYYY-MM-DD" KST
-}
-
-export interface HarvestResult {
-  forestObject: ForestObject;
+  creatureType: CreatureType;
+  stage: number;
+  fossilX: number;
+  fossilY: number;
+  createdAt: Date;
 }
 
 export interface ForestData {
-  objects: ForestObject[];
+  fossils: Fossil[];
   baseLevel: ForestBaseLevel;
 }

@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import { sseRouter } from './routes/sse';
 import { sessionsRouter } from './routes/sessions';
-import { harvestRouter } from './routes/harvest';
 import { mapRouter } from './routes/map';
 import { waterRouter } from './routes/water';
 import { creatureRouter } from './routes/creature';
@@ -26,7 +25,6 @@ app.use('/stats', statsRouter);
 
 // Internal: require Next.js-issued secret on mutating routes
 app.use('/sessions', requireInternalAuth, sessionsRouter);
-app.use('/harvest', requireInternalAuth, harvestRouter);
 app.use('/water', requireInternalAuth, waterRouter);
 
 app.get('/health', (_req, res) => {

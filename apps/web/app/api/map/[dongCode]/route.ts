@@ -7,17 +7,17 @@ export async function GET(
 ) {
   const { dongCode } = params;
 
-  const objects = await prisma.forestObject.findMany({
+  const fossils = await prisma.fossil.findMany({
     where: { dongCode },
-    orderBy: { harvestedAt: 'asc' },
+    orderBy: { createdAt: 'asc' },
   });
 
-  const count = objects.length;
+  const count = fossils.length;
   const baseLevel =
     count === 0 ? 'BARREN' :
     count <= 50 ? 'SPROUT' :
     count <= 200 ? 'MEADOW' :
     count <= 500 ? 'FOREST' : 'DENSE_FOREST';
 
-  return NextResponse.json({ objects, baseLevel });
+  return NextResponse.json({ fossils, baseLevel });
 }
