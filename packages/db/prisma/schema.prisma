@@ -19,9 +19,10 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  sessions      FocusSession[]
-  wateringLogs  WateringLog[]
-  dailySessions DailySession[]
+  sessions          FocusSession[]
+  wateringLogs      WateringLog[]
+  dailySessions     DailySession[]
+  pushSubscriptions PushSubscription[]
 
   @@unique([provider, providerId])
   @@index([dongCode])
@@ -110,6 +111,19 @@ model DailySession {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
+  @@index([userId])
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 

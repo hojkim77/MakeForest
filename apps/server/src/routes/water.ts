@@ -7,10 +7,11 @@ export const waterRouter = Router();
 
 // POST /water — 물 주기
 waterRouter.post('/', async (req: Request, res: Response) => {
-  const { userId, dongCode, nickname } = req.body as {
+  const { userId, dongCode, nickname, totalElapsedSec } = req.body as {
     userId: string;
     dongCode: string;
     nickname: string;
+    totalElapsedSec?: number;
   };
 
   if (!userId || !dongCode) {
@@ -19,14 +20,15 @@ waterRouter.post('/', async (req: Request, res: Response) => {
 
   const today = getKstDateString();
 
-  // 오늘 누적 집중 시간이 6시간(21600초)을 초과했는지 확인
+  // 클라이언트가 계산한 누적 집중 시간(myWaterCount*1800 + elapsedSec)으로 6시간 캡 검사
+  const effectiveElapsedSec = totalElapsedSec ?? 0;
+  if (checkDailyCapExceeded(effectiveElapsedSec)) {
+    return res.status(409).json({ error: '오늘 최대 집중 시간에 도달했습니다.' });
+  }
+
   const daily = await prisma.dailySession.findUnique({
     where: { userId_date: { userId, date: today } },
   });
-
-  if (checkDailyCapExceeded(daily?.elapsedSec ?? 0)) {
-    return res.status(409).json({ error: '오늘 최대 집중 시간에 도달했습니다.' });
-  }
 
   // 물주기 기록 생성 + Creature 업데이트 (트랜잭션)
   const [, creature] = await prisma.$transaction(async (tx) => {
@@ -47,11 +49,11 @@ waterRouter.post('/', async (req: Request, res: Response) => {
       create: { dongCode, date: today, waterCount: newWaterCount, stage: newStage },
     });
 
-    // DailySession 업데이트 (내 물주기 횟수)
+    // DailySession 업데이트 (물주기 횟수 + 누적 집중 시간)
     await tx.dailySession.upsert({
       where: { userId_date: { userId, date: today } },
-      update: { waterCount: { increment: 1 } },
-      create: { userId, date: today, elapsedSec: 0, waterCount: 1 },
+      update: { waterCount: { increment: 1 }, elapsedSec: effectiveElapsedSec },
+      create: { userId, date: today, elapsedSec: effectiveElapsedSec, waterCount: 1 },
     });
 
     return [log, updated];

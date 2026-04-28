@@ -7,14 +7,13 @@ import { Icon } from '@/components/ui/Icon';
 import { LoginPrompt } from './LoginPrompt';
 import { SloganSection } from './SloganSection';
 import { CreatureSection } from './CreatureSection';
-import { TimerSection } from './TimerSection';
+import { TimerWaterSection } from './TimerWaterSection';
 import { TaskList } from './TaskList';
 import { NeighborhoodStats } from './NeighborhoodStats';
 import { NeighborhoodSearch } from './NeighborhoodSearch';
 import { WaterToast } from './WaterToast';
 
 const WATER_THRESHOLD_SEC = 30 * 60;
-const MAX_ACCUMULATION_SEC = 2 * 60 * 60;
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
 
 type CreatureStage = 0 | 1 | 2 | 3 | 4;
@@ -22,7 +21,7 @@ type CreatureStage = 0 | 1 | 2 | 3 | 4;
 export function Panel() {
   const { data: session, status } = useSession();
   const { focusedDongCode, focusDong } = useMapStore();
-  const { status: timerStatus, elapsedSec, todos, addTodo, toggleTodo, start, pause } = useTimerStore();
+  const { status: timerStatus, elapsedSec, autoPaused, todos, addTodo, toggleTodo, start, pause } = useTimerStore();
   const isLoggedIn = status === 'authenticated' && !!session?.user?.id;
   const myDongCode = session?.user?.dongCode ?? null;
   const isPeeking = focusedDongCode !== null && focusedDongCode !== myDongCode;
@@ -30,24 +29,20 @@ export function Panel() {
 
   const neighborhoodName = activeDongCode ?? '내 동네';
 
-  // 생명체 & 물주기 상태
   const [creatureStage, setCreatureStage] = useState<CreatureStage>(0);
   const [myWaterCount, setMyWaterCount] = useState(0);
   const [growthPercent, setGrowthPercent] = useState(0);
 
-  // 생명체 데이터 fetch
   const fetchCreature = useCallback(async (dongCode: string) => {
     try {
       const res = await fetch(`/api/creature/${dongCode}`);
       if (!res.ok) return;
       const data = await res.json() as { stage: number; waterCount: number };
       setCreatureStage(Math.min(data.stage, 4) as CreatureStage);
-      // 동네 전체 물주기 수를 기반으로 경험치 바 계산 (45회 = 100%)
       setGrowthPercent(Math.min(Math.round((data.waterCount / 45) * 100), 100));
     } catch { /* 실패 시 기본값 유지 */ }
   }, []);
 
-  // 내 물주기 횟수 fetch
   const fetchMyWaterCount = useCallback(async () => {
     if (!isLoggedIn) return;
     try {
@@ -58,7 +53,6 @@ export function Panel() {
     } catch { /* 실패 시 기본값 유지 */ }
   }, [isLoggedIn]);
 
-  // 동네 변경 or 최초 로드 시 데이터 fetch
   useEffect(() => {
     if (!activeDongCode) return;
     fetchCreature(activeDongCode);
@@ -68,7 +62,6 @@ export function Panel() {
     fetchMyWaterCount();
   }, [fetchMyWaterCount]);
 
-  // SSE: creature:update 구독 (동네 생명체 실시간 반영)
   const sseRef = useRef<EventSource | null>(null);
   useEffect(() => {
     if (!activeDongCode) return;
@@ -86,7 +79,6 @@ export function Panel() {
     return () => { es.close(); sseRef.current = null; };
   }, [activeDongCode]);
 
-  // 타이머 시작 — DB 세션 생성 후 로컬 타이머 시작
   async function handleStart() {
     if (!isLoggedIn) return;
     try {
@@ -103,7 +95,6 @@ export function Panel() {
     start();
   }
 
-  // 타이머 중지 — DB 세션 complete 처리
   async function handleStop() {
     pause();
     const { sessionId } = useTimerStore.getState();
@@ -117,34 +108,63 @@ export function Panel() {
     } catch { /* 실패 시 조용히 무시 */ }
   }
 
-  // 물주기
+  async function handleResume() {
+    const { sessionId } = useTimerStore.getState();
+    if (sessionId) {
+      try {
+        await fetch(`/api/sessions/${sessionId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'resume' }),
+        });
+      } catch { /* 실패 시 조용히 무시 */ }
+    }
+    start();
+  }
+
   async function handleWater() {
+    const totalElapsedSec = myWaterCount * 1800 + elapsedSec;
     try {
-      const res = await fetch('/api/water', { method: 'POST' });
+      const res = await fetch('/api/water', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ totalElapsedSec }),
+      });
       if (!res.ok) return;
       const data = await res.json() as { myWaterCount: number; creature: { stage: number; waterCount: number } };
       setMyWaterCount(data.myWaterCount);
       setCreatureStage(Math.min(data.creature.stage, 4) as CreatureStage);
       setGrowthPercent(Math.min(Math.round((data.creature.waterCount / 45) * 100), 100));
-      // 물주기 후 타이머 30분 차감
       useTimerStore.getState().resetWaterProgress();
     } catch { /* 실패 시 조용히 무시 */ }
   }
 
   function handleDongSelect(dongCode: string) { focusDong(dongCode); }
 
-  // 물주기 버튼 활성화: 타이머 실행 중 + 30분 이상 누적
+  // 자동 정지(autoPaused) 상태에서도 물주기 허용 — 물을 줘야 재개 가능
   const canWater =
     isLoggedIn &&
     !isPeeking &&
-    timerStatus === 'RUNNING' &&
+    (timerStatus === 'RUNNING' || (timerStatus === 'PAUSED' && autoPaused)) &&
     elapsedSec >= WATER_THRESHOLD_SEC;
+
+  useEffect(() => {
+    if (!autoPaused || !isLoggedIn) return;
+    const { sessionId } = useTimerStore.getState();
+    if (sessionId) {
+      fetch(`/api/sessions/${sessionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'pause' }),
+      }).catch(() => {});
+    }
+    fetch('/api/push/notify', { method: 'POST' }).catch(() => {});
+  }, [autoPaused, isLoggedIn]);
 
   return (
     <aside className="w-[420px] flex-shrink-0 bg-surface-container border-r border-outline-variant flex flex-col h-full overflow-y-auto">
       <div className="flex flex-col gap-xl p-lg flex-1">
 
-        {/* ── Peek mode banner ── */}
         {isPeeking && (
           <button
             onClick={() => focusDong(null)}
@@ -155,31 +175,24 @@ export function Panel() {
           </button>
         )}
 
-        {/* ── Slogan ── */}
         <SloganSection neighborhoodName={neighborhoodName} />
-
-        {/* ── Water toast (SSE) ── */}
         <WaterToast dongCode={activeDongCode} />
 
-        {/* ── Creature + water ── */}
-        <CreatureSection
-          stage={creatureStage}
-          waterCount={myWaterCount}
-          canWater={canWater}
-          onWater={handleWater}
-        />
+        <CreatureSection stage={creatureStage} />
 
-        {/* ── Auth gate: timer + tasks only for logged-in users ── */}
         {isLoggedIn ? (
           <>
             {!isPeeking && (
-              <TimerSection
+              <TimerWaterSection
                 status={timerStatus}
                 elapsedSec={elapsedSec}
-                waterThresholdSec={WATER_THRESHOLD_SEC}
-                maxSec={MAX_ACCUMULATION_SEC}
+                myWaterCount={myWaterCount}
+                canWater={canWater}
+                autoPaused={autoPaused}
                 onStart={handleStart}
                 onStop={handleStop}
+                onResume={handleResume}
+                onWater={handleWater}
               />
             )}
 
@@ -195,13 +208,11 @@ export function Panel() {
           !isPeeking && <LoginPrompt />
         )}
 
-        {/* ── Neighborhood stats ── */}
         <NeighborhoodStats
           neighborhoodName={neighborhoodName}
           growthPercent={growthPercent}
         />
 
-        {/* ── Spacer + search (bottom) ── */}
         <div className="mt-auto pt-md border-t border-outline-variant">
           <NeighborhoodSearch onSelect={handleDongSelect} />
         </div>

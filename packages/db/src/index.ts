@@ -16,8 +16,12 @@ export { PrismaClient } from '@prisma/client';
 export type {
   User,
   FocusSession,
-  ForestObject,
   Dong,
+  DailySession,
+  Creature,
+  Fossil,
+  WateringLog,
+  PushSubscription,
   SessionStatus,
   Prisma,
 } from '@prisma/client';

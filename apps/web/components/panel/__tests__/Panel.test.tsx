@@ -20,18 +20,38 @@ jest.mock('../SloganSection',     () => ({ SloganSection: () => null }));
 jest.mock('../NeighborhoodStats', () => ({ NeighborhoodStats: () => null }));
 jest.mock('../TaskList',          () => ({ TaskList: () => null }));
 jest.mock('../LoginPrompt',       () => ({ LoginPrompt: () => <div>로그인이 필요합니다</div> }));
+jest.mock('../CreatureSection',   () => ({ CreatureSection: () => null }));
 
-jest.mock('../CreatureSection', () => ({
-  CreatureSection: ({ canWater, onWater }: { canWater: boolean; onWater: () => void }) => (
-    <button onClick={onWater} disabled={!canWater} data-testid="water-btn">물주기</button>
-  ),
-}));
-
-jest.mock('../TimerSection', () => ({
-  TimerSection: ({ status, onStart, onStop }: { status: string; onStart: () => void; onStop: () => void }) => (
-    status !== 'RUNNING'
-      ? <button data-testid="start-btn" onClick={onStart}>시작</button>
-      : <button data-testid="stop-btn"  onClick={onStop}>중지</button>
+jest.mock('../TimerWaterSection', () => ({
+  TimerWaterSection: ({
+    status,
+    canWater,
+    autoPaused,
+    onStart,
+    onStop,
+    onResume,
+    onWater,
+  }: {
+    status: string;
+    canWater: boolean;
+    autoPaused?: boolean;
+    onStart: () => void;
+    onStop: () => void;
+    onResume: () => void;
+    onWater: () => void;
+  }) => (
+    <div>
+      {status === 'IDLE' && (
+        <button data-testid="start-btn" onClick={onStart}>시작</button>
+      )}
+      {status === 'RUNNING' && (
+        <button data-testid="stop-btn" onClick={onStop}>중지</button>
+      )}
+      {status === 'PAUSED' && (
+        <button data-testid="resume-btn" onClick={onResume} disabled={autoPaused}>재개</button>
+      )}
+      <button onClick={onWater} disabled={!canWater} data-testid="water-btn">물주기</button>
+    </div>
   ),
 }));
 
@@ -75,7 +95,9 @@ function setupDefaultFetch() {
       return Promise.resolve({ ok: true, json: () => Promise.resolve({
         myWaterCount: 1,
         creature: { stage: 1, waterCount: 5 },
-      })});
+      }) });
+    if (url === '/api/push/notify' && opts?.method === 'POST')
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ sent: 1 }) });
     return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
   });
 }
@@ -134,7 +156,6 @@ describe('타이머 중지', () => {
   it('중지 버튼 클릭 → PATCH /api/sessions/:id 호출', async () => {
     loginSession();
     setupDefaultFetch();
-    // 타이머가 이미 RUNNING 상태로 세팅
     useTimerStore.setState({ status: 'RUNNING', sessionId: 'sess-1' });
     render(<Panel />);
 
@@ -148,11 +169,31 @@ describe('타이머 중지', () => {
   });
 });
 
+describe('타이머 재개', () => {
+  it('재개 버튼 클릭 → PATCH resume 호출', async () => {
+    loginSession();
+    setupDefaultFetch();
+    useTimerStore.setState({ status: 'PAUSED', sessionId: 'sess-1', elapsedSec: 900 });
+    render(<Panel />);
+
+    await waitFor(() => screen.getByTestId('resume-btn'));
+    await act(async () => { fireEvent.click(screen.getByTestId('resume-btn')); });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/sessions/sess-1'),
+      expect.objectContaining({
+        method: 'PATCH',
+        body: expect.stringContaining('"action":"resume"'),
+      }),
+    );
+    expect(useTimerStore.getState().status).toBe('RUNNING');
+  });
+});
+
 describe('물주기 버튼 활성화 조건 (canWater)', () => {
   it('타이머 중지 상태 → 물주기 버튼 disabled', async () => {
     loginSession();
     setupDefaultFetch();
-    // PAUSED 상태, elapsedSec 충분
     useTimerStore.setState({ status: 'PAUSED', elapsedSec: 3600 });
     render(<Panel />);
 
@@ -198,6 +239,59 @@ describe('물주기 성공', () => {
   });
 });
 
+describe('자동 정지 (autoPaused)', () => {
+  it('autoPaused=true 상태에서 재개 버튼 disabled', async () => {
+    loginSession();
+    setupDefaultFetch();
+    useTimerStore.setState({ status: 'PAUSED', elapsedSec: 1800, autoPaused: true });
+    render(<Panel />);
+
+    await waitFor(() => screen.getByTestId('resume-btn'));
+    expect(screen.getByTestId('resume-btn')).toBeDisabled();
+  });
+
+  it('autoPaused=true + elapsedSec=1800 → 물주기 버튼 활성화 (PAUSED 상태에서도)', async () => {
+    loginSession();
+    setupDefaultFetch();
+    useTimerStore.setState({ status: 'PAUSED', elapsedSec: 1800, autoPaused: true });
+    render(<Panel />);
+
+    await waitFor(() => screen.getByTestId('water-btn'));
+    expect(screen.getByTestId('water-btn')).not.toBeDisabled();
+  });
+
+  it('autoPaused 시 POST /api/push/notify 호출', async () => {
+    loginSession();
+    setupDefaultFetch();
+    useTimerStore.setState({ status: 'RUNNING', elapsedSec: 1799, sessionId: 'sess-1' });
+    render(<Panel />);
+
+    await act(async () => {
+      useTimerStore.getState().tick();
+    });
+
+    await waitFor(() =>
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/push/notify',
+        expect.objectContaining({ method: 'POST' }),
+      )
+    );
+  });
+
+  it('물주기 후 autoPaused=false → 재개 버튼 활성화', async () => {
+    loginSession();
+    setupDefaultFetch();
+    useTimerStore.setState({ status: 'PAUSED', elapsedSec: 1800, autoPaused: true, sessionId: 'sess-1' });
+    render(<Panel />);
+
+    await waitFor(() => expect(screen.getByTestId('resume-btn')).toBeDisabled());
+
+    await act(async () => { fireEvent.click(screen.getByTestId('water-btn')); });
+
+    await waitFor(() => expect(screen.getByTestId('resume-btn')).not.toBeDisabled());
+  });
+});
+
 describe('SSE creature:update 수신', () => {
   it('creature:update 이벤트 → 오류 없이 처리', async () => {
     loginSession();
@@ -212,26 +306,23 @@ describe('SSE creature:update 수신', () => {
       sseInstance?.triggerEvent('creature:update', { stage: 3, waterCount: 25 });
     });
 
-    // 오류 없이 처리됐는지 확인
     expect(screen.getByTestId('water-btn')).toBeInTheDocument();
   });
 });
 
 describe('엿보기 모드', () => {
   it('다른 동네 선택 시 타이머 버튼 없음', async () => {
-    // focusedDongCode가 내 동네와 다를 때 isPeeking=true → TimerSection 숨김
     jest.resetModules();
     jest.doMock('@/store/mapStore', () => ({
       useMapStore: () => ({ focusedDongCode: '2222000000', focusDong: jest.fn() }),
     }));
     mockUseSession.mockReturnValue({
-      data: { user: { id: 'user1', dongCode: '1111000000', expires: '' } },
+      data: { user: { id: 'user1', dongCode: '1111000000' }, expires: '' },
       status: 'authenticated',
       update: jest.fn(),
     });
     setupDefaultFetch();
 
-    // 렌더 자체는 오류 없어야 함
     expect(() => render(<Panel />)).not.toThrow();
   });
 });
