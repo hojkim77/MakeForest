@@ -3,13 +3,12 @@ import { auth } from '@/auth';
 import { prisma } from '@makeforest/db';
 import webpush from 'web-push';
 
-webpush.setVapidDetails(
-  process.env.VAPID_MAILTO!,
-  process.env.VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!,
-);
-
 export async function POST() {
+  webpush.setVapidDetails(
+    process.env.VAPID_MAILTO!,
+    process.env.VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!,
+  );
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
