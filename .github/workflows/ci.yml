@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  # ── develop / main 공통: Lint + TypeScript + Jest ──────────
+  lint-test:
+    name: Lint + Type Check + Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - run: yarn install --frozen-lockfile
+
+      - name: Lint
+        run: yarn turbo run lint
+
+      - name: Type check
+        run: yarn turbo run type-check
+
+      - name: Test
+        run: yarn turbo run test
+
+  # ── main PR 전용: Docker로 서버 띄우고 k6 중간 부하 ────────
+  load-test:
+    name: Load Test (Docker k6)
+    if: github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1) PostgreSQL + Express 서버 컨테이너 시작
+      - name: Start test environment
+        run: docker compose -f docker-compose.test.yml up -d --wait
+        env:
+          UPSTASH_REDIS_REST_URL: ${{ secrets.CI_UPSTASH_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.CI_UPSTASH_TOKEN }}
+          INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - run: yarn install --frozen-lockfile
+
+      # 2) DB 마이그레이션
+      - name: Migrate DB
+        run: npx prisma migrate deploy
+        working-directory: packages/db
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/makeforest_test
+          DIRECT_URL: postgresql://postgres:postgres@localhost:5432/makeforest_test
+
+      # 3) k6 중간 부하 (API 25VU + Toggle 5VU + SSE 20VU / 1분)
+      #    thresholds 초과 시 exit 1 → 잡 실패 → merge 차단
+      - name: k6 load test
+        uses: grafana/k6-action@v0.3.1
+        with:
+          filename: load-test/script.js
+          flags: >
+            --env API_VUS=25
+            --env TOGGLE_VUS=5
+            --env SSE_VUS=20
+            --env DURATION=1m
+            --env TARGET_URL=http://localhost:4000
+            --env INTERNAL_SECRET=${{ secrets.INTERNAL_API_SECRET }}
+            --summary-export=load-test/result.json
+
+      # 4) 결과를 PR에 코멘트 (성공/실패 무관)
+      - name: Post result to PR
+        if: always()
+        run: node load-test/post-result.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+
+      # 5) Redis 테스트 데이터 정리 — docker compose down 전에 서버가 살아있을 때 호출
+      #    프로덕션 Upstash 공유 시 실사용자 지도에 load-test 유저가 노출되는 것을 방지
+      - name: Cleanup Redis test data
+        if: always()
+        run: |
+          curl -sf -X DELETE http://localhost:4000/test/cleanup \
+            -H "x-internal-secret: ${{ secrets.INTERNAL_API_SECRET }}" || true
+
+      - name: Cleanup Docker
+        if: always()
+        run: docker compose -f docker-compose.test.yml down

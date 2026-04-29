@@ -37,3 +37,7 @@ yarn-error.log*
 .idea
 *.swp
 *.swo
+
+# Load test generated files
+load-test/users.json
+load-test/result.json

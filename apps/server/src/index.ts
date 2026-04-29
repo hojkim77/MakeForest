@@ -8,6 +8,7 @@ import { creatureRouter } from './routes/creature';
 import { statsRouter } from './routes/stats';
 import { registerCronJobs } from './cron/midnight';
 import { requireInternalAuth } from './middleware/auth';
+import { testRouter } from './routes/test';
 
 const app = express();
 const PORT = process.env.PORT ?? 4000;
@@ -30,6 +31,11 @@ app.use('/water', requireInternalAuth, waterRouter);
 app.get('/health', (_req, res) => {
   res.json({ ok: true, ts: new Date().toISOString() });
 });
+
+// 부하 테스트 전용 엔드포인트 — test 환경에서만 노출
+if (process.env.NODE_ENV === 'test') {
+  app.use('/test', testRouter);
+}
 
 registerCronJobs();
 
