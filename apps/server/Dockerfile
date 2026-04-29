@@ -9,6 +9,9 @@ COPY packages/types/package.json ./packages/types/
 # web의 package.json은 yarn workspace 해석에만 필요 (빌드 불필요)
 COPY apps/web/package.json ./apps/web/
 
+# prisma generate가 postinstall에서 실행되므로 schema 파일이 필요
+COPY packages/db/prisma/ ./packages/db/prisma/
+
 RUN yarn install --frozen-lockfile
 
 COPY apps/server/ ./apps/server/
