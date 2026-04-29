@@ -28,8 +28,8 @@ export async function PATCH(req: NextRequest) {
   });
 
   // dongCode가 변경된 경우 JWT 쿠키를 서버 사이드에서 즉시 갱신
-  if (body.dongCode) {
-    await unstable_update({ user: { dongCode: updated.dongCode ?? undefined } });
+  if (body.dongCode && updated.dongCode) {
+    await unstable_update({ user: { dongCode: updated.dongCode } });
   }
 
   return NextResponse.json(updated);
