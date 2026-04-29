@@ -34,9 +34,9 @@ export const options = {
   },
   thresholds: {
     // API / 토글 유저 SLA — 초과 시 CI 실패
-    'http_req_duration{scenario:api_users}': ['p95<500'],
+    'http_req_duration{scenario:api_users}': ['p(95)<500'],
     'http_req_failed{scenario:api_users}': ['rate<0.01'],
-    'http_req_duration{scenario:timer_toggler}': ['p95<500'],
+    'http_req_duration{scenario:timer_toggler}': ['p(95)<500'],
     'http_req_failed{scenario:timer_toggler}': ['rate<0.01'],
     // SSE는 timeout이 정상 종료이므로 http_req_failed 대신 check 성공률로 평가
     'checks{scenario:sse_watchers}': ['rate>0.95'],
