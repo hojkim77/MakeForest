@@ -10,6 +10,7 @@ dist
 out
 build
 tsconfig.tsbuildinfo
+apps/web/.vercel
 
 # Turbo
 .turbo
@@ -41,3 +42,7 @@ yarn-error.log*
 # Load test generated files
 load-test/users.json
 load-test/result.json
+load-test/README.md
+
+# README files
+apps/server/README.md
