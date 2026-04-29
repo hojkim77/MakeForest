@@ -1,7 +1,7 @@
 FROM node:20-alpine
 WORKDIR /app
 
-COPY package.json yarn.lock turbo.json ./
+COPY package.json yarn.lock turbo.json tsconfig.base.json ./
 COPY apps/server/package.json ./apps/server/
 COPY packages/db/package.json ./packages/db/
 COPY packages/redis/package.json ./packages/redis/
