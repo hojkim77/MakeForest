@@ -12,6 +12,7 @@
     }
   },
   "scripts": {
+    "postinstall": "prisma generate",
     "build": "tsc",
     "dev": "tsc --watch",
     "type-check": "tsc --noEmit",
