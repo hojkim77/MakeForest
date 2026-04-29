@@ -8,6 +8,8 @@ COPY packages/redis/package.json ./packages/redis/
 COPY packages/types/package.json ./packages/types/
 # web의 package.json은 yarn workspace 해석에만 필요 (빌드 불필요)
 COPY apps/web/package.json ./apps/web/
+# prisma generate(postinstall)가 schema를 필요로 하므로 install 전에 먼저 복사
+COPY packages/db/prisma ./packages/db/prisma/
 
 RUN yarn install --frozen-lockfile
 
