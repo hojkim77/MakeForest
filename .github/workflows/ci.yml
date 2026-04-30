@@ -2,10 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [develop, main]
+    branches: [main]
 
 jobs:
-  # ── develop / main 공통: Lint + TypeScript + Jest ──────────
   lint-test:
     name: Lint + Type Check + Test
     runs-on: ubuntu-latest
@@ -28,7 +27,6 @@ jobs:
       - name: Test
         run: yarn turbo run test
 
-  # ── main PR 전용: Docker로 서버 띄우고 k6 중간 부하 ────────
   load-test:
     name: Load Test (Docker k6)
     if: github.base_ref == 'main'
