@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useMapStore, useTimerStore } from '@/store';
-import { regionOf, regionDisplayName } from '@makeforest/types';
+import { regionDisplayName } from '@makeforest/types';
 import { Icon } from '@/components/ui/Icon';
 import { LoginPrompt } from './LoginPrompt';
 import { SloganSection } from './SloganSection';
@@ -11,7 +11,6 @@ import { CreatureSection } from './CreatureSection';
 import { TimerWaterSection } from './TimerWaterSection';
 import { TaskList } from './TaskList';
 import { NeighborhoodStats } from './NeighborhoodStats';
-import { NeighborhoodSearch } from './NeighborhoodSearch';
 import { WaterToast } from './WaterToast';
 
 const WATER_THRESHOLD_SEC = 30 * 60;
@@ -141,9 +140,9 @@ export function Panel() {
     } catch { /* 실패 시 조용히 무시 */ }
   }
 
-  function handleDongSelect(dongCode: string, dongName: string) {
-    focusRegion(regionOf(dongCode, dongName));
-  }
+  // function handleDongSelect(dongCode: string, dongName: string) {
+  //   focusRegion(regionOf(dongCode, dongName));
+  // }
 
   // 자동 정지(autoPaused) 상태에서도 물주기 허용 — 물을 줘야 재개 가능
   const canWater =
@@ -217,9 +216,11 @@ export function Panel() {
           growthPercent={growthPercent}
         />
 
-        <div className="mt-auto pt-md border-t border-outline-variant">
-          <NeighborhoodSearch onSelect={handleDongSelect} />
-        </div>
+        {/* TODO
+          <div className="mt-auto pt-md border-t border-outline-variant">
+            <NeighborhoodSearch onSelect={handleDongSelect} />
+          </div> 
+        */}
 
       </div>
     </aside>

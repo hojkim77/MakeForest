@@ -11,10 +11,9 @@ interface DongResult {
 
 interface LocationSearchStepProps {
   onSelect: (dong: { code: string; name: string }) => void;
-  onBack: () => void;
 }
 
-export function LocationSearchStep({ onSelect, onBack }: LocationSearchStepProps) {
+export function LocationSearchStep({ onSelect }: LocationSearchStepProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<DongResult[]>([]);
   const [selected, setSelected] = useState<DongResult | null>(null);

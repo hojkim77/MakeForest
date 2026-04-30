@@ -14,13 +14,13 @@ jest.mock('@/store/mapStore', () => ({
 }));
 
 // ── Mock: 하위 컴포넌트 ──────────────────────────────────────────────────────
-jest.mock('../WaterToast',        () => ({ WaterToast: () => null }));
-jest.mock('../NeighborhoodSearch',() => ({ NeighborhoodSearch: () => null }));
-jest.mock('../SloganSection',     () => ({ SloganSection: () => null }));
+jest.mock('../WaterToast', () => ({ WaterToast: () => null }));
+jest.mock('../NeighborhoodSearch', () => ({ NeighborhoodSearch: () => null }));
+jest.mock('../SloganSection', () => ({ SloganSection: () => null }));
 jest.mock('../NeighborhoodStats', () => ({ NeighborhoodStats: () => null }));
-jest.mock('../TaskList',          () => ({ TaskList: () => null }));
-jest.mock('../LoginPrompt',       () => ({ LoginPrompt: () => <div>로그인이 필요합니다</div> }));
-jest.mock('../CreatureSection',   () => ({ CreatureSection: () => null }));
+jest.mock('../TaskList', () => ({ TaskList: () => null }));
+jest.mock('../LoginPrompt', () => ({ LoginPrompt: () => <div>로그인이 필요합니다</div> }));
+jest.mock('../CreatureSection', () => ({ CreatureSection: () => null }));
 
 jest.mock('../TimerWaterSection', () => ({
   TimerWaterSection: ({
@@ -92,10 +92,12 @@ function setupDefaultFetch() {
     if (url.includes('/api/sessions/') && opts?.method === 'PATCH')
       return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     if (url === '/api/water' && opts?.method === 'POST')
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({
-        myWaterCount: 1,
-        creature: { stage: 1, waterCount: 5 },
-      }) });
+      return Promise.resolve({
+        ok: true, json: () => Promise.resolve({
+          myWaterCount: 1,
+          creature: { stage: 1, waterCount: 5 },
+        })
+      });
     if (url === '/api/push/notify' && opts?.method === 'POST')
       return Promise.resolve({ ok: true, json: () => Promise.resolve({ sent: 1 }) });
     return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });

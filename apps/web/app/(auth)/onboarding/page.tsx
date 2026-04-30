@@ -126,7 +126,6 @@ export default function OnboardingPage() {
         ) : (
           <LocationSearchStep
             onSelect={handleSelectFromSearch}
-            onBack={() => setStep('detect')}
           />
         )}
       </div>
