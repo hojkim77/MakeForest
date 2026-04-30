@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
-import { broadcastToDong } from './sse';
+import { broadcastToRegion } from './sse';
 import { calcStage, getKstDateString, checkDailyCapExceeded } from './water.logic';
+import { regionOf } from '@makeforest/types';
 
 export const waterRouter = Router();
 
@@ -30,6 +31,10 @@ waterRouter.post('/', async (req: Request, res: Response) => {
     where: { userId_date: { userId, date: today } },
   });
 
+  // dong name 조회 → regionCode 계산
+  const dong = await prisma.dong.findUnique({ where: { code: dongCode }, select: { name: true } });
+  const regionCode = dong ? regionOf(dongCode, dong.name) : dongCode.substring(0, 5);
+
   // 물주기 기록 생성 + Creature 업데이트 (트랜잭션)
   const [, creature] = await prisma.$transaction(async (tx) => {
     const log = await tx.wateringLog.create({
@@ -37,16 +42,16 @@ waterRouter.post('/', async (req: Request, res: Response) => {
     });
 
     const existing = await tx.creature.findUnique({
-      where: { dongCode_date: { dongCode, date: today } },
+      where: { regionCode_date: { regionCode, date: today } },
     });
 
     const newWaterCount = (existing?.waterCount ?? 0) + 1;
     const newStage = calcStage(newWaterCount);
 
     const updated = await tx.creature.upsert({
-      where: { dongCode_date: { dongCode, date: today } },
+      where: { regionCode_date: { regionCode, date: today } },
       update: { waterCount: newWaterCount, stage: newStage },
-      create: { dongCode, date: today, waterCount: newWaterCount, stage: newStage },
+      create: { regionCode, date: today, waterCount: newWaterCount, stage: newStage },
     });
 
     // DailySession 업데이트 (물주기 횟수 + 누적 집중 시간)
@@ -60,13 +65,13 @@ waterRouter.post('/', async (req: Request, res: Response) => {
   });
 
   // SSE: 물주기 토스트 브로드캐스트
-  broadcastToDong(dongCode, {
+  broadcastToRegion(regionCode, {
     type: 'water:toast',
     data: { dongCode, nickname: nickname ?? '누군가' },
   });
 
   // SSE: 생명체 단계 업데이트
-  broadcastToDong(dongCode, {
+  broadcastToRegion(regionCode, {
     type: 'creature:update',
     data: { dongCode, stage: creature.stage, waterCount: creature.waterCount },
   });

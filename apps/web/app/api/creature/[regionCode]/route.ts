@@ -12,13 +12,13 @@ function getKstDateString(): string {
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { dongCode: string } },
+  { params }: { params: { regionCode: string } },
 ) {
-  const { dongCode } = params;
+  const regionCode = decodeURIComponent(params.regionCode);
   const today = getKstDateString();
 
   const creature = await prisma.creature.findUnique({
-    where: { dongCode_date: { dongCode, date: today } },
+    where: { regionCode_date: { regionCode, date: today } },
   });
 
   return NextResponse.json({

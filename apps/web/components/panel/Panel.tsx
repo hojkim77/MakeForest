@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useMapStore, useTimerStore } from '@/store';
+import { regionOf, regionDisplayName } from '@makeforest/types';
 import { Icon } from '@/components/ui/Icon';
 import { LoginPrompt } from './LoginPrompt';
 import { SloganSection } from './SloganSection';
@@ -20,22 +21,23 @@ type CreatureStage = 0 | 1 | 2 | 3 | 4;
 
 export function Panel() {
   const { data: session, status } = useSession();
-  const { focusedDongCode, focusDong } = useMapStore();
+  const { focusedRegionCode, focusRegion } = useMapStore();
   const { status: timerStatus, elapsedSec, autoPaused, todos, addTodo, toggleTodo, start, pause } = useTimerStore();
   const isLoggedIn = status === 'authenticated' && !!session?.user?.id;
-  const myDongCode = session?.user?.dongCode ?? null;
-  const isPeeking = focusedDongCode !== null && focusedDongCode !== myDongCode;
-  const activeDongCode = focusedDongCode ?? myDongCode;
-
-  const neighborhoodName = activeDongCode ?? '내 동네';
+  const myRegionCode = session?.user?.regionCode ?? null;
+  const isPeeking = focusedRegionCode !== null && focusedRegionCode !== myRegionCode;
+  const activeRegionCode = focusedRegionCode ?? myRegionCode;
+  console.log('focusedRegionCode', focusedRegionCode)
+  console.log('myRegionCode', myRegionCode)
+  const neighborhoodName = activeRegionCode ? regionDisplayName(activeRegionCode) : '내 동네';
 
   const [creatureStage, setCreatureStage] = useState<CreatureStage>(0);
   const [myWaterCount, setMyWaterCount] = useState(0);
   const [growthPercent, setGrowthPercent] = useState(0);
 
-  const fetchCreature = useCallback(async (dongCode: string) => {
+  const fetchCreature = useCallback(async (regionCode: string) => {
     try {
-      const res = await fetch(`/api/creature/${dongCode}`);
+      const res = await fetch(`/api/creature/${encodeURIComponent(regionCode)}`);
       if (!res.ok) return;
       const data = await res.json() as { stage: number; waterCount: number };
       setCreatureStage(Math.min(data.stage, 4) as CreatureStage);
@@ -54,9 +56,9 @@ export function Panel() {
   }, [isLoggedIn]);
 
   useEffect(() => {
-    if (!activeDongCode) return;
-    fetchCreature(activeDongCode);
-  }, [activeDongCode, fetchCreature]);
+    if (!activeRegionCode) return;
+    fetchCreature(activeRegionCode);
+  }, [activeRegionCode, fetchCreature]);
 
   useEffect(() => {
     fetchMyWaterCount();
@@ -64,10 +66,10 @@ export function Panel() {
 
   const sseRef = useRef<EventSource | null>(null);
   useEffect(() => {
-    if (!activeDongCode) return;
+    if (!activeRegionCode) return;
     if (sseRef.current) sseRef.current.close();
 
-    const es = new EventSource(`${SERVER_URL}/sse/${activeDongCode}`);
+    const es = new EventSource(`${SERVER_URL}/sse/${encodeURIComponent(activeRegionCode)}`);
     sseRef.current = es;
 
     es.addEventListener('creature:update', (e) => {
@@ -77,7 +79,7 @@ export function Panel() {
     });
 
     return () => { es.close(); sseRef.current = null; };
-  }, [activeDongCode]);
+  }, [activeRegionCode]);
 
   async function handleStart() {
     if (!isLoggedIn) return;
@@ -139,7 +141,9 @@ export function Panel() {
     } catch { /* 실패 시 조용히 무시 */ }
   }
 
-  function handleDongSelect(dongCode: string) { focusDong(dongCode); }
+  function handleDongSelect(dongCode: string, dongName: string) {
+    focusRegion(regionOf(dongCode, dongName));
+  }
 
   // 자동 정지(autoPaused) 상태에서도 물주기 허용 — 물을 줘야 재개 가능
   const canWater =
@@ -156,9 +160,9 @@ export function Panel() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'pause' }),
-      }).catch(() => {});
+      }).catch(() => { });
     }
-    fetch('/api/push/notify', { method: 'POST' }).catch(() => {});
+    fetch('/api/push/notify', { method: 'POST' }).catch(() => { });
   }, [autoPaused, isLoggedIn]);
 
   return (
@@ -167,7 +171,7 @@ export function Panel() {
 
         {isPeeking && (
           <button
-            onClick={() => focusDong(null)}
+            onClick={() => focusRegion(null)}
             className="flex items-center gap-sm p-sm bg-primary-fixed text-on-primary-fixed font-mono text-label uppercase tracking-wider w-full border border-primary active:translate-y-px transition-none"
           >
             <Icon name="arrow_back" size={16} />
@@ -176,7 +180,7 @@ export function Panel() {
         )}
 
         <SloganSection neighborhoodName={neighborhoodName} />
-        <WaterToast dongCode={activeDongCode} />
+        <WaterToast regionCode={activeRegionCode} />
 
         <CreatureSection stage={creatureStage} />
 

@@ -1,11 +1,17 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
-import { redis, RedisKeys, setSession, getSession, addActiveDong, removeActiveDong, getDongActiveCount } from '@makeforest/redis';
-import { broadcastToDong, buildDongUsers } from './sse';
+import { redis, RedisKeys, setSession, getSession, addActiveDong, removeActiveDong, getDongActiveCount, addActiveRegion, removeActiveRegion } from '@makeforest/redis';
+import { broadcastToRegion, buildRegionUsers } from './sse';
 import { broadcastHeatmap } from './map';
+import { regionOf } from '@makeforest/types';
 import type { CreateSessionInput, SessionAction } from '@makeforest/types';
 
 export const sessionsRouter = Router();
+
+async function getDongRegionCode(dongCode: string): Promise<string> {
+  const dong = await prisma.dong.findUnique({ where: { code: dongCode }, select: { name: true } });
+  return dong ? regionOf(dongCode, dong.name) : dongCode.substring(0, 5);
+}
 
 // POST /sessions — 새 세션 시작
 sessionsRouter.post('/', async (req: Request, res: Response) => {
@@ -47,6 +53,9 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
         });
         await addActiveDong(dongCode, session.id);
 
+        const regionCode = await getDongRegionCode(dongCode);
+        await addActiveRegion(regionCode, session.id);
+
         const activeCount = await getDongActiveCount(dongCode);
         await redis.hset(RedisKeys.heatmapDong(), { [dongCode]: activeCount });
         const heatmapRaw = await redis.hgetall(RedisKeys.heatmapDong()) ?? {};
@@ -54,8 +63,8 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
         for (const [code, cnt] of Object.entries(heatmapRaw)) activity[code] = Number(cnt);
         broadcastHeatmap(activity);
 
-        const users = await buildDongUsers(dongCode);
-        broadcastToDong(dongCode, { type: 'dong:users', data: { dongCode, users } });
+        const users = await buildRegionUsers(regionCode);
+        broadcastToRegion(regionCode, { type: 'dong:users', data: { regionCode, users } });
       } catch (err) {
         console.error('[sessions] Redis/SSE sync error:', err);
       }
@@ -107,10 +116,14 @@ sessionsRouter.patch('/:id', async (req: Request, res: Response) => {
     void (async () => {
       try {
         if (isChangingActive) {
+          const regionCode = await getDongRegionCode(session.dongCode);
+
           if (isPausing || isEnding) {
             await removeActiveDong(session.dongCode, id);
+            await removeActiveRegion(regionCode, id);
           } else if (isResuming) {
             await addActiveDong(session.dongCode, id);
+            await addActiveRegion(regionCode, id);
           }
 
           const activeCount = await getDongActiveCount(session.dongCode);
@@ -120,10 +133,10 @@ sessionsRouter.patch('/:id', async (req: Request, res: Response) => {
           for (const [code, cnt] of Object.entries(heatmapRaw)) activity[code] = Number(cnt);
           broadcastHeatmap(activity);
 
-          const users = await buildDongUsers(session.dongCode);
-          broadcastToDong(session.dongCode, {
+          const users = await buildRegionUsers(regionCode);
+          broadcastToRegion(regionCode, {
             type: 'dong:users',
-            data: { dongCode: session.dongCode, users },
+            data: { regionCode, users },
           });
         }
 

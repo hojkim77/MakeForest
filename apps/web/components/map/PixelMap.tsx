@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePixelMapData } from '@/hooks/usePixelMapData';
 import { useActivityStream } from '@/hooks/useActivityStream';
+import { regionOf, regionDisplayName } from '@makeforest/types';
 
 const PIXEL_SIZE = 4;
 const MAX_COUNT = 20;
@@ -12,9 +13,6 @@ const HL_ALPHA_MAX = 0.34;
 const SEA_COLOR = '#b4cdd8';
 const SOIL_COLOR = '#707972';
 
-// 특별시/광역시/특별자치시 → 시 전체를 단위로
-const METROPOLITAN = new Set(['11', '26', '27', '28', '29', '30', '31', '36']);
-
 export interface RegionBounds {
   minX: number;
   maxX: number;
@@ -22,31 +20,8 @@ export interface RegionBounds {
   maxY: number;
 }
 
-// "고양시덕양구" → "고양시", "부천시소사구" → "부천시", "고성군" → null
-function cityFromSigungu(sigungu: string): string | null {
-  const m = sigungu.match(/^(.+시)[가-힣]+구$/);
-  return m ? (m[1] ?? null) : null;
-}
+export { regionOf };
 
-// 각 동 픽셀의 호버 단위(시/군)를 결정하는 키
-export function regionOf(code: string, name: string): string {
-  const sido = code.substring(0, 2);
-  if (METROPOLITAN.has(sido)) return sido;
-  const sigungu = name.split(' ')[1] ?? code.substring(0, 5);
-  const city = cityFromSigungu(sigungu);
-  return `${sido}:${city ?? sigungu}`;
-}
-
-function regionDisplayName(sampleName: string, regionCode: string): string {
-  if (!regionCode.includes(':')) {
-    // 특별시/광역시: "서울특별시"
-    return sampleName.split(' ')[0] ?? sampleName;
-  }
-  const parts = sampleName.split(' ');
-  const sigungu = parts[1] ?? '';
-  const city = cityFromSigungu(sigungu);
-  return city ? `${parts[0] ?? ''} ${city}` : `${parts[0] ?? ''} ${sigungu}`;
-}
 
 function dongColor(count: number): string {
   if (count === 0) return SOIL_COLOR;
@@ -232,7 +207,7 @@ export function PixelMap({ onRegionClick }: PixelMapProps) {
 
         // 지역명 즉시 표시
         const stats = regionStats.get(rc) ?? { totalUsers: 0, sampleName: cell.name };
-        setHoverLabel({ regionCode: rc, displayName: regionDisplayName(stats.sampleName, rc), x: hit.screenX, y: hit.screenY });
+        setHoverLabel({ regionCode: rc, displayName: regionDisplayName(rc, stats.sampleName), x: hit.screenX, y: hit.screenY });
         setTooltipStats(null);
 
         // 0.5초 후 상세 스탯

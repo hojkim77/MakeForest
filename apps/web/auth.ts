@@ -36,12 +36,13 @@ const nextAuth = NextAuth({
           nickname: user.name ?? '새 유저',
           avatarUrl: user.image ?? null,
         },
-        select: { id: true, dongCode: true },
+        select: { id: true, dongCode: true, regionCode: true },
       });
 
       // Attach to user so jwt callback picks it up without another DB round-trip
       user.id = dbUser.id;
       (user as Record<string, unknown>).dongCode = dbUser.dongCode ?? undefined;
+      (user as Record<string, unknown>).regionCode = dbUser.regionCode ?? undefined;
 
       return true;
     },
@@ -50,14 +51,16 @@ const nextAuth = NextAuth({
       if (user?.id) {
         token.id = user.id;
         token.dongCode = (user as Record<string, unknown>).dongCode as string | undefined;
+        token.regionCode = (user as Record<string, unknown>).regionCode as string | undefined;
       }
 
       if (trigger === 'update' && token.id) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { dongCode: true },
+          select: { dongCode: true, regionCode: true },
         });
         token.dongCode = dbUser?.dongCode ?? undefined;
+        token.regionCode = (dbUser as Record<string, unknown> | null)?.['regionCode'] as string | undefined;
       }
 
       return token;
@@ -66,6 +69,7 @@ const nextAuth = NextAuth({
     session({ session, token }) {
       if (token.id) session.user.id = token.id as string;
       if (token.dongCode) session.user.dongCode = token.dongCode as string;
+      if (token.regionCode) session.user.regionCode = token.regionCode as string;
       return session;
     },
   },
@@ -85,6 +89,7 @@ declare module 'next-auth' {
       email?: string | null;
       image?: string | null;
       dongCode?: string;
+      regionCode?: string;
     };
   }
 }

@@ -12,13 +12,13 @@ function getKstDateString(): string {
   }).replace(/\. /g, '-').replace(/\.$/, '');
 }
 
-// GET /creature/:dongCode — 오늘의 동네 생명체
-creatureRouter.get('/:dongCode', async (req: Request, res: Response) => {
-  const { dongCode } = req.params as { dongCode: string };
+// GET /creature/:regionCode — 오늘의 시/군 생명체
+creatureRouter.get('/:regionCode', async (req: Request, res: Response) => {
+  const regionCode = decodeURIComponent(req.params['regionCode'] as string);
   const today = getKstDateString();
 
   const creature = await prisma.creature.findUnique({
-    where: { dongCode_date: { dongCode, date: today } },
+    where: { regionCode_date: { regionCode, date: today } },
   });
 
   return res.json({

@@ -15,6 +15,7 @@ model User {
   nickname     String
   avatarUrl    String?
   dongCode     String?
+  regionCode   String?
   todosPublic  Boolean   @default(true)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -26,6 +27,7 @@ model User {
 
   @@unique([provider, providerId])
   @@index([dongCode])
+  @@index([regionCode])
 }
 
 model FocusSession {
@@ -72,18 +74,18 @@ model Dong {
   @@index([sidoCode])
 }
 
-// 날짜별 동네별 오늘의 생명체
+// 날짜별 시/군 단위 오늘의 생명체
 model Creature {
   id         String   @id @default(uuid())
-  dongCode   String
+  regionCode String
   date       String   // KST "YYYY-MM-DD"
   stage      Int      @default(0) // 0=씨앗 1=새싹 2=나무1 3=나무2 4=나무3
-  waterCount Int      @default(0) // 동네 전체 누적 물주기 수
+  waterCount Int      @default(0) // 시/군 전체 누적 물주기 수
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  @@unique([dongCode, date])
-  @@index([dongCode])
+  @@unique([regionCode, date])
+  @@index([regionCode])
 }
 
 // 유저별 날짜별 물주기 이력
