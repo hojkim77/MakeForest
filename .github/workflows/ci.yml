@@ -72,6 +72,11 @@ jobs:
             --env INTERNAL_SECRET=${{ secrets.INTERNAL_API_SECRET }}
             --summary-export=load-test/result.json
 
+      - name: Debug files
+        run: |
+          pwd
+          ls -R
+
       # 4) 결과를 PR에 코멘트 (성공/실패 무관)
       - name: Post result to PR
         if: always()
