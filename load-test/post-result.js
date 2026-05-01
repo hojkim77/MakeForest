@@ -42,15 +42,19 @@ function buildComment(result) {
 
   const metrics = result.metrics || {};
 
-  const p95Api = metrics['http_req_duration{scenario:api_users}']?.values?.['p(95)'];
-  const errRateApi = metrics['http_req_failed{scenario:api_users}']?.values?.rate;
-  const errRateSse = metrics['http_req_failed{scenario:sse_watchers}']?.values?.rate;
-  const reqPerSec = metrics['http_reqs']?.values?.rate;
+  const p95Api    = metrics['http_req_duration{scenario:api_users}']?.values?.['p(95)'];
+  const errRateApi  = metrics['http_req_failed{scenario:api_users}']?.values?.rate;
+  const p95Toggle   = metrics['http_req_duration{scenario:timer_toggler}']?.values?.['p(95)'];
+  const errRateToggle = metrics['http_req_failed{scenario:timer_toggler}']?.values?.rate;
+  const sseCheckRate  = metrics['checks{scenario:sse_watchers}']?.values?.rate;
+  const reqPerSec   = metrics['http_reqs']?.values?.rate;
 
-  const p95Ok = p95Api !== undefined && p95Api < 500;
-  const errOk = errRateApi !== undefined && errRateApi < 0.01;
-  const sseOk = errRateSse !== undefined && errRateSse < 0.05;
-  const overall = p95Ok && errOk && sseOk ? '✅ 통과' : '❌ 실패';
+  const p95ApiOk     = p95Api !== undefined && p95Api < 500;
+  const errApiOk     = errRateApi !== undefined && errRateApi < 0.01;
+  const p95ToggleOk  = p95Toggle !== undefined && p95Toggle < 500;
+  const errToggleOk  = errRateToggle !== undefined && errRateToggle < 0.01;
+  const sseOk        = sseCheckRate !== undefined && sseCheckRate > 0.95;
+  const overall = p95ApiOk && errApiOk && p95ToggleOk && errToggleOk && sseOk ? '✅ 통과' : '❌ 실패';
 
   return `## k6 부하 테스트 결과 — ${overall}
 
@@ -58,7 +62,9 @@ function buildComment(result) {
 |------|------|----|------|------|
 | API | p95 응답시간 | ${formatMs(p95Api)} | < 500ms | ${slaIcon(p95Api, 500, true)} |
 | API | 에러율 | ${formatRate(errRateApi)} | < 1% | ${slaIcon(errRateApi, 0.01, true)} |
-| SSE | 연결 실패율 | ${formatRate(errRateSse)} | < 5% | ${slaIcon(errRateSse, 0.05, true)} |
+| 토글 | p95 응답시간 | ${formatMs(p95Toggle)} | < 500ms | ${slaIcon(p95Toggle, 500, true)} |
+| 토글 | 에러율 | ${formatRate(errRateToggle)} | < 1% | ${slaIcon(errRateToggle, 0.01, true)} |
+| SSE | 연결 성공률 | ${formatRate(sseCheckRate)} | > 95% | ${slaIcon(sseCheckRate, 0.95)} |
 | 전체 | 초당 요청수 | ${reqPerSec ? Math.round(reqPerSec) + ' req/s' : 'N/A'} | - | - |
 
 <details>
