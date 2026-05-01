@@ -79,8 +79,7 @@ jobs:
             --env SSE_VUS=20 \
             --env DURATION=1m \
             --env TARGET_URL=http://localhost:4000 \
-            --env INTERNAL_SECRET=${{ secrets.INTERNAL_API_SECRET }} \
-            --summary-export=load-test/result.json
+            --env INTERNAL_SECRET=${{ secrets.INTERNAL_API_SECRET }}
 
       - name: Debug files
         run: |
