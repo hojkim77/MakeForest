@@ -8,7 +8,7 @@ interface ToastMessage {
 }
 
 interface WaterToastProps {
-  dongCode: string | null;
+  regionCode: string | null;
 }
 
 const SERVER_URL =
@@ -16,14 +16,14 @@ const SERVER_URL =
     ? (process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000')
     : 'http://localhost:4000';
 
-export function WaterToast({ dongCode }: WaterToastProps) {
+export function WaterToast({ regionCode }: WaterToastProps) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const counterRef = useRef(0);
 
   useEffect(() => {
-    if (!dongCode) return;
+    if (!regionCode) return;
 
-    const es = new EventSource(`${SERVER_URL}/sse/${dongCode}`);
+    const es = new EventSource(`${SERVER_URL}/sse/${encodeURIComponent(regionCode)}`);
 
     es.addEventListener('water:toast', (e) => {
       const data = JSON.parse((e as MessageEvent).data) as { nickname: string };
@@ -36,7 +36,7 @@ export function WaterToast({ dongCode }: WaterToastProps) {
     });
 
     return () => es.close();
-  }, [dongCode]);
+  }, [regionCode]);
 
   if (toasts.length === 0) return null;
 

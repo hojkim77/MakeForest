@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { LocationDetectStep, type DetectStatus } from '@/components/onboarding/LocationDetectStep';
 import { LocationSearchStep } from '@/components/onboarding/LocationSearchStep';
+import { regionOf } from '@makeforest/types';
 
 type Step = 'detect' | 'search';
 
@@ -62,16 +63,16 @@ export default function OnboardingPage() {
     }
   }, []);
 
-  async function saveDongCode(code: string) {
+  async function saveDong(code: string, name: string) {
     setSaving(true);
     try {
       const res = await fetch('/api/user/me', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dongCode: code }),
+        body: JSON.stringify({ dongCode: code, regionCode: regionOf(code, name) }),
       });
       if (!res.ok) throw new Error('save failed');
-      // JWT 쿠키에 dongCode 반영 후 하드 내비게이션 — 미들웨어가 새 쿠키를 읽어야 함
+      // JWT 쿠키에 dongCode/regionCode 반영 후 하드 내비게이션 — 미들웨어가 새 쿠키를 읽어야 함
       window.location.href = '/';
     } catch {
       setSaving(false);
@@ -80,11 +81,11 @@ export default function OnboardingPage() {
 
   async function handleConfirmDetected() {
     if (!detectedDong) return;
-    await saveDongCode(detectedDong.code);
+    await saveDong(detectedDong.code, detectedDong.name);
   }
 
   async function handleSelectFromSearch(dong: { code: string; name: string }) {
-    await saveDongCode(dong.code);
+    await saveDong(dong.code, dong.name);
   }
 
   return (
@@ -125,7 +126,6 @@ export default function OnboardingPage() {
         ) : (
           <LocationSearchStep
             onSelect={handleSelectFromSearch}
-            onBack={() => setStep('detect')}
           />
         )}
       </div>

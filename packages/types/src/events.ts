@@ -10,7 +10,7 @@ export interface ActiveUser {
 }
 
 export interface DongUsersPayload {
-  dongCode: string;
+  regionCode: string;
   users: ActiveUser[];
 }
 

@@ -9,18 +9,20 @@ import { useSession } from 'next-auth/react';
 const mockUseSession = useSession as jest.MockedFunction<typeof useSession>;
 
 // ── Mock: mapStore ───────────────────────────────────────────────────────────
+let mockMapState = { focusedRegionCode: null as string | null, focusRegion: jest.fn() };
+
 jest.mock('@/store/mapStore', () => ({
-  useMapStore: () => ({ focusedDongCode: null, focusDong: jest.fn() }),
+  useMapStore: () => mockMapState,
 }));
 
 // ── Mock: 하위 컴포넌트 ──────────────────────────────────────────────────────
-jest.mock('../WaterToast',        () => ({ WaterToast: () => null }));
-jest.mock('../NeighborhoodSearch',() => ({ NeighborhoodSearch: () => null }));
-jest.mock('../SloganSection',     () => ({ SloganSection: () => null }));
+jest.mock('../WaterToast', () => ({ WaterToast: () => null }));
+jest.mock('../NeighborhoodSearch', () => ({ NeighborhoodSearch: () => null }));
+jest.mock('../SloganSection', () => ({ SloganSection: () => null }));
 jest.mock('../NeighborhoodStats', () => ({ NeighborhoodStats: () => null }));
-jest.mock('../TaskList',          () => ({ TaskList: () => null }));
-jest.mock('../LoginPrompt',       () => ({ LoginPrompt: () => <div>로그인이 필요합니다</div> }));
-jest.mock('../CreatureSection',   () => ({ CreatureSection: () => null }));
+jest.mock('../TaskList', () => ({ TaskList: () => null }));
+jest.mock('../LoginPrompt', () => ({ LoginPrompt: () => <div>로그인이 필요합니다</div> }));
+jest.mock('../CreatureSection', () => ({ CreatureSection: () => null }));
 
 jest.mock('../TimerWaterSection', () => ({
   TimerWaterSection: ({
@@ -73,9 +75,9 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 // ── 헬퍼 ─────────────────────────────────────────────────────────────────────
-function loginSession(dongCode = '1111000000') {
+function loginSession(regionCode = '11') {
   mockUseSession.mockReturnValue({
-    data: { user: { id: 'user1', name: '테스트', dongCode }, expires: '' },
+    data: { user: { id: 'user1', name: '테스트', regionCode }, expires: '' },
     status: 'authenticated',
     update: jest.fn(),
   });
@@ -92,10 +94,12 @@ function setupDefaultFetch() {
     if (url.includes('/api/sessions/') && opts?.method === 'PATCH')
       return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     if (url === '/api/water' && opts?.method === 'POST')
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({
-        myWaterCount: 1,
-        creature: { stage: 1, waterCount: 5 },
-      }) });
+      return Promise.resolve({
+        ok: true, json: () => Promise.resolve({
+          myWaterCount: 1,
+          creature: { stage: 1, waterCount: 5 },
+        })
+      });
     if (url === '/api/push/notify' && opts?.method === 'POST')
       return Promise.resolve({ ok: true, json: () => Promise.resolve({ sent: 1 }) });
     return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
@@ -103,6 +107,7 @@ function setupDefaultFetch() {
 }
 
 beforeEach(() => {
+  mockMapState = { focusedRegionCode: null, focusRegion: jest.fn() };
   MockEventSource.instances = [];
   mockFetch.mockReset();
   useTimerStore.getState().reset();
@@ -312,17 +317,13 @@ describe('SSE creature:update 수신', () => {
 
 describe('엿보기 모드', () => {
   it('다른 동네 선택 시 타이머 버튼 없음', async () => {
-    jest.resetModules();
-    jest.doMock('@/store/mapStore', () => ({
-      useMapStore: () => ({ focusedDongCode: '2222000000', focusDong: jest.fn() }),
-    }));
-    mockUseSession.mockReturnValue({
-      data: { user: { id: 'user1', dongCode: '1111000000' }, expires: '' },
-      status: 'authenticated',
-      update: jest.fn(),
-    });
+    mockMapState = { focusedRegionCode: '26', focusRegion: jest.fn() };
+    loginSession('11');
     setupDefaultFetch();
+    render(<Panel />);
 
-    expect(() => render(<Panel />)).not.toThrow();
+    await waitFor(() =>
+      expect(screen.queryByTestId('start-btn')).not.toBeInTheDocument()
+    );
   });
 });

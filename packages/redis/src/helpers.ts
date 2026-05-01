@@ -35,3 +35,15 @@ export async function getActiveDongSessions(dongCode: string): Promise<string[]>
 export async function getDongActiveCount(dongCode: string): Promise<number> {
   return redis.scard(RedisKeys.dongActive(dongCode));
 }
+
+export async function addActiveRegion(regionCode: string, sessionId: string): Promise<void> {
+  await redis.sadd(RedisKeys.regionActive(regionCode), sessionId);
+}
+
+export async function removeActiveRegion(regionCode: string, sessionId: string): Promise<void> {
+  await redis.srem(RedisKeys.regionActive(regionCode), sessionId);
+}
+
+export async function getActiveRegionSessions(regionCode: string): Promise<string[]> {
+  return redis.smembers(RedisKeys.regionActive(regionCode));
+}

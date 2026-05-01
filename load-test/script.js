@@ -173,3 +173,9 @@ export function sseScenario() {
 
   sleep(5);
 }
+
+export function handleSummary(data) {
+  return {
+    'load-test/result.json': JSON.stringify(data),
+  };
+}

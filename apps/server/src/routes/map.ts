@@ -12,18 +12,8 @@ export function broadcastHeatmap(activity: Record<string, number>): void {
   activityClients.forEach((res) => res.write(payload));
 }
 
-// 한반도 위경도 범위 및 그리드 크기
-// 가로:세로 = (131.0-124.6)*cos(36°) : (38.9-33.0) ≈ 5.18 : 5.9 → 250×290
-const LAT_MIN = 33.0, LAT_MAX = 38.9;
-const LNG_MIN = 124.6, LNG_MAX = 131.0;
-const GRID_W = 250, GRID_H = 290;
-
-function toPixel(lat: number, lng: number) {
-  return {
-    pixelX: Math.max(0, Math.min(GRID_W - 1, Math.round(((lng - LNG_MIN) / (LNG_MAX - LNG_MIN)) * GRID_W))),
-    pixelY: Math.max(0, Math.min(GRID_H - 1, Math.round(((LAT_MAX - lat) / (LAT_MAX - LAT_MIN)) * GRID_H))),
-  };
-}
+import { toPixel, GRID_W, GRID_H, LAT_MIN, LAT_MAX, LNG_MIN, LNG_MAX } from './map.logic';
+export { toPixel, GRID_W, GRID_H, LAT_MIN, LAT_MAX, LNG_MIN, LNG_MAX };
 
 // GET /map/pixel-data — 전체 행정동 픽셀 좌표 (24h 캐시)
 mapRouter.get('/pixel-data', async (_req: Request, res: Response) => {

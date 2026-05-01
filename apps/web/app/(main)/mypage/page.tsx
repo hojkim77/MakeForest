@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
-import { CreatureSprite, STAGE_LABELS } from '@/components/panel/CreatureSprite';
+import { CreatureSprite } from '@/components/panel/CreatureSprite';
 
 interface StatsData {
   totalFocusSec: number;
@@ -89,7 +89,7 @@ export default function MypagePage() {
         <div className="space-y-4 animate-pulse">
           <div className="h-28 bg-surface-container border border-outline-variant" />
           <div className="grid grid-cols-4 gap-4">
-            {[0,1,2,3].map(i => <div key={i} className="h-24 bg-surface-container border border-outline-variant" />)}
+            {[0, 1, 2, 3].map(i => <div key={i} className="h-24 bg-surface-container border border-outline-variant" />)}
           </div>
           <div className="h-64 bg-surface-container border border-outline-variant" />
           <div className="h-64 bg-surface-container border border-outline-variant" />

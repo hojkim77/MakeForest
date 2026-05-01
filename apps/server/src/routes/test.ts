@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
 import { deleteSession, removeActiveDong } from '@makeforest/redis';
 import { requireInternalAuth } from '../middleware/auth';
+import { runMidnightBatch } from '../cron/midnight';
 
 export const testRouter = Router();
 
@@ -58,6 +59,17 @@ testRouter.post('/login', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('[test] login error:', err);
     return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /test/run-midnight — 자정 배치 수동 실행 (검증용)
+testRouter.post('/run-midnight', requireInternalAuth, async (_req: Request, res: Response) => {
+  try {
+    await runMidnightBatch();
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('[test] run-midnight error:', err);
+    return res.status(500).json({ error: 'batch failed' });
   }
 });
 

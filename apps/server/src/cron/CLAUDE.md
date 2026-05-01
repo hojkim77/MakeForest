@@ -1,41 +1,42 @@
 # Cron — 자정 배치 처리 (KST 00:00)
 
-## 처리 순서
+## 처리 순서 (구현 완료)
 
-1. 물주기 미입력 유저 자동 반영 (당일 2시간 달성 후 버튼 미입력 상태)
-2. 각 동네 생명체 최종 단계 확정
-3. 박제 조건 충족 시 숲에 기록
-4. 새 생명체 생성 (날씨 + 계절 조합)
-5. 물주기 횟수 / 누적 집중 시간 초기화
+1. **물주기 미입력 유저 자동 반영** — 당일 RUNNING/PAUSED 세션 합산 집중시간 >= 7200초 && waterCount = 0인 유저에게 자동 1회 물주기 (WateringLog 생성 + Creature.waterCount++)
+2. **RUNNING 세션 전체 ABANDONED** — DB updateMany + Redis dongActive/regionActive 키 삭제, 히트맵 초기화, SSE broadcastHeatmap({})
+3. **Fossil 생성** — 전날(KST) Creature 중 stage >= 1 & 가입 유저 1명 이상인 시/군만 대상. 물주기 기록이 있는 대표 dong의 픽셀 좌표 + ±5px jitter. creatureType은 day-of-year % 14 순환
+4. **새 Creature 생성** — User.regionCode 보유 유저가 있는 모든 시/군에 오늘 날짜 기준 stage=0 upsert
+5. **SSE 브로드캐스트** — creature:update (stage:0) 각 시/군에 전송
 
-## 생명체 박제 조건 (F)
+## 생명체 단위
 
-- 최소 새싹 이상이어야 숲에 박제
-- 씨앗 상태 (물주기 0 또는 새싹 임계값 미달) → 박제 없음
-- 해당 동네 가입 유저 0명 → 생명체 생성 자체 없음
+- **시/군(regionCode) 기준** — `regionOf(dongCode, dongName)` 함수로 계산
+- 서울/광역시: sido 코드(예: `'11'`), 경기 일반시: `'41:부천시'` 형식
+- Creature 테이블: `@@unique([regionCode, date])`
 
-## 박제 데이터
+## 생명체 박제 조건
 
-- 생명체 종류, 최종 단계, 소속 동네, 날짜
-- 시/구 숲 내 좌표 (키운 동네 구역 내 자동 배치)
+- 최소 stage >= 1 (새싹 이상)이어야 Fossil 생성
+- stage = 0 (씨앗) → 박제 없음
+- 해당 시/군 가입 유저 0명 → 생명체 생성 없음
+- Fossil.dongCode 필드에 regionCode를 저장 (MVP — 스키마 마이그레이션 전 임시)
 
-## 새 생명체 결정 (F)
+## 새 생명체 결정
 
-- 매일 자정, 동네별로 씨앗 상태(stage=0)의 새 Creature 생성
-- 생명체 종류는 추후 기획에 따라 결정
+- 매일 자정, 시/군별로 stage=0 새 Creature upsert
+- creatureType: day-of-year % 14 순환 (날씨/계절 연동은 미구현)
 
-## 진화 임계값 (F)
+## 진화 임계값
 
-- 씨앗 → 새싹 → 풀 → 나무 (4단계)
-- 동네 전체 누적 물주기 시간 = 경험치
-- 임계값은 서버에서 실시간 조절 가능 (하드코딩 금지)
+- `STAGE_THRESHOLDS = [0, 5, 12, 25, 45]` — `water.logic.ts`에 하드코딩
+- 서버 실시간 조절은 미구현 (Config 테이블 없음)
 
-## 숲 누적 (G)
+## 미구현 항목
 
-- 시/구 단위 숲에 소속 읍/면/동 생명체가 매일 누적
-- 생명체는 키운 동네 구역 안에 자동 배치
-- 지면 텍스처 변화 기준: 생명체 밀도 (황무지 → 풀밭 → 숲)
+- 배치 실행 중 물주기 요청 큐 (현재 race condition 허용)
+- 날씨/계절 기반 creatureType 결정
+- 진화 임계값 Config 테이블
 
-## 배치 처리 중 물주기 요청 충돌
+## 수동 실행 (검증용)
 
-- 배치 실행 중 들어온 물주기 요청 → 큐 대기 후 전날 생명체에 반영
+`POST /test/run-midnight` (NODE_ENV=test 환경만) — `runMidnightBatch()` 직접 호출

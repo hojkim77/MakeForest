@@ -3,15 +3,15 @@
 import { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 
-interface NeighborhoodSearchProps {
-  onSelect: (dongCode: string, dongName: string) => void;
-}
+// interface NeighborhoodSearchProps {
+//   onSelect: (dongCode: string, dongName: string) => void;
+// }
 
 /**
  * Neighborhood search bar.
  * Currently renders a text input placeholder — wire up to an API for autocomplete.
  */
-export function NeighborhoodSearch({ onSelect: _onSelect }: NeighborhoodSearchProps) {
+export function NeighborhoodSearch() {
   const [value, setValue] = useState('');
 
   return (

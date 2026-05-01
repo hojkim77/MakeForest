@@ -42,6 +42,10 @@ jobs:
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.CI_UPSTASH_TOKEN }}
           INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
 
+      - name: Server logs (on failure)
+        if: failure()
+        run: docker compose -f docker-compose.test.yml logs server
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -59,18 +63,28 @@ jobs:
 
       # 3) k6 중간 부하 (API 25VU + Toggle 5VU + SSE 20VU / 1분)
       #    thresholds 초과 시 exit 1 → 잡 실패 → merge 차단
+      - name: Install k6
+        run: |
+          curl -fsSL https://dl.k6.io/key.gpg \
+            | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
+            | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update -qq && sudo apt-get install -y k6
+
       - name: k6 load test
-        uses: grafana/k6-action@v0.3.1
-        with:
-          filename: load-test/script.js
-          flags: >
-            --env API_VUS=25
-            --env TOGGLE_VUS=5
-            --env SSE_VUS=20
-            --env DURATION=1m
-            --env TARGET_URL=http://localhost:4000
+        run: |
+          k6 run load-test/script.js \
+            --env API_VUS=25 \
+            --env TOGGLE_VUS=5 \
+            --env SSE_VUS=20 \
+            --env DURATION=1m \
+            --env TARGET_URL=http://localhost:4000 \
             --env INTERNAL_SECRET=${{ secrets.INTERNAL_API_SECRET }}
-            --summary-export=load-test/result.json
+
+      - name: Debug files
+        run: |
+          pwd
+          ls -R
 
       # 4) 결과를 PR에 코멘트 (성공/실패 무관)
       - name: Post result to PR

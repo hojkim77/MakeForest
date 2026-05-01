@@ -1,11 +1,17 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
-import { redis, RedisKeys, setSession, getSession, addActiveDong, removeActiveDong, getDongActiveCount } from '@makeforest/redis';
-import { broadcastToDong, buildDongUsers } from './sse';
+import { redis, RedisKeys, setSession, getSession, addActiveDong, removeActiveDong, getDongActiveCount, addActiveRegion, removeActiveRegion } from '@makeforest/redis';
+import { broadcastToRegion, buildRegionUsers } from './sse';
 import { broadcastHeatmap } from './map';
+import { regionOf } from '@makeforest/types';
 import type { CreateSessionInput, SessionAction } from '@makeforest/types';
 
 export const sessionsRouter = Router();
+
+async function getDongRegionCode(dongCode: string): Promise<string> {
+  const dong = await prisma.dong.findUnique({ where: { code: dongCode }, select: { name: true } });
+  return dong ? regionOf(dongCode, dong.name) : dongCode.substring(0, 5);
+}
 
 // POST /sessions — 새 세션 시작
 sessionsRouter.post('/', async (req: Request, res: Response) => {
@@ -16,10 +22,41 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'userId and dongCode required' });
     }
 
-    await prisma.focusSession.updateMany({
-      where: { userId, status: 'RUNNING' },
-      data: { status: 'ABANDONED', endedAt: new Date() },
+    // 기존 RUNNING/PAUSED 세션 조회 → DB ABANDONED + Redis 정리
+    const staleSessions = await prisma.focusSession.findMany({
+      where: { userId, status: { in: ['RUNNING', 'PAUSED'] } },
+      select: { id: true, dongCode: true },
     });
+
+    if (staleSessions.length > 0) {
+      await prisma.focusSession.updateMany({
+        where: { userId, status: { in: ['RUNNING', 'PAUSED'] } },
+        data: { status: 'ABANDONED', endedAt: new Date() },
+      });
+
+      // 비동기로 Redis 정리 (응답 블로킹 없음)
+      void (async () => {
+        try {
+          for (const stale of staleSessions) {
+            const rc = await getDongRegionCode(stale.dongCode);
+            await removeActiveDong(stale.dongCode, stale.id);
+            await removeActiveRegion(rc, stale.id);
+          }
+          // 히트맵 재계산 (영향받은 dongCode들만)
+          const affectedDongs = [...new Set(staleSessions.map((s) => s.dongCode))];
+          for (const dc of affectedDongs) {
+            const cnt = await getDongActiveCount(dc);
+            await redis.hset(RedisKeys.heatmapDong(), { [dc]: cnt });
+          }
+          const heatmapRaw = await redis.hgetall(RedisKeys.heatmapDong()) ?? {};
+          const activity: Record<string, number> = {};
+          for (const [code, cnt] of Object.entries(heatmapRaw)) activity[code] = Number(cnt);
+          broadcastHeatmap(activity);
+        } catch (err) {
+          console.error('[sessions] stale session cleanup error:', err);
+        }
+      })();
+    }
 
     const session = await prisma.focusSession.create({
       data: {
@@ -47,6 +84,9 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
         });
         await addActiveDong(dongCode, session.id);
 
+        const regionCode = await getDongRegionCode(dongCode);
+        await addActiveRegion(regionCode, session.id);
+
         const activeCount = await getDongActiveCount(dongCode);
         await redis.hset(RedisKeys.heatmapDong(), { [dongCode]: activeCount });
         const heatmapRaw = await redis.hgetall(RedisKeys.heatmapDong()) ?? {};
@@ -54,8 +94,8 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
         for (const [code, cnt] of Object.entries(heatmapRaw)) activity[code] = Number(cnt);
         broadcastHeatmap(activity);
 
-        const users = await buildDongUsers(dongCode);
-        broadcastToDong(dongCode, { type: 'dong:users', data: { dongCode, users } });
+        const users = await buildRegionUsers(regionCode);
+        broadcastToRegion(regionCode, { type: 'dong:users', data: { regionCode, users } });
       } catch (err) {
         console.error('[sessions] Redis/SSE sync error:', err);
       }
@@ -107,10 +147,14 @@ sessionsRouter.patch('/:id', async (req: Request, res: Response) => {
     void (async () => {
       try {
         if (isChangingActive) {
+          const regionCode = await getDongRegionCode(session.dongCode);
+
           if (isPausing || isEnding) {
             await removeActiveDong(session.dongCode, id);
+            await removeActiveRegion(regionCode, id);
           } else if (isResuming) {
             await addActiveDong(session.dongCode, id);
+            await addActiveRegion(regionCode, id);
           }
 
           const activeCount = await getDongActiveCount(session.dongCode);
@@ -120,10 +164,10 @@ sessionsRouter.patch('/:id', async (req: Request, res: Response) => {
           for (const [code, cnt] of Object.entries(heatmapRaw)) activity[code] = Number(cnt);
           broadcastHeatmap(activity);
 
-          const users = await buildDongUsers(session.dongCode);
-          broadcastToDong(session.dongCode, {
+          const users = await buildRegionUsers(regionCode);
+          broadcastToRegion(regionCode, {
             type: 'dong:users',
-            data: { dongCode: session.dongCode, users },
+            data: { regionCode, users },
           });
         }
 
