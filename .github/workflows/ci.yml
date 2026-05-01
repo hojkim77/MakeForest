@@ -42,6 +42,10 @@ jobs:
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.CI_UPSTASH_TOKEN }}
           INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
 
+      - name: Server logs (on failure)
+        if: failure()
+        run: docker compose -f docker-compose.test.yml logs server
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
