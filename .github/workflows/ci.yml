@@ -63,17 +63,25 @@ jobs:
 
       # 3) k6 중간 부하 (API 25VU + Toggle 5VU + SSE 20VU / 1분)
       #    thresholds 초과 시 exit 1 → 잡 실패 → merge 차단
+      - name: Install k6
+        run: |
+          sudo gpg --no-default-keyring \
+            --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
+            --keyserver hkp://keyserver.ubuntu.com:80 \
+            --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
+            | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update -qq && sudo apt-get install -y k6
+
       - name: k6 load test
-        uses: grafana/k6-action@v0.3.1
-        with:
-          filename: load-test/script.js
-          flags: >
-            --env API_VUS=25
-            --env TOGGLE_VUS=5
-            --env SSE_VUS=20
-            --env DURATION=1m
-            --env TARGET_URL=http://localhost:4000
-            --env INTERNAL_SECRET=${{ secrets.INTERNAL_API_SECRET }}
+        run: |
+          k6 run load-test/script.js \
+            --env API_VUS=25 \
+            --env TOGGLE_VUS=5 \
+            --env SSE_VUS=20 \
+            --env DURATION=1m \
+            --env TARGET_URL=http://localhost:4000 \
+            --env INTERNAL_SECRET=${{ secrets.INTERNAL_API_SECRET }} \
             --summary-export=load-test/result.json
 
       - name: Debug files
