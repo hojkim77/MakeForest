@@ -22,10 +22,41 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'userId and dongCode required' });
     }
 
-    await prisma.focusSession.updateMany({
-      where: { userId, status: 'RUNNING' },
-      data: { status: 'ABANDONED', endedAt: new Date() },
+    // 기존 RUNNING/PAUSED 세션 조회 → DB ABANDONED + Redis 정리
+    const staleSessions = await prisma.focusSession.findMany({
+      where: { userId, status: { in: ['RUNNING', 'PAUSED'] } },
+      select: { id: true, dongCode: true },
     });
+
+    if (staleSessions.length > 0) {
+      await prisma.focusSession.updateMany({
+        where: { userId, status: { in: ['RUNNING', 'PAUSED'] } },
+        data: { status: 'ABANDONED', endedAt: new Date() },
+      });
+
+      // 비동기로 Redis 정리 (응답 블로킹 없음)
+      void (async () => {
+        try {
+          for (const stale of staleSessions) {
+            const rc = await getDongRegionCode(stale.dongCode);
+            await removeActiveDong(stale.dongCode, stale.id);
+            await removeActiveRegion(rc, stale.id);
+          }
+          // 히트맵 재계산 (영향받은 dongCode들만)
+          const affectedDongs = [...new Set(staleSessions.map((s) => s.dongCode))];
+          for (const dc of affectedDongs) {
+            const cnt = await getDongActiveCount(dc);
+            await redis.hset(RedisKeys.heatmapDong(), { [dc]: cnt });
+          }
+          const heatmapRaw = await redis.hgetall(RedisKeys.heatmapDong()) ?? {};
+          const activity: Record<string, number> = {};
+          for (const [code, cnt] of Object.entries(heatmapRaw)) activity[code] = Number(cnt);
+          broadcastHeatmap(activity);
+        } catch (err) {
+          console.error('[sessions] stale session cleanup error:', err);
+        }
+      })();
+    }
 
     const session = await prisma.focusSession.create({
       data: {
