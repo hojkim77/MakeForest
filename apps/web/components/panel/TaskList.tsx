@@ -15,6 +15,7 @@ export function TaskList({ todos, onToggle, onAdd }: TaskListProps) {
   const doneCount = todos.filter((t) => t.done).length;
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.nativeEvent.isComposing) return;
     if (e.key === 'Enter' && input.trim()) {
       onAdd(input.trim());
       setInput('');
