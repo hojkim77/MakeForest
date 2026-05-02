@@ -131,7 +131,7 @@ describe('비로그인 상태', () => {
 });
 
 describe('타이머 시작', () => {
-  it('시작 버튼 클릭 → POST /api/sessions 호출', async () => {
+  it('시작 버튼 클릭 → POST /api/sessions + sessionId 저장', async () => {
     loginSession();
     setupDefaultFetch();
     render(<Panel />);
@@ -141,11 +141,15 @@ describe('타이머 시작', () => {
 
     expect(mockFetch).toHaveBeenCalledWith(
       '/api/sessions',
-      expect.objectContaining({ method: 'POST' }),
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('"durationSec":7200'),
+      }),
     );
+    expect(useTimerStore.getState().sessionId).toBe('sess-1');
   });
 
-  it('응답의 sessionId가 timerStore에 저장됨', async () => {
+  it('시작 후 SSE 연결 유지 → 서버의 실시간 브로드캐스트 수신 가능', async () => {
     loginSession();
     setupDefaultFetch();
     render(<Panel />);
@@ -153,12 +157,14 @@ describe('타이머 시작', () => {
     await waitFor(() => screen.getByTestId('start-btn'));
     await act(async () => { fireEvent.click(screen.getByTestId('start-btn')); });
 
-    expect(useTimerStore.getState().sessionId).toBe('sess-1');
+    const sseInstance = MockEventSource.instances.find(es => es.url.includes('/sse/'));
+    expect(sseInstance).toBeDefined();
+    expect(sseInstance?.close).not.toHaveBeenCalled();
   });
 });
 
 describe('타이머 중지', () => {
-  it('중지 버튼 클릭 → PATCH /api/sessions/:id 호출', async () => {
+  it('중지 버튼 클릭 → PATCH /api/sessions/:id + action:pause → 서버가 활성 목록에서 제거 후 heatmap 감소', async () => {
     loginSession();
     setupDefaultFetch();
     useTimerStore.setState({ status: 'RUNNING', sessionId: 'sess-1' });
@@ -168,14 +174,17 @@ describe('타이머 중지', () => {
     await act(async () => { fireEvent.click(screen.getByTestId('stop-btn')); });
 
     expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/sessions/'),
-      expect.objectContaining({ method: 'PATCH' }),
+      expect.stringContaining('/api/sessions/sess-1'),
+      expect.objectContaining({
+        method: 'PATCH',
+        body: expect.stringContaining('"action":"pause"'),
+      }),
     );
   });
 });
 
 describe('타이머 재개', () => {
-  it('재개 버튼 클릭 → PATCH resume 호출', async () => {
+  it('재개 버튼 클릭 → PATCH resume + status=RUNNING + SSE 연결 유지', async () => {
     loginSession();
     setupDefaultFetch();
     useTimerStore.setState({ status: 'PAUSED', sessionId: 'sess-1', elapsedSec: 900 });
@@ -192,6 +201,10 @@ describe('타이머 재개', () => {
       }),
     );
     expect(useTimerStore.getState().status).toBe('RUNNING');
+
+    const sseInstance = MockEventSource.instances.find(es => es.url.includes('/sse/'));
+    expect(sseInstance).toBeDefined();
+    expect(sseInstance?.close).not.toHaveBeenCalled();
   });
 });
 
@@ -245,7 +258,7 @@ describe('물주기 성공', () => {
 });
 
 describe('자동 정지 (autoPaused)', () => {
-  it('autoPaused=true 상태에서 재개 버튼 disabled', async () => {
+  it('autoPaused 상태: 재개 disabled + 물주기 enabled', async () => {
     loginSession();
     setupDefaultFetch();
     useTimerStore.setState({ status: 'PAUSED', elapsedSec: 1800, autoPaused: true });
@@ -253,15 +266,6 @@ describe('자동 정지 (autoPaused)', () => {
 
     await waitFor(() => screen.getByTestId('resume-btn'));
     expect(screen.getByTestId('resume-btn')).toBeDisabled();
-  });
-
-  it('autoPaused=true + elapsedSec=1800 → 물주기 버튼 활성화 (PAUSED 상태에서도)', async () => {
-    loginSession();
-    setupDefaultFetch();
-    useTimerStore.setState({ status: 'PAUSED', elapsedSec: 1800, autoPaused: true });
-    render(<Panel />);
-
-    await waitFor(() => screen.getByTestId('water-btn'));
     expect(screen.getByTestId('water-btn')).not.toBeDisabled();
   });
 

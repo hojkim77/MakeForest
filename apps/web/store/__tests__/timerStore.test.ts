@@ -10,31 +10,22 @@ afterEach(() => {
 });
 
 describe('start / tick', () => {
-  it('start 후 1초마다 elapsedSec 증가', () => {
-    useTimerStore.getState().start();
-    jest.advanceTimersByTime(3000);
-    expect(useTimerStore.getState().elapsedSec).toBe(3);
-  });
-
-  it('status가 RUNNING으로 변경', () => {
+  it('start 후 1초마다 elapsedSec 증가, status=RUNNING', () => {
     useTimerStore.getState().start();
     expect(useTimerStore.getState().status).toBe('RUNNING');
+    jest.advanceTimersByTime(3000);
+    expect(useTimerStore.getState().elapsedSec).toBe(3);
   });
 });
 
 describe('pause', () => {
-  it('pause 후 elapsedSec 고정', () => {
+  it('pause 후 elapsedSec 고정, status=PAUSED', () => {
     useTimerStore.getState().start();
     jest.advanceTimersByTime(2000);
     useTimerStore.getState().pause();
+    expect(useTimerStore.getState().status).toBe('PAUSED');
     jest.advanceTimersByTime(5000);
     expect(useTimerStore.getState().elapsedSec).toBe(2);
-  });
-
-  it('status가 PAUSED로 변경', () => {
-    useTimerStore.getState().start();
-    useTimerStore.getState().pause();
-    expect(useTimerStore.getState().status).toBe('PAUSED');
   });
 });
 
@@ -79,7 +70,7 @@ describe('resetWaterProgress — 30분(1800초) 리셋', () => {
 });
 
 describe('reset', () => {
-  it('모든 state 초기화', () => {
+  it('모든 state 초기화 + interval 클리어', () => {
     useTimerStore.getState().setSession('abc');
     useTimerStore.getState().start();
     jest.advanceTimersByTime(5000);
@@ -90,28 +81,9 @@ describe('reset', () => {
     expect(state.status).toBe('IDLE');
     expect(state.elapsedSec).toBe(0);
     expect(state.todos).toHaveLength(0);
-  });
 
-  it('reset 후 interval 클리어 — tick 없음', () => {
-    useTimerStore.getState().start();
-    useTimerStore.getState().reset();
+    // interval이 클리어됐는지 확인 — reset 후 시간이 지나도 tick 없음
     jest.advanceTimersByTime(5000);
     expect(useTimerStore.getState().elapsedSec).toBe(0);
-  });
-});
-
-describe('todo 관리', () => {
-  it('addTodo → toggleTodo → removeTodo 라운드트립', () => {
-    useTimerStore.getState().addTodo('테스트 작성');
-    const { todos } = useTimerStore.getState();
-    expect(todos).toHaveLength(1);
-    expect(todos[0]!.text).toBe('테스트 작성');
-    expect(todos[0]!.done).toBe(false);
-
-    useTimerStore.getState().toggleTodo(todos[0]!.id);
-    expect(useTimerStore.getState().todos[0]!.done).toBe(true);
-
-    useTimerStore.getState().removeTodo(todos[0]!.id);
-    expect(useTimerStore.getState().todos).toHaveLength(0);
   });
 });

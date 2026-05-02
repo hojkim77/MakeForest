@@ -45,7 +45,7 @@ interface ForestState {
 }
 
 export function MapContainer() {
-  const { setMapMode } = useMapStore();
+  const { setMapMode, focusRegion, focusedRegionCode } = useMapStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const minScaleRef = useRef(0.1);
 
@@ -162,9 +162,8 @@ export function MapContainer() {
     };
   }, [handleWheel, handleMouseDown, handleMouseMove, handleMouseUp]);
 
-  // ── 시/군 클릭 → 숲 모드 진입 ────────────────────────────────────────
+  // ── 시/군 클릭 → 숲 모드 진입 + 패널 동기화 ──────────────────────────
   const handleRegionClick = useCallback((regionCode: string, bounds: RegionBounds) => {
-    // 드래그 후 mouseup에서 설정된 억제 플래그면 무시
     if (suppressNextClick.current) {
       suppressNextClick.current = false;
       return;
@@ -174,16 +173,29 @@ export function MapContainer() {
     const { width, height } = el.getBoundingClientRect();
     setForestT(computeForestTransform(bounds, width, height));
     setForestState({ regionCode, bounds });
-  }, []);
+    focusRegion(regionCode);
+  }, [focusRegion]);
 
-  // ── 전체 보기 리셋 ────────────────────────────────────────────────────
+  // ── 전체 보기 리셋 + 패널 동기화 ─────────────────────────────────────
   const resetView = useCallback(() => {
     setForestState(null);
+    focusRegion(null);
     const el = containerRef.current;
     if (!el) return;
     const { width, height } = el.getBoundingClientRect();
     setPixelT(constrain({ scale: minScaleRef.current, tx: 0, ty: 0 }, width, height));
-  }, []);
+  }, [focusRegion]);
+
+  // ── 패널 "내 동네로 돌아가기" → 맵도 픽셀 모드로 복귀 ──────────────
+  useEffect(() => {
+    if (focusedRegionCode === null) {
+      setForestState(null);
+      const el = containerRef.current;
+      if (!el) return;
+      const { width, height } = el.getBoundingClientRect();
+      setPixelT((prev) => constrain(prev, width, height));
+    }
+  }, [focusedRegionCode]);
 
   return (
     <div

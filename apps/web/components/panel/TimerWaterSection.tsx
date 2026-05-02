@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { SessionStatus } from '@makeforest/types';
 import { Icon } from '@/components/ui/Icon';
 
@@ -47,6 +48,12 @@ export function TimerWaterSection({
   const isRunning = status === 'RUNNING';
   const isPaused = status === 'PAUSED';
   const totalSec = Math.min(myWaterCount * SEGMENT_SEC + elapsedSec, DAILY_MAX_SEC);
+
+  const [showInfo, setShowInfo] = useState(false);
+
+  function dismissInfo() {
+    setShowInfo(!showInfo);
+  }
 
   return (
     <div className="flex flex-col gap-sm border-t border-outline-variant pt-md">
@@ -98,17 +105,45 @@ export function TimerWaterSection({
 
       {/* Timer + total progress */}
       <div className="flex items-end justify-between">
-        <span
-          className="font-mono tabular-nums text-3xl leading-none text-on-surface"
-          data-testid="timer-display"
-        >
-          {formatTimer(elapsedSec)}
-        </span>
+        <div className="flex items-center gap-xs">
+          <span
+            className="font-mono tabular-nums text-3xl leading-none text-on-surface"
+            data-testid="timer-display"
+          >
+            {formatTimer(elapsedSec)}
+          </span>
+          <button
+            onClick={() => setShowInfo((v) => !v)}
+            className="text-outline hover:text-on-surface transition-none p-0.5"
+            aria-label="뽀모도로 설명"
+          >
+            <Icon name="info" size={14} />
+          </button>
+        </div>
         <span className="font-mono text-label text-on-surface-variant uppercase tracking-wider">
           오늘 집중&nbsp;
           <span className="text-primary">{formatDuration(totalSec)} / 6h</span>
         </span>
       </div>
+
+      {/* pomodoro description */}
+      {showInfo && (
+        <div className="relative bg-surface-container-high border border-outline-variant p-sm font-mono text-label text-on-surface-variant">
+          <button
+            onClick={dismissInfo}
+            className="absolute top-1 right-1 text-outline hover:text-on-surface transition-none"
+            aria-label="닫기"
+          >
+            <Icon name="close" size={14} />
+          </button>
+          <p className="font-semibold text-on-surface mb-xs">뽀모도로 집중법</p>
+          <ul className="space-y-xs list-none">
+            <li>· 30분 집중하면 물주기 1회 가능</li>
+            <li>· 물주기로 동네 생명체를 성장시켜요</li>
+            <li>· 하루 최대 12회 (6시간) 집중 가능</li>
+          </ul>
+        </div>
+      )}
 
       {/* Controls */}
       <div className="flex gap-sm">
