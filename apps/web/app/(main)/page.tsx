@@ -3,9 +3,6 @@ import { Panel } from '@/components/panel/Panel';
 import { MapContainer } from '@/components/map/MapContainer';
 import { MapOverlay } from '@/components/map/MapOverlay';
 
-// TODO: fetch real active user count from SSE / API
-const MOCK_ACTIVE_USERS = 1249;
-
 export default function MainPage() {
   return (
     <>
@@ -19,7 +16,7 @@ export default function MainPage() {
         {/* Map area */}
         <section className="relative flex-1 bg-inverse-surface overflow-hidden">
           <MapContainer />
-          <MapOverlay activeUsers={MOCK_ACTIVE_USERS} />
+          <MapOverlay />
         </section>
       </main>
     </>

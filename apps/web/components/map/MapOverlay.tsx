@@ -1,7 +1,6 @@
-interface MapOverlayProps {
-  /** Live active user count from SSE/WebSocket */
-  activeUsers: number;
-}
+'use client';
+
+import { useActivityStream } from '@/hooks/useActivityStream';
 
 const LEGEND = [
   { colorClass: 'bg-primary', label: 'Old Growth' },
@@ -14,13 +13,16 @@ const LEGEND = [
  * Contains the floating title card and density legend.
  * Pointer-events are disabled on the grid; legend/title are interactive-safe.
  */
-export function MapOverlay({ activeUsers }: MapOverlayProps) {
+export function MapOverlay() {
+  const activity = useActivityStream();
+  const activeUsers = Object.values(activity).reduce((sum, n) => sum + n, 0);
+
   return (
     <>
       {/* Title card — top left */}
       <div className="absolute top-6 left-6 z-10 p-md bg-background border border-outline">
         <p className="font-mono text-pixel-stat text-primary-container uppercase tracking-wider">
-          South Korea Pixel Forest
+          Pixel Forest
         </p>
         <p className="font-mono text-label text-outline mt-xs">
           Live Sync: {activeUsers.toLocaleString()} users active
