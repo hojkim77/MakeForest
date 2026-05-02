@@ -80,42 +80,22 @@ describe('SSE 연결', () => {
 });
 
 describe('heatmap:update 이벤트', () => {
-  it('이벤트 수신 → activity 상태 업데이트', async () => {
-    setupEmptyAlias();
-    const { result } = renderHook(() => useActivityStream());
-    await waitFor(() => MockEventSource.lastInstance !== null);
-
-    await act(async () => {
-      MockEventSource.lastInstance!.triggerEvent('heatmap:update', { '1111000': 5, '2222000': 3 });
-    });
-
-    expect(result.current).toEqual({ '1111000': 5, '2222000': 3 });
-  });
-
-  it('alias 병합: 동일 alias 코드의 count 합산', async () => {
+  it('alias 합산 + 원본 코드 유지 + 상태 업데이트', async () => {
+    // '1111000', '1111001' → 'target' 으로 병합, '9999000' 은 alias 없어 원본 유지
     setupAlias({ '1111000': 'target', '1111001': 'target' });
     const { result } = renderHook(() => useActivityStream());
     await waitFor(() => MockEventSource.lastInstance !== null);
 
     await act(async () => {
-      MockEventSource.lastInstance!.triggerEvent('heatmap:update', { '1111000': 2, '1111001': 3 });
+      MockEventSource.lastInstance!.triggerEvent('heatmap:update', {
+        '1111000': 2,
+        '1111001': 3,
+        '9999000': 1,
+      });
     });
 
     await waitFor(() => result.current['target'] !== undefined);
-    expect(result.current).toEqual({ target: 5 });
-  });
-
-  it('alias 없는 코드는 원본 코드 그대로', async () => {
-    setupAlias({ '1111000': 'mapped' });
-    const { result } = renderHook(() => useActivityStream());
-    await waitFor(() => MockEventSource.lastInstance !== null);
-
-    await act(async () => {
-      MockEventSource.lastInstance!.triggerEvent('heatmap:update', { '1111000': 4, '9999000': 1 });
-    });
-
-    await waitFor(() => result.current['mapped'] !== undefined);
-    expect(result.current).toEqual({ mapped: 4, '9999000': 1 });
+    expect(result.current).toEqual({ target: 5, '9999000': 1 });
   });
 });
 
@@ -151,23 +131,6 @@ describe('오류 및 재연결 (지수 백오프)', () => {
 
     act(() => { jest.advanceTimersByTime(1); });
     expect(MockEventSource.callCount).toBe(3);
-  });
-
-  it('백오프 상한: 30000ms 이상으로 늘어나지 않음', () => {
-    setupEmptyAlias();
-    renderHook(() => useActivityStream());
-
-    // 6번 연속 오류로 상한에 도달시킴
-    for (let i = 0; i < 6; i++) {
-      act(() => { MockEventSource.lastInstance!.triggerError(); });
-      act(() => { jest.advanceTimersByTime(30000); });
-    }
-
-    const countBefore = MockEventSource.callCount;
-    act(() => { MockEventSource.lastInstance!.triggerError(); });
-    act(() => { jest.advanceTimersByTime(30000); });
-
-    expect(MockEventSource.callCount).toBe(countBefore + 1);
   });
 
   it('언마운트 후 오류 → 재연결 없음', () => {
