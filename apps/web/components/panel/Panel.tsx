@@ -31,6 +31,7 @@ export function Panel() {
   const [creatureStage, setCreatureStage] = useState<CreatureStage>(0);
   const [myWaterCount, setMyWaterCount] = useState(0);
   const [growthPercent, setGrowthPercent] = useState(0);
+  const [isWatering, setIsWatering] = useState(false);
 
   const fetchCreature = useCallback(async (regionCode: string) => {
     try {
@@ -122,6 +123,8 @@ export function Panel() {
   }
 
   async function handleWater() {
+    if (isWatering) return;
+    setIsWatering(true);
     const totalElapsedSec = myWaterCount * 1800 + elapsedSec;
     try {
       const res = await fetch('/api/water', {
@@ -136,6 +139,7 @@ export function Panel() {
       setGrowthPercent(Math.min(Math.round((data.creature.waterCount / 45) * 100), 100));
       useTimerStore.getState().resetWaterProgress();
     } catch { /* 실패 시 조용히 무시 */ }
+    finally { setIsWatering(false); }
   }
 
   // function handleDongSelect(dongCode: string, dongName: string) {
@@ -146,6 +150,7 @@ export function Panel() {
   const canWater =
     isLoggedIn &&
     !isPeeking &&
+    !isWatering &&
     (timerStatus === 'RUNNING' || (timerStatus === 'PAUSED' && autoPaused)) &&
     elapsedSec >= WATER_THRESHOLD_SEC;
 
