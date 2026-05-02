@@ -12,6 +12,7 @@ import { TimerWaterSection } from './TimerWaterSection';
 import { TaskList } from './TaskList';
 import { NeighborhoodStats } from './NeighborhoodStats';
 import { WaterToast } from './WaterToast';
+import { usePushNotification } from '@/hooks/usePushNotification';
 
 const WATER_THRESHOLD_SEC = 30 * 60;
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
@@ -27,6 +28,13 @@ export function Panel() {
   const isPeeking = focusedRegionCode !== null && focusedRegionCode !== myRegionCode;
   const activeRegionCode = focusedRegionCode ?? myRegionCode;
   const neighborhoodName = activeRegionCode ? regionDisplayName(activeRegionCode) : '내 동네';
+
+  const { subscribe } = usePushNotification();
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    subscribe().catch(() => {});
+  }, [isLoggedIn]);
 
   const [creatureStage, setCreatureStage] = useState<CreatureStage>(0);
   const [myWaterCount, setMyWaterCount] = useState(0);
