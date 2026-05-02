@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { usePixelMapData } from '@/hooks/usePixelMapData';
 import { useActivityStream } from '@/hooks/useActivityStream';
 import { regionOf, regionDisplayName } from '@makeforest/types';
@@ -30,11 +31,10 @@ function dongColor(count: number): string {
   return `hsl(148,60%,${l.toFixed(0)}%)`;
 }
 
-function hashCode(s: string): number {
-  return s.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-}
+const STAGE_EMOJIS = ['🌱', '🌿', '🌳', '🌲', '🌲'] as const;
 
-const STAGES = ['🌱', '🌿', '🌳', '🌲'] as const;
+interface CreatureData { stage: number; waterCount: number; }
+const creatureCache = new Map<string, CreatureData>();
 
 interface TooltipStats {
   stage: string;
@@ -170,8 +170,8 @@ export function PixelMap({ onRegionClick }: PixelMapProps) {
       return {
         cx: Math.floor((e.clientX - rect.left) * scaleX / PIXEL_SIZE),
         cy: Math.floor((e.clientY - rect.top) * scaleY / PIXEL_SIZE),
-        screenX: e.clientX - rect.left,
-        screenY: e.clientY - rect.top,
+        screenX: e.clientX,
+        screenY: e.clientY,
       };
     },
     [],
@@ -211,14 +211,32 @@ export function PixelMap({ onRegionClick }: PixelMapProps) {
         setTooltipStats(null);
 
         // 0.5초 후 상세 스탯
-        const h = hashCode(rc);
         hoverTimerRef.current = setTimeout(() => {
-          setTooltipStats({
-            stage: STAGES[h % 4] as string,
-            water: h % 4,
-            totalUsers: regionStats.get(rc)?.totalUsers ?? 0,
-          });
           hoverTimerRef.current = null;
+          if (activeRegionRef.current !== rc) return;
+
+          const cached = creatureCache.get(rc);
+          if (cached) {
+            setTooltipStats({
+              stage: STAGE_EMOJIS[Math.min(cached.stage, 4)] as string,
+              water: Math.min(cached.waterCount, 3),
+              totalUsers: regionStats.get(rc)?.totalUsers ?? 0,
+            });
+            return;
+          }
+
+          fetch(`/api/creature/${encodeURIComponent(rc)}`)
+            .then((res) => res.json())
+            .then((data: { stage: number; waterCount: number }) => {
+              creatureCache.set(rc, data);
+              if (activeRegionRef.current !== rc) return;
+              setTooltipStats({
+                stage: STAGE_EMOJIS[Math.min(data.stage, 4)] as string,
+                water: Math.min(data.waterCount, 3),
+                totalUsers: regionStats.get(rc)?.totalUsers ?? 0,
+              });
+            })
+            .catch(() => { /* 조용히 무시 — 지역명만 표시됨 */ });
         }, HOVER_DELAY_MS);
       } else {
         // 같은 지역 내 이동 — 라벨 위치만 갱신
@@ -260,11 +278,11 @@ export function PixelMap({ onRegionClick }: PixelMapProps) {
         onClick={handleClick}
       />
 
-      {/* 호버 라벨 — 지역명 즉시, 스탯은 0.5초 후 */}
-      {hoverLabel && (
+      {/* 호버 라벨 — transform 영향을 피하기 위해 portal로 body에 직접 렌더링 */}
+      {hoverLabel && createPortal(
         <div
           key={hoverLabel.regionCode}
-          className="pointer-events-none absolute z-10 animate-fade-in-up bg-inverse-surface px-2 py-1.5 font-mono text-label text-inverse-on-surface border border-outline"
+          className="pointer-events-none fixed z-[9999] animate-fade-in-up bg-inverse-surface px-2 py-1.5 font-mono text-label text-inverse-on-surface border border-outline"
           style={{ left: hoverLabel.x + 14, top: hoverLabel.y - 10 }}
         >
           <div className="font-medium">{hoverLabel.displayName}</div>
@@ -279,7 +297,8 @@ export function PixelMap({ onRegionClick }: PixelMapProps) {
               )}
             </div>
           )}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
