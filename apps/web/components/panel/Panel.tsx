@@ -26,8 +26,6 @@ export function Panel() {
   const myRegionCode = session?.user?.regionCode ?? null;
   const isPeeking = focusedRegionCode !== null && focusedRegionCode !== myRegionCode;
   const activeRegionCode = focusedRegionCode ?? myRegionCode;
-  console.log('focusedRegionCode', focusedRegionCode)
-  console.log('myRegionCode', myRegionCode)
   const neighborhoodName = activeRegionCode ? regionDisplayName(activeRegionCode) : '내 동네';
 
   const [creatureStage, setCreatureStage] = useState<CreatureStage>(0);
@@ -183,6 +181,11 @@ export function Panel() {
 
         <CreatureSection stage={creatureStage} />
 
+        <NeighborhoodStats
+          neighborhoodName={neighborhoodName}
+          growthPercent={growthPercent}
+        />
+
         {isLoggedIn ? (
           <>
             {!isPeeking && (
@@ -210,11 +213,6 @@ export function Panel() {
         ) : (
           !isPeeking && <LoginPrompt />
         )}
-
-        <NeighborhoodStats
-          neighborhoodName={neighborhoodName}
-          growthPercent={growthPercent}
-        />
 
         {/* TODO
           <div className="mt-auto pt-md border-t border-outline-variant">
