@@ -29,11 +29,12 @@ export interface MapUser {
   dongCode: string;
   pixelX: number;
   pixelY: number;
-  waterCount: number;
+  waterCount: number;      // 생애 누적 물주기 횟수 (stage 계산용)
+  todayWaterCount: number; // 오늘 물주기 횟수 (표시·순위용, 최대 12)
   creatureStage: number;
   sessionStatus: 'RUNNING' | 'PAUSED' | 'IDLE';
   todos: Todo[];
-  neighborhoodRank: number; // 같은 동 내 waterCount 순위 (1-based)
+  neighborhoodRank: number; // 같은 동 내 오늘 물주기 순위 (1-based)
 }
 
 export type UsersOverlayPayload = MapUser[];

@@ -53,7 +53,7 @@ export async function buildUsersOverlay(): Promise<MapUser[]> {
   const userMap = new Map(users.map((u) => [u.id, u]));
   const dongMap = new Map(dongs.map((d) => [d.code, d]));
 
-  // 영구 생명체 조회 (date 필터 없음)
+  // 영구 생명체 조회 (누적 waterCount, stage)
   const creatures = await prisma.userCreature.findMany({
     where: { userId: { in: allUserIds } },
     select: { userId: true, waterCount: true, stage: true },
@@ -61,6 +61,13 @@ export async function buildUsersOverlay(): Promise<MapUser[]> {
   const creatureMap = new Map<string, { waterCount: number; stage: number }>(
     creatures.map((c) => [c.userId, c]),
   );
+
+  // 오늘 일일 물주기 횟수 (표시·순위용)
+  const dailies = await prisma.dailySession.findMany({
+    where: { date: today, userId: { in: allUserIds } },
+    select: { userId: true, waterCount: true },
+  });
+  const dailyWaterMap = new Map(dailies.map((d) => [d.userId, d.waterCount]));
 
   const unranked: Omit<MapUser, 'neighborhoodRank'>[] = [];
 
@@ -80,6 +87,7 @@ export async function buildUsersOverlay(): Promise<MapUser[]> {
       pixelX,
       pixelY,
       waterCount: creature.waterCount,
+      todayWaterCount: dailyWaterMap.get(session.userId) ?? 0,
       creatureStage: creature.stage,
       sessionStatus: session.status === 'RUNNING' ? 'RUNNING' : 'PAUSED',
       todos,
@@ -101,25 +109,26 @@ export async function buildUsersOverlay(): Promise<MapUser[]> {
       pixelX,
       pixelY,
       waterCount: creature.waterCount,
+      todayWaterCount: dailyWaterMap.get(userId) ?? 0,
       creatureStage: creature.stage,
       sessionStatus: 'IDLE',
       todos: [],
     });
   }
 
-  // 같은 dongCode 내 waterCount 내림차순 순위 계산 (1-based)
+  // 같은 dongCode 내 오늘 물주기 기준 순위 (1-based, 동률 처리 포함)
   const dongRankMap = new Map<string, number[]>();
   for (const u of unranked) {
     if (!dongRankMap.has(u.dongCode)) dongRankMap.set(u.dongCode, []);
-    dongRankMap.get(u.dongCode)!.push(u.waterCount);
+    dongRankMap.get(u.dongCode)!.push(u.todayWaterCount);
   }
   dongRankMap.forEach((counts) => counts.sort((a, b) => b - a));
 
   const rankCounters = new Map<string, number>();
   const result: MapUser[] = unranked.map((u) => {
     const sorted = dongRankMap.get(u.dongCode)!;
-    const key = `${u.dongCode}:${u.waterCount}`;
-    const baseRank = sorted.indexOf(u.waterCount) + 1;
+    const key = `${u.dongCode}:${u.todayWaterCount}`;
+    const baseRank = sorted.indexOf(u.todayWaterCount) + 1;
     const tieOffset = rankCounters.get(key) ?? 0;
     rankCounters.set(key, tieOffset + 1);
     return { ...u, neighborhoodRank: baseRank + tieOffset };

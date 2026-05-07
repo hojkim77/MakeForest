@@ -55,8 +55,8 @@ export async function runMidnightBatch(): Promise<void> {
 }
 
 async function autoWaterUnwatered(date: string): Promise<void> {
-  // 해당 날짜 내 종료된 세션(자정 기준 포함) 집계
-  const kstMidnightUtc = new Date(`${date}T15:00:00Z`);
+  // 해당 날짜 KST 00:00 = UTC 전날 15:00
+  const kstMidnightUtc = new Date(`${date}T00:00:00+09:00`);
   const sessions = await prisma.focusSession.findMany({
     where: { startedAt: { gte: kstMidnightUtc }, endedAt: { not: null } },
     select: { userId: true, dongCode: true, startedAt: true, endedAt: true },

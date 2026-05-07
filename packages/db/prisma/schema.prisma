@@ -112,7 +112,7 @@ model DailySession {
   userId     String
   date       String // KST "YYYY-MM-DD"
   elapsedSec Int    @default(0)
-  waterCount Int    @default(0) // 오늘 내가 준 물 (최대 3)
+  waterCount Int    @default(0) // 오늘 내가 준 물 (최대 12)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
