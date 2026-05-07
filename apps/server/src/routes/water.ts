@@ -10,6 +10,7 @@ export const waterRouter = Router();
 
 // POST /water — 물 주기
 waterRouter.post('/', async (req: Request, res: Response) => {
+  try {
   const { userId, dongCode, nickname, totalElapsedSec } = req.body as {
     userId: string;
     dongCode: string;
@@ -101,16 +102,25 @@ waterRouter.post('/', async (req: Request, res: Response) => {
     myWaterCount,
     userCreature: { stage: userCreature.stage, waterCount: userCreature.waterCount },
   });
+  } catch (err) {
+    console.error('[water] POST error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // GET /water/me?userId=...&date=...  — 내 오늘 물주기 횟수
 waterRouter.get('/me', async (req: Request, res: Response) => {
-  const { userId, date } = req.query as { userId: string; date?: string };
-  const today = date ?? getKstDateString();
+  try {
+    const { userId, date } = req.query as { userId: string; date?: string };
+    const today = date ?? getKstDateString();
 
-  const daily = await prisma.dailySession.findUnique({
-    where: { userId_date: { userId, date: today } },
-  });
+    const daily = await prisma.dailySession.findUnique({
+      where: { userId_date: { userId, date: today } },
+    });
 
-  return res.json({ waterCount: daily?.waterCount ?? 0, date: today });
+    return res.json({ waterCount: daily?.waterCount ?? 0, date: today });
+  } catch (err) {
+    console.error('[water] GET /me error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 });
