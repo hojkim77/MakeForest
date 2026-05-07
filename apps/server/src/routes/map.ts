@@ -17,6 +17,30 @@ export function broadcastHeatmap(activity: Record<string, number>): void {
   activityClients.forEach((res) => res.write(payload));
 }
 
+// In-flight coalescing + 5s cache: 동시에 여러 SSE 연결이 재접속해도 DB 쿼리 1회만 실행
+let pendingOverlayBuild: Promise<MapUser[]> | null = null;
+let overlayCache: MapUser[] = [];
+let overlayCachedAt = 0;
+
+async function getCachedUsersOverlay(): Promise<MapUser[]> {
+  const now = Date.now();
+  if (now - overlayCachedAt < 5_000) return overlayCache;
+  if (!pendingOverlayBuild) {
+    pendingOverlayBuild = buildUsersOverlay()
+      .then((users) => {
+        overlayCache = users;
+        overlayCachedAt = Date.now();
+        pendingOverlayBuild = null;
+        return users;
+      })
+      .catch((err) => {
+        pendingOverlayBuild = null;
+        throw err;
+      });
+  }
+  return pendingOverlayBuild;
+}
+
 export async function buildUsersOverlay(): Promise<MapUser[]> {
   const today = getKstDateString();
 
@@ -145,7 +169,7 @@ export function scheduleUsersOverlayBroadcast(): void {
   overlayBroadcastTimer = setTimeout(async () => {
     overlayBroadcastTimer = null;
     try {
-      const users = await buildUsersOverlay();
+      const users = await getCachedUsersOverlay();
       const payload = `event: users:overlay\ndata: ${JSON.stringify(users)}\n\n`;
       activityClients.forEach((res) => res.write(payload));
     } catch (err) {
@@ -201,7 +225,7 @@ mapRouter.get('/activity-stream', (req: Request, res: Response) => {
       }
       res.write(`event: heatmap:update\ndata: ${JSON.stringify(activity)}\n\n`);
 
-      const users = await buildUsersOverlay();
+      const users = await getCachedUsersOverlay();
       res.write(`event: users:overlay\ndata: ${JSON.stringify(users)}\n\n`);
     } catch (err) {
       console.error('[map] sendSnapshot error:', err);

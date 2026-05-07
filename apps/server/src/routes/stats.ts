@@ -6,6 +6,7 @@ export const statsRouter = Router();
 
 // GET /stats/me?userId=...&dongCode=...
 statsRouter.get('/me', async (req: Request, res: Response) => {
+  try {
   const { userId, dongCode } = req.query as { userId: string; dongCode?: string };
 
   if (!userId) {
@@ -109,4 +110,8 @@ statsRouter.get('/me', async (req: Request, res: Response) => {
     collection,
     dongName,
   });
+  } catch (err) {
+    console.error('[stats] GET /me error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 });
