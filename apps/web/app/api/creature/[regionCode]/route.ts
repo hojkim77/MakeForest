@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const SERVER_URL = process.env.SERVER_URL ?? 'http://localhost:4000';
+const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
 
 export async function GET(
   _req: NextRequest,
