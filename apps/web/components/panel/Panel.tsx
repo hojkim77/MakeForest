@@ -17,7 +17,7 @@ import { usePushNotification } from '@/hooks/usePushNotification';
 const WATER_THRESHOLD_SEC = 30 * 60;
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
 
-type CreatureStage = 0 | 1 | 2 | 3 | 4;
+type CreatureStage = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 export function Panel() {
   const { data: session, status } = useSession();
@@ -41,23 +41,15 @@ export function Panel() {
   const [growthPercent, setGrowthPercent] = useState(0);
   const [isWatering, setIsWatering] = useState(false);
 
-  const PERSONAL_THRESHOLDS = [0, 1, 3, 6, 10];
-  function personalStage(wc: number): CreatureStage {
-    let s = 0;
-    for (let i = PERSONAL_THRESHOLDS.length - 1; i >= 0; i--) {
-      if (wc >= PERSONAL_THRESHOLDS[i]!) { s = i; break; }
-    }
-    return Math.min(s, 4) as CreatureStage;
-  }
-
   const fetchMyWaterCount = useCallback(async () => {
     if (!isLoggedIn) return;
     try {
       const res = await fetch('/api/water/me');
       if (!res.ok) return;
-      const data = await res.json() as { waterCount: number };
+      const data = await res.json() as { waterCount: number; creatureStage: number; creatureWaterCount: number };
       setMyWaterCount(data.waterCount);
-      setCreatureStage(personalStage(data.waterCount));
+      setCreatureStage(Math.min(data.creatureStage, 9) as CreatureStage);
+      // growthPercent = 오늘 하루 물주기 진행도 (일일 12회 기준)
       setGrowthPercent(Math.min(Math.round((data.waterCount / 12) * 100), 100));
     } catch { /* 실패 시 기본값 유지 */ }
   }, [isLoggedIn]);
@@ -133,8 +125,9 @@ export function Panel() {
       if (!res.ok) return;
       const data = await res.json() as { myWaterCount: number; userCreature: { stage: number; waterCount: number } };
       setMyWaterCount(data.myWaterCount);
-      setCreatureStage(Math.min(data.userCreature.stage, 4) as CreatureStage);
-      setGrowthPercent(Math.min(Math.round((data.userCreature.waterCount / 12) * 100), 100));
+      setCreatureStage(Math.min(data.userCreature.stage, 9) as CreatureStage);
+      // growthPercent = 오늘 하루 물주기 진행도 (일일 12회 기준)
+      setGrowthPercent(Math.min(Math.round((data.myWaterCount / 12) * 100), 100));
       useTimerStore.getState().resetWaterProgress();
     } catch { /* 실패 시 조용히 무시 */ }
     finally { setIsWatering(false); }
@@ -182,7 +175,7 @@ export function Panel() {
         <SloganSection neighborhoodName={neighborhoodName} />
         <WaterToast regionCode={activeRegionCode} />
 
-        {isLoggedIn && <CreatureSection stage={creatureStage} />}
+        {isLoggedIn && <CreatureSection stage={Math.min(creatureStage, 4) as 0 | 1 | 2 | 3 | 4} />}
 
         {isLoggedIn && (
           <NeighborhoodStats
