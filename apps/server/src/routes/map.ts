@@ -137,10 +137,21 @@ export async function buildUsersOverlay(): Promise<MapUser[]> {
   return result;
 }
 
-export async function broadcastUsersOverlay(): Promise<void> {
-  const users = await buildUsersOverlay();
-  const payload = `event: users:overlay\ndata: ${JSON.stringify(users)}\n\n`;
-  activityClients.forEach((res) => res.write(payload));
+// 디바운스: 물주기/세션 이벤트가 집중될 때 DB 쿼리 중복 방지 (1초 내 중복 호출 무시)
+let overlayBroadcastTimer: ReturnType<typeof setTimeout> | null = null;
+
+export function scheduleUsersOverlayBroadcast(): void {
+  if (overlayBroadcastTimer) return;
+  overlayBroadcastTimer = setTimeout(async () => {
+    overlayBroadcastTimer = null;
+    try {
+      const users = await buildUsersOverlay();
+      const payload = `event: users:overlay\ndata: ${JSON.stringify(users)}\n\n`;
+      activityClients.forEach((res) => res.write(payload));
+    } catch (err) {
+      console.error('[map] broadcastUsersOverlay error:', err);
+    }
+  }, 1000);
 }
 
 // GET /map/pixel-data — 전체 행정동 픽셀 좌표 (24h 캐시)
@@ -172,7 +183,7 @@ mapRouter.get('/activity', async (_req: Request, res: Response) => {
 });
 
 // GET /map/activity-stream — SSE로 동별 활성도 + 유저 오버레이 실시간 전송 (10초 간격)
-mapRouter.get('/activity-stream', async (req: Request, res: Response) => {
+mapRouter.get('/activity-stream', (req: Request, res: Response) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
@@ -180,22 +191,27 @@ mapRouter.get('/activity-stream', async (req: Request, res: Response) => {
   activityClients.add(res);
 
   const sendSnapshot = async () => {
-    const heatmapRaw = await redis.hgetall(RedisKeys.heatmapDong());
-    const activity: Record<string, number> = {};
-    if (heatmapRaw) {
-      for (const [dongCode, count] of Object.entries(heatmapRaw)) {
-        activity[dongCode] = Number(count);
+    try {
+      const heatmapRaw = await redis.hgetall(RedisKeys.heatmapDong());
+      const activity: Record<string, number> = {};
+      if (heatmapRaw) {
+        for (const [dongCode, count] of Object.entries(heatmapRaw)) {
+          activity[dongCode] = Number(count);
+        }
       }
-    }
-    res.write(`event: heatmap:update\ndata: ${JSON.stringify(activity)}\n\n`);
+      res.write(`event: heatmap:update\ndata: ${JSON.stringify(activity)}\n\n`);
 
-    const users = await buildUsersOverlay();
-    res.write(`event: users:overlay\ndata: ${JSON.stringify(users)}\n\n`);
+      const users = await buildUsersOverlay();
+      res.write(`event: users:overlay\ndata: ${JSON.stringify(users)}\n\n`);
+    } catch (err) {
+      console.error('[map] sendSnapshot error:', err);
+    }
   };
 
-  await sendSnapshot();
+  // 초기 스냅샷 (연결 직후)
+  void sendSnapshot();
 
-  const interval = setInterval(sendSnapshot, 10_000);
+  const interval = setInterval(() => void sendSnapshot(), 10_000);
   const ping = setInterval(() => res.write(': ping\n\n'), 30_000);
 
   req.on('close', () => {

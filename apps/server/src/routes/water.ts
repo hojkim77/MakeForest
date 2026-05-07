@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
 import { broadcastToRegion } from './sse';
-import { broadcastUsersOverlay } from './map';
+import { scheduleUsersOverlayBroadcast } from './map';
 import { calcPersonalStage, getKstDateString, checkDailyCapExceeded } from './water.logic';
 import { regionOf } from '@makeforest/types';
 import { getSession, setSession, getActiveDongSessions } from '@makeforest/redis';
@@ -32,6 +32,11 @@ waterRouter.post('/', async (req: Request, res: Response) => {
   const daily = await prisma.dailySession.findUnique({
     where: { userId_date: { userId, date: today } },
   });
+
+  // 일일 물주기 한도 (최대 12회)
+  if ((daily?.waterCount ?? 0) >= 12) {
+    return res.status(409).json({ error: '오늘 물주기 횟수를 모두 사용했습니다.' });
+  }
 
   // dong name 조회 → regionCode 계산
   const dong = await prisma.dong.findUnique({ where: { code: dongCode }, select: { name: true } });
@@ -79,7 +84,7 @@ waterRouter.post('/', async (req: Request, res: Response) => {
         }
       }
       // 갱신된 유저 목록을 users:overlay로 브로드캐스트
-      await broadcastUsersOverlay();
+      scheduleUsersOverlayBroadcast();
     } catch (err) {
       console.error('[water] Redis/SSE sync error:', err);
     }
