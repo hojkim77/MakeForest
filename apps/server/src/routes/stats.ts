@@ -73,25 +73,16 @@ statsRouter.get('/me', async (req: Request, res: Response) => {
     weeklyData.reduce((sum, w) => sum + w.waterCount, 0) / 4,
   );
 
-  // 5. 생명체 컬렉션 — 유저가 물 준 날의 Fossil 기준
+  // 5. 생명체 컬렉션 — 유저의 Fossil 직접 조회
   const SEED_TYPES = ['SEED'];
   const SPROUT_TYPES = ['SPROUT'];
   const GRASS_TYPES = ['GRASS', 'FLOWER_A', 'FLOWER_B', 'MUSHROOM', 'ROCK'];
   const TREE_TYPES = ['SAPLING', 'OAK', 'PINE', 'BAMBOO', 'BIG_OAK', 'CHERRY', 'RARE_ANIMAL'];
 
-  const wateringLogs = await prisma.wateringLog.findMany({
+  const fossils = await prisma.fossil.findMany({
     where: { userId },
-    select: { dongCode: true, date: true },
-    distinct: ['dongCode', 'date'],
+    select: { creatureType: true },
   });
-
-  const fossilConditions = wateringLogs.map((log: { dongCode: string; date: string }) => ({ dongCode: log.dongCode, date: log.date }));
-  const fossils: { creatureType: string }[] = fossilConditions.length > 0
-    ? await prisma.fossil.findMany({
-        where: { OR: fossilConditions },
-        select: { creatureType: true },
-      })
-    : [];
 
   const collection = {
     seed: fossils.filter(o => SEED_TYPES.includes(o.creatureType)).length,
