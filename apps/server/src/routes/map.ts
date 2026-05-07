@@ -67,7 +67,7 @@ export async function buildUsersOverlay(): Promise<MapUser[]> {
     activeCreatures.map((c) => [c.userId, c]),
   );
 
-  const result: MapUser[] = [];
+  const unranked: Omit<MapUser, 'neighborhoodRank'>[] = [];
 
   for (const session of activeSessions) {
     const user = userMap.get(session.userId);
@@ -78,7 +78,7 @@ export async function buildUsersOverlay(): Promise<MapUser[]> {
     const creature = creatureMap.get(session.userId) ?? { waterCount: 0, stage: 0 };
     const todos = user.todosPublic ? (session.todos as unknown as Todo[]) : [];
 
-    result.push({
+    unranked.push({
       userId: session.userId,
       nickname: user.nickname,
       dongCode: user.dongCode,
@@ -98,7 +98,7 @@ export async function buildUsersOverlay(): Promise<MapUser[]> {
     if (!dong) continue;
     const { pixelX, pixelY } = toPixel(dong.lat, dong.lng);
 
-    result.push({
+    unranked.push({
       userId: creature.userId,
       nickname: user.nickname,
       dongCode: user.dongCode,
@@ -110,6 +110,24 @@ export async function buildUsersOverlay(): Promise<MapUser[]> {
       todos: [],
     });
   }
+
+  // 같은 dongCode 내 waterCount 내림차순 순위 계산 (1-based)
+  const dongRankMap = new Map<string, number[]>();
+  for (const u of unranked) {
+    if (!dongRankMap.has(u.dongCode)) dongRankMap.set(u.dongCode, []);
+    dongRankMap.get(u.dongCode)!.push(u.waterCount);
+  }
+  dongRankMap.forEach((counts) => counts.sort((a, b) => b - a));
+
+  const rankCounters = new Map<string, number>();
+  const result: MapUser[] = unranked.map((u) => {
+    const sorted = dongRankMap.get(u.dongCode)!;
+    const key = `${u.dongCode}:${u.waterCount}`;
+    const baseRank = sorted.indexOf(u.waterCount) + 1;
+    const tieOffset = rankCounters.get(key) ?? 0;
+    rankCounters.set(key, tieOffset + 1);
+    return { ...u, neighborhoodRank: baseRank + tieOffset };
+  });
 
   return result;
 }

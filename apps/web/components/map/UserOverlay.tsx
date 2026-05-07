@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import type { MapUser } from '@makeforest/types';
 import { CreatureSprite } from '@/components/panel/CreatureSprite';
 
@@ -10,15 +11,14 @@ interface UserOverlayProps {
   mapH: number;
 }
 
-// 모든 상태에 기본 투명도 적용 (겹쳐도 아래가 보임)
 const STATUS_OPACITY: Record<string, number> = {
   RUNNING: 0.75,
   PAUSED: 0.5,
   IDLE: 0.25,
 };
 
-const SPRITE_SIZE = 2;   // 원래 24px의 1/12
-const JITTER_RADIUS = 2; // 원래 14px의 1/7 (2px 단위 이격)
+const SPRITE_SIZE = 2;
+const JITTER_RADIUS = 2;
 
 function jitteredPositions(users: MapUser[], mapW: number, mapH: number) {
   const grouped = new Map<string, MapUser[]>();
@@ -47,44 +47,14 @@ function jitteredPositions(users: MapUser[], mapW: number, mapH: number) {
   });
 }
 
-interface PopoverProps {
+interface HoverState {
   user: MapUser;
-}
-
-function UserPopover({ user }: PopoverProps) {
-  const visibleTodos = user.todos.filter((t) => !t.done);
-  return (
-    <div
-      className="absolute bottom-full left-1/2 mb-0.5 w-max max-w-32 rounded border border-white/20 bg-black/85 px-1.5 py-1 text-[8px] leading-tight text-white shadow-lg"
-      style={{ transform: 'translateX(-50%)' }}
-    >
-      <p className="font-bold text-[9px]">{user.nickname}</p>
-      {user.sessionStatus !== 'IDLE' && (
-        <p className="text-green-400 text-[8px]">
-          {user.sessionStatus === 'RUNNING' ? '집중 중' : '일시정지'}
-        </p>
-      )}
-      {user.waterCount > 0 && (
-        <p className="text-blue-300">💧×{user.waterCount}</p>
-      )}
-      {visibleTodos.length > 0 && (
-        <ul className="mt-0.5 space-y-px">
-          {visibleTodos.slice(0, 2).map((t, i) => (
-            <li key={i} className="truncate text-white/70">
-              · {t.text}
-            </li>
-          ))}
-          {visibleTodos.length > 2 && (
-            <li className="text-white/40">+{visibleTodos.length - 2}개</li>
-          )}
-        </ul>
-      )}
-    </div>
-  );
+  screenX: number;
+  screenY: number;
 }
 
 export function UserOverlay({ users, mapW, mapH }: UserOverlayProps) {
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [hovered, setHovered] = useState<HoverState | null>(null);
 
   const positioned = useMemo(
     () => jitteredPositions(users, mapW, mapH),
@@ -96,7 +66,6 @@ export function UserOverlay({ users, mapW, mapH }: UserOverlayProps) {
       {positioned.map(({ user, baseLeft, baseTop, jx, jy }) => {
         const opacity = STATUS_OPACITY[user.sessionStatus] ?? 0.25;
         const stage = Math.min(4, Math.max(0, user.creatureStage)) as 0 | 1 | 2 | 3 | 4;
-        const isHovered = hoveredId === user.userId;
 
         return (
           <div
@@ -108,16 +77,55 @@ export function UserOverlay({ users, mapW, mapH }: UserOverlayProps) {
               transform: `translate(calc(-50% + ${jx}px), calc(-50% + ${jy}px))`,
               opacity,
             }}
-            onMouseEnter={() => setHoveredId(user.userId)}
-            onMouseLeave={() => setHoveredId(null)}
+            onMouseEnter={(e) => {
+              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              setHovered({ user, screenX: rect.left + rect.width / 2, screenY: rect.bottom });
+            }}
+            onMouseLeave={() => setHovered(null)}
           >
-            <div className="relative flex flex-col items-center">
-              {isHovered && <UserPopover user={user} />}
-              <CreatureSprite stage={stage} size={SPRITE_SIZE} />
-            </div>
+            <CreatureSprite stage={stage} size={SPRITE_SIZE} />
           </div>
         );
       })}
+
+      {/* 팝오버: transform 밖에 렌더링해 scale 영향 없음 */}
+      {hovered && typeof document !== 'undefined' && createPortal(
+        <div
+          className="pointer-events-none fixed z-[9999] w-max max-w-[140px] border border-white/20 bg-black/85 px-2 py-1.5 text-[11px] leading-snug text-white shadow-lg"
+          style={{ left: hovered.screenX, top: hovered.screenY + 6, transform: 'translateX(-50%)' }}
+        >
+          {/* 닉네임 + 동네 순위 */}
+          <div className="flex items-baseline gap-1.5">
+            <p className="font-bold">{hovered.user.nickname}</p>
+            <p className="text-[10px] text-yellow-300">#{hovered.user.neighborhoodRank}위</p>
+          </div>
+
+          {/* 세션 상태 */}
+          {hovered.user.sessionStatus !== 'IDLE' && (
+            <p className="text-green-400 text-[10px]">
+              {hovered.user.sessionStatus === 'RUNNING' ? '집중 중' : '일시정지'}
+            </p>
+          )}
+
+          {/* 물주기 횟수 */}
+          <p className="text-blue-300 text-[10px]">
+            💧 {hovered.user.waterCount}/12회
+          </p>
+
+          {/* 오늘의 할일 */}
+          {hovered.user.todos.length > 0 && (
+            <div className="mt-1 border-t border-white/10 pt-1 space-y-px">
+              {hovered.user.todos.filter((t) => !t.done).slice(0, 3).map((t, i) => (
+                <p key={i} className="truncate text-white/70 text-[10px]">· {t.text}</p>
+              ))}
+              {hovered.user.todos.filter((t) => !t.done).length > 3 && (
+                <p className="text-white/40 text-[10px]">+{hovered.user.todos.filter((t) => !t.done).length - 3}개</p>
+              )}
+            </div>
+          )}
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }

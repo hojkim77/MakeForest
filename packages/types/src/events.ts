@@ -33,6 +33,7 @@ export interface MapUser {
   creatureStage: number;
   sessionStatus: 'RUNNING' | 'PAUSED' | 'IDLE';
   todos: Todo[];
+  neighborhoodRank: number; // 같은 동 내 waterCount 순위 (1-based)
 }
 
 export type UsersOverlayPayload = MapUser[];
