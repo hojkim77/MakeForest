@@ -1,6 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
 import { redis, RedisKeys } from '@makeforest/redis';
+import { toPixel, GRID_W, GRID_H, LAT_MIN, LAT_MAX, LNG_MIN, LNG_MAX } from './map.logic';
+import { getKstDateString } from './water.logic';
+import type { MapUser, Todo } from '@makeforest/types';
+
+export { toPixel, GRID_W, GRID_H, LAT_MIN, LAT_MAX, LNG_MIN, LNG_MAX };
 
 export const mapRouter = Router();
 
@@ -12,8 +17,108 @@ export function broadcastHeatmap(activity: Record<string, number>): void {
   activityClients.forEach((res) => res.write(payload));
 }
 
-import { toPixel, GRID_W, GRID_H, LAT_MIN, LAT_MAX, LNG_MIN, LNG_MAX } from './map.logic';
-export { toPixel, GRID_W, GRID_H, LAT_MIN, LAT_MAX, LNG_MIN, LNG_MAX };
+export async function buildUsersOverlay(): Promise<MapUser[]> {
+  const today = getKstDateString();
+
+  // RUNNING / PAUSED 세션 조회 (미종료 세션만)
+  const activeSessions = await prisma.focusSession.findMany({
+    where: { status: { in: ['RUNNING', 'PAUSED'] } },
+    select: { userId: true, status: true, todos: true },
+  });
+
+  const activeUserIds = new Set(activeSessions.map((s) => s.userId));
+
+  // 오늘 UserCreature가 있지만 현재 활성 세션 없는 유저 (IDLE)
+  const idleCreatures = await prisma.userCreature.findMany({
+    where: {
+      date: today,
+      userId: { notIn: [...activeUserIds] },
+    },
+    select: { userId: true, waterCount: true, stage: true },
+  });
+
+  const allUserIds = [
+    ...activeUserIds,
+    ...idleCreatures.map((c) => c.userId),
+  ];
+  if (allUserIds.length === 0) return [];
+
+  // 유저 정보와 dongCode 조회
+  const users = await prisma.user.findMany({
+    where: { id: { in: allUserIds } },
+    select: { id: true, nickname: true, dongCode: true, todosPublic: true },
+  });
+
+  const dongCodes = users.map((u) => u.dongCode).filter(Boolean) as string[];
+  const dongs = await prisma.dong.findMany({
+    where: { code: { in: dongCodes } },
+    select: { code: true, lat: true, lng: true },
+  });
+
+  const userMap = new Map(users.map((u) => [u.id, u]));
+  const dongMap = new Map(dongs.map((d) => [d.code, d]));
+
+  // 활성 세션 유저의 오늘 UserCreature 조회
+  const activeCreatures = await prisma.userCreature.findMany({
+    where: { date: today, userId: { in: [...activeUserIds] } },
+    select: { userId: true, waterCount: true, stage: true },
+  });
+  const creatureMap = new Map<string, { waterCount: number; stage: number }>(
+    activeCreatures.map((c) => [c.userId, c]),
+  );
+
+  const result: MapUser[] = [];
+
+  for (const session of activeSessions) {
+    const user = userMap.get(session.userId);
+    if (!user?.dongCode) continue;
+    const dong = dongMap.get(user.dongCode);
+    if (!dong) continue;
+    const { pixelX, pixelY } = toPixel(dong.lat, dong.lng);
+    const creature = creatureMap.get(session.userId) ?? { waterCount: 0, stage: 0 };
+    const todos = user.todosPublic ? (session.todos as unknown as Todo[]) : [];
+
+    result.push({
+      userId: session.userId,
+      nickname: user.nickname,
+      dongCode: user.dongCode,
+      pixelX,
+      pixelY,
+      waterCount: creature.waterCount,
+      creatureStage: creature.stage,
+      sessionStatus: session.status === 'RUNNING' ? 'RUNNING' : 'PAUSED',
+      todos,
+    });
+  }
+
+  for (const creature of idleCreatures) {
+    const user = userMap.get(creature.userId);
+    if (!user?.dongCode) continue;
+    const dong = dongMap.get(user.dongCode);
+    if (!dong) continue;
+    const { pixelX, pixelY } = toPixel(dong.lat, dong.lng);
+
+    result.push({
+      userId: creature.userId,
+      nickname: user.nickname,
+      dongCode: user.dongCode,
+      pixelX,
+      pixelY,
+      waterCount: creature.waterCount,
+      creatureStage: creature.stage,
+      sessionStatus: 'IDLE',
+      todos: [],
+    });
+  }
+
+  return result;
+}
+
+export async function broadcastUsersOverlay(): Promise<void> {
+  const users = await buildUsersOverlay();
+  const payload = `event: users:overlay\ndata: ${JSON.stringify(users)}\n\n`;
+  activityClients.forEach((res) => res.write(payload));
+}
 
 // GET /map/pixel-data — 전체 행정동 픽셀 좌표 (24h 캐시)
 mapRouter.get('/pixel-data', async (_req: Request, res: Response) => {
@@ -43,7 +148,7 @@ mapRouter.get('/activity', async (_req: Request, res: Response) => {
   res.json(activity);
 });
 
-// GET /map/activity-stream — SSE로 동별 활성도 실시간 전송 (10초 간격)
+// GET /map/activity-stream — SSE로 동별 활성도 + 유저 오버레이 실시간 전송 (10초 간격)
 mapRouter.get('/activity-stream', async (req: Request, res: Response) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -60,6 +165,9 @@ mapRouter.get('/activity-stream', async (req: Request, res: Response) => {
       }
     }
     res.write(`event: heatmap:update\ndata: ${JSON.stringify(activity)}\n\n`);
+
+    const users = await buildUsersOverlay();
+    res.write(`event: users:overlay\ndata: ${JSON.stringify(users)}\n\n`);
   };
 
   await sendSnapshot();
