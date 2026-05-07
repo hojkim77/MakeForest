@@ -26,10 +26,11 @@
 - 활성 유저 있는 동 → **브리딩 애니메이션** (밝기가 사인파로 진동, 주기 약 900ms)
 - 아무도 없는 동 → 회색 (#707972), 애니메이션 없음
 - **유저 오버레이** (`UserOverlay.tsx`): 오늘 활동한 유저를 각자의 dongCode lat/lng 위치에 생명체 스프라이트로 표시
-  - 투명도: RUNNING 1.0 / PAUSED 0.6 / IDLE 0.3
-  - 물 뱃지: 오늘 물주기 횟수 (💧 최대 5개 표시)
-  - 같은 동 유저 이격: 인덱스 기반 원형 배치 (radius 14px)
-  - 호버 팝오버: 닉네임 + 세션 상태 + 할 일 목록 (todosPublic=false면 할 일 미표시)
+  - 투명도: RUNNING 0.75 / PAUSED 0.5 / IDLE 0.25
+  - 같은 동 유저 이격: 인덱스 기반 원형 배치 (JITTER_RADIUS 0.5px — hit area 절반, 겹침 없음 보장)
+  - hit area: 1×1px div (overflow: visible로 2px 스프라이트 시각적 표시), 이격 보장으로 모든 유저 호버 가능
+  - 호버 팝오버: 닉네임 + 동네 순위(#N위) + 세션 상태 + `todayWaterCount`(오늘 물주기 횟수 N/12) + 할 일 목록 (todosPublic=false면 미표시)
+  - 팝오버는 `createPortal`로 `document.body`에 렌더링 (canvas scale transform 영향 없음)
 - **화면 이동 불가** (드래그·휠 잠금)
 - 우측 하단 버튼 → 뒤로가기(픽셀 모드 복귀)
 

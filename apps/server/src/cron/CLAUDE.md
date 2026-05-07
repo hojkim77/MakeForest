@@ -9,19 +9,29 @@
 
 ## 생명체 단위
 
-- **유저별(userId) 기준** — `UserCreature.@@unique([userId, date])`
+- **유저별(userId) 기준** — `UserCreature.@@unique([userId])` (date 없음, 영구 단일 레코드)
 - 기존 지역 공유 `Creature` 테이블 제거됨
 
 ## 생명체 박제 조건
 
-- 개인 `UserCreature.stage >= 1` (새싹 이상)이어야 Fossil 생성
-- stage = 0 (씨앗, 물주기 0회) → 박제 없음
+- 해당 날짜 `WateringLog`에 기록된 유저(당일 물을 준 유저) → Fossil 생성 대상
+- 해당 유저의 영구 `UserCreature.stage >= 1` (새싹 이상)이어야 Fossil 생성
+- stage = 0 (씨앗, 물주기 0회) → 박제 없음 (단, WateringLog 기준이므로 첫 물주기 당일은 stage 1 이상으로 Fossil 생성됨)
 - `User.dongCode`가 null이면 해당 유저 건너뜀
 - `Fossil.@@unique([userId, date])` — 유저 1명 × 하루 1개
 
-## 개인 생명체 진화 임계값
+## 개인 생명체 진화 임계값 (누적 waterCount 기준)
 
-`PERSONAL_STAGE_THRESHOLDS = [0, 1, 3, 6, 10]` — `water.logic.ts`에 하드코딩
+`PERSONAL_STAGE_THRESHOLDS = [0, 12, 36, 72, 132, 216, 336, 504, 744, 1080]` — `water.logic.ts`에 하드코딩 (10단계)
+
+## 날짜 계산 주의사항
+
+`autoWaterUnwatered`에서 어제 KST 날짜 기준 세션 조회 시:
+```typescript
+// 올바른 방식: KST 00:00을 UTC로 변환
+const kstMidnightUtc = new Date(`${date}T00:00:00+09:00`);
+// 틀린 방식: ${date}T15:00:00Z = 해당 날짜 다음날 KST 자정 → 조회 결과 0건
+```
 
 ## 미구현 항목
 

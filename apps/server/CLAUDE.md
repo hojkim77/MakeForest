@@ -23,7 +23,10 @@
 - 물주기 1회당 개인 `UserCreature` 진화 단계 업데이트 (응답에 `userCreature: { stage, waterCount }` 포함)
 - 물주기 성공 시 동네 전체에 `water:toast` SSE 이벤트 발행, `users:overlay` 즉시 재브로드캐스트
 - 응답 형식: `{ myWaterCount: number, userCreature: { stage: number, waterCount: number } }`
-- UI: 6시간을 12개 세그먼트(각 30분)로 나눈 단일 게이지바로 표시 (growthPercent = waterCount / 12 * 100)
+  - `myWaterCount`: 오늘 내가 준 물 횟수 (1~12, DailySession 기반)
+  - `userCreature.waterCount`: **생애 누적** 물주기 총량 (stage 계산 기반)
+  - `userCreature.stage`: 누적 waterCount 기반 현재 단계 (0~9)
+- UI: 6시간을 12개 세그먼트(각 30분)로 나눈 단일 게이지바로 표시 (growthPercent = myWaterCount / 12 * 100, 오늘 기준)
 
 ## 마이페이지 통계 API (H)
 
