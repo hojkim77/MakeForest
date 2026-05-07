@@ -182,13 +182,14 @@ export function Panel() {
         <SloganSection neighborhoodName={neighborhoodName} />
         <WaterToast regionCode={activeRegionCode} />
 
-        <CreatureSection stage={creatureStage} />
+        {isLoggedIn && <CreatureSection stage={creatureStage} />}
 
-        <NeighborhoodStats
-          neighborhoodName={neighborhoodName}
-          growthPercent={growthPercent}
-          regionCode={activeRegionCode}
-        />
+        {isLoggedIn && (
+          <NeighborhoodStats
+            neighborhoodName={neighborhoodName}
+            growthPercent={growthPercent}
+          />
+        )}
 
         {isLoggedIn ? (
           <>

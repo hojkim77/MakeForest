@@ -48,7 +48,7 @@ interface HoverLabel {
 }
 
 interface PixelMapProps {
-  onRegionClick: (regionCode: string, bounds: RegionBounds) => void;
+  onRegionClick?: (regionCode: string, bounds: RegionBounds) => void;
 }
 
 export function PixelMap({ onRegionClick }: PixelMapProps) {
@@ -245,7 +245,7 @@ export function PixelMap({ onRegionClick }: PixelMapProps) {
       const rc = regionOf(cell.code, cell.name);
       const bounds = regionMeta.bounds.get(rc);
       if (!bounds || bounds.minX === Infinity) return;
-      onRegionClick(rc, bounds);
+      onRegionClick?.(rc, bounds);
     },
     [getCellFromEvent, gridMap, regionMeta.bounds, onRegionClick],
   );

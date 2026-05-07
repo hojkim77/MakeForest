@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { useMapStore } from '@/store';
 import { PixelMap, type RegionBounds } from './PixelMap';
 import { ForestMap } from './ForestMap';
@@ -45,6 +46,8 @@ interface ForestState {
 }
 
 export function MapContainer() {
+  const { data: session, status } = useSession();
+  const isLoggedIn = status === 'authenticated' && !!session?.user?.id;
   const { setMapMode, focusRegion, focusedRegionCode } = useMapStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const minScaleRef = useRef(0.1);
@@ -227,7 +230,7 @@ export function MapContainer() {
           className="absolute inset-0 transition-opacity duration-300"
           style={{ opacity: isForest ? 0 : 1, pointerEvents: isForest ? 'none' : 'auto' }}
         >
-          <PixelMap onRegionClick={handleRegionClick} />
+          <PixelMap {...(isLoggedIn ? { onRegionClick: handleRegionClick } : {})} />
         </div>
       </div>
 
