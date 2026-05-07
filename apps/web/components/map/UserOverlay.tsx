@@ -19,7 +19,7 @@ const STATUS_OPACITY: Record<string, number> = {
 
 const SPRITE_SIZE = 2;    // 시각적 크기 (px)
 const HIT_SIZE = 1;       // 호버 hit area (px) — div 크기
-const JITTER_RADIUS = 1;  // hit area가 겹치지 않도록 보장하는 최소 이격 (>= HIT_SIZE)
+const JITTER_RADIUS = 0.5; // 같은 동 유저 이격 (hit area 절반 — 2명은 비겹침 보장)
 
 function jitteredPositions(users: MapUser[], mapW: number, mapH: number) {
   const grouped = new Map<string, MapUser[]>();
@@ -87,7 +87,7 @@ export function UserOverlay({ users, mapW, mapH }: UserOverlayProps) {
             }}
             onMouseLeave={() => setHovered(null)}
           >
-            <div style={{ position: 'absolute', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }}>
+            <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }}>
               <CreatureSprite stage={stage} size={SPRITE_SIZE} />
             </div>
           </div>
