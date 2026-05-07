@@ -10,19 +10,21 @@ interface UserOverlayProps {
   mapH: number;
 }
 
+// 모든 상태에 기본 투명도 적용 (겹쳐도 아래가 보임)
 const STATUS_OPACITY: Record<string, number> = {
-  RUNNING: 1.0,
-  PAUSED: 0.6,
-  IDLE: 0.3,
+  RUNNING: 0.75,
+  PAUSED: 0.5,
+  IDLE: 0.25,
 };
 
-// Circular jitter for same-dong users
+const SPRITE_SIZE = 2;   // 원래 24px의 1/12
+const JITTER_RADIUS = 2; // 원래 14px의 1/7 (2px 단위 이격)
+
 function jitteredPositions(users: MapUser[], mapW: number, mapH: number) {
   const grouped = new Map<string, MapUser[]>();
   for (const u of users) {
-    const key = u.dongCode;
-    if (!grouped.has(key)) grouped.set(key, []);
-    grouped.get(key)!.push(u);
+    if (!grouped.has(u.dongCode)) grouped.set(u.dongCode, []);
+    grouped.get(u.dongCode)!.push(u);
   }
 
   return users.map((user) => {
@@ -30,18 +32,15 @@ function jitteredPositions(users: MapUser[], mapW: number, mapH: number) {
     const idx = group.indexOf(user);
     const count = group.length;
 
-    // base position as percentage of canvas
     const baseLeft = (user.pixelX / mapW) * 100;
     const baseTop = (user.pixelY / mapH) * 100;
 
-    // circular jitter in px (CSS) when multiple users in same dong
     let jx = 0;
     let jy = 0;
     if (count > 1) {
       const angle = (2 * Math.PI * idx) / count;
-      const radius = 14;
-      jx = Math.round(Math.cos(angle) * radius);
-      jy = Math.round(Math.sin(angle) * radius);
+      jx = Math.round(Math.cos(angle) * JITTER_RADIUS);
+      jy = Math.round(Math.sin(angle) * JITTER_RADIUS);
     }
 
     return { user, baseLeft, baseTop, jx, jy };
@@ -56,24 +55,27 @@ function UserPopover({ user }: PopoverProps) {
   const visibleTodos = user.todos.filter((t) => !t.done);
   return (
     <div
-      className="absolute bottom-full left-1/2 mb-1 w-max max-w-48 rounded-lg border border-white/20 bg-black/80 p-2 text-xs text-white shadow-lg"
+      className="absolute bottom-full left-1/2 mb-0.5 w-max max-w-32 rounded border border-white/20 bg-black/85 px-1.5 py-1 text-[8px] leading-tight text-white shadow-lg"
       style={{ transform: 'translateX(-50%)' }}
     >
-      <p className="font-bold">{user.nickname}</p>
+      <p className="font-bold text-[9px]">{user.nickname}</p>
       {user.sessionStatus !== 'IDLE' && (
-        <p className="text-green-300">
+        <p className="text-green-400 text-[8px]">
           {user.sessionStatus === 'RUNNING' ? '집중 중' : '일시정지'}
         </p>
       )}
+      {user.waterCount > 0 && (
+        <p className="text-blue-300">💧×{user.waterCount}</p>
+      )}
       {visibleTodos.length > 0 && (
-        <ul className="mt-1 space-y-0.5">
-          {visibleTodos.slice(0, 3).map((t, i) => (
-            <li key={i} className="truncate text-white/80">
+        <ul className="mt-0.5 space-y-px">
+          {visibleTodos.slice(0, 2).map((t, i) => (
+            <li key={i} className="truncate text-white/70">
               · {t.text}
             </li>
           ))}
-          {visibleTodos.length > 3 && (
-            <li className="text-white/50">+{visibleTodos.length - 3}개 더</li>
+          {visibleTodos.length > 2 && (
+            <li className="text-white/40">+{visibleTodos.length - 2}개</li>
           )}
         </ul>
       )}
@@ -92,7 +94,7 @@ export function UserOverlay({ users, mapW, mapH }: UserOverlayProps) {
   return (
     <div className="pointer-events-none absolute inset-0">
       {positioned.map(({ user, baseLeft, baseTop, jx, jy }) => {
-        const opacity = STATUS_OPACITY[user.sessionStatus] ?? 0.3;
+        const opacity = STATUS_OPACITY[user.sessionStatus] ?? 0.25;
         const stage = Math.min(4, Math.max(0, user.creatureStage)) as 0 | 1 | 2 | 3 | 4;
         const isHovered = hoveredId === user.userId;
 
@@ -111,15 +113,7 @@ export function UserOverlay({ users, mapW, mapH }: UserOverlayProps) {
           >
             <div className="relative flex flex-col items-center">
               {isHovered && <UserPopover user={user} />}
-
-              {/* Water badge */}
-              {user.waterCount > 0 && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px]">
-                  {'💧'.repeat(Math.min(user.waterCount, 5))}
-                </div>
-              )}
-
-              <CreatureSprite stage={stage} size={24} />
+              <CreatureSprite stage={stage} size={SPRITE_SIZE} />
             </div>
           </div>
         );
