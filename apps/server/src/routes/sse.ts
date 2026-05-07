@@ -39,6 +39,7 @@ sseRouter.get('/:regionCode', async (req: Request, res: Response) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
 
   if (!clients.has(regionCode)) clients.set(regionCode, new Set());
