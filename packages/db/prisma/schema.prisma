@@ -80,21 +80,16 @@ model Dong {
   @@index([sidoCode])
 }
 
-// 유저별 날짜별 개인 생명체
+// 유저별 영구 생명체 (하루 최대 12회 물주기, 누적 성장)
 model UserCreature {
   id         String   @id @default(uuid())
-  userId     String
-  date       String   // KST "YYYY-MM-DD"
-  stage      Int      @default(0) // 0=씨앗 1=새싹 2=나무1 3=나무2 4=나무3
-  waterCount Int      @default(0) // 개인 물주기 누적 (하루 최대 12회)
+  userId     String   @unique
+  stage      Int      @default(0) // 0~9, 누적 waterCount 기반 자동 계산
+  waterCount Int      @default(0) // 생애 누적 물주기 횟수
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, date])
-  @@index([userId])
-  @@index([date])
 }
 
 // 유저별 날짜별 물주기 이력

@@ -1,4 +1,6 @@
-const PERSONAL_STAGE_THRESHOLDS = [0, 1, 3, 6, 10];
+// 누적 물주기 횟수 → 단계 임계값 (0~9)
+// 단계별 요구량: 12 / 24 / 36 / 60 / 84 / 120 / 168 / 240 / 336 → 최고 단계 90일 목표
+const PERSONAL_STAGE_THRESHOLDS = [0, 12, 36, 72, 132, 216, 336, 504, 744, 1080];
 const DAILY_CAP_SEC = 6 * 60 * 60; // 21600
 
 export function calcPersonalStage(waterCount: number): number {
