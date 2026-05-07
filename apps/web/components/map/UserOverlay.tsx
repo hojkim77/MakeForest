@@ -66,7 +66,7 @@ export function UserOverlay({ users, mapW, mapH }: UserOverlayProps) {
     <div className="pointer-events-none absolute inset-0">
       {positioned.map(({ user, baseLeft, baseTop, jx, jy }) => {
         const opacity = STATUS_OPACITY[user.sessionStatus] ?? 0.25;
-        const stage = Math.min(4, Math.max(0, user.creatureStage)) as 0 | 1 | 2 | 3 | 4;
+        const stage = Math.min(9, Math.max(0, user.creatureStage)) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
         return (
           <div

@@ -3,7 +3,7 @@
 import { CreatureSprite, STAGE_LABELS } from './CreatureSprite';
 
 interface CreatureSectionProps {
-  stage: 0 | 1 | 2 | 3 | 4;
+  stage: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 }
 
 export function CreatureSection({ stage }: CreatureSectionProps) {

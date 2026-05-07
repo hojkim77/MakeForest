@@ -175,7 +175,7 @@ export function Panel() {
         <SloganSection neighborhoodName={neighborhoodName} />
         <WaterToast regionCode={activeRegionCode} />
 
-        {isLoggedIn && <CreatureSection stage={Math.min(creatureStage, 4) as 0 | 1 | 2 | 3 | 4} />}
+        {isLoggedIn && <CreatureSection stage={creatureStage} />}
 
         {isLoggedIn && (
           <NeighborhoodStats
