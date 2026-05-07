@@ -6,6 +6,7 @@ const INTERNAL_SECRET = __ENV.INTERNAL_SECRET || '';
 const API_VUS = parseInt(__ENV.API_VUS || '25');
 const TOGGLE_VUS = parseInt(__ENV.TOGGLE_VUS || '5');
 const SSE_VUS = parseInt(__ENV.SSE_VUS || '20');
+const MAP_VUS = parseInt(__ENV.MAP_VUS || '10');
 const DURATION = __ENV.DURATION || '1m';
 
 export const options = {
@@ -24,12 +25,19 @@ export const options = {
       duration: DURATION,
       exec: 'toggleScenario',
     },
-    // 지도 열람 유저: SSE 연결을 맺고 이벤트 수신 확인
+    // 지도 열람 유저: 지역 SSE 연결을 맺고 이벤트 수신 확인
     sse_watchers: {
       executor: 'constant-vus',
       vus: SSE_VUS,
       duration: DURATION,
       exec: 'sseScenario',
+    },
+    // 전국 맵 스트림 유저: /map/activity-stream 연결 후 users:overlay 수신 확인
+    map_stream_watchers: {
+      executor: 'constant-vus',
+      vus: MAP_VUS,
+      duration: DURATION,
+      exec: 'mapStreamScenario',
     },
   },
   thresholds: {
@@ -40,6 +48,7 @@ export const options = {
     'http_req_failed{scenario:timer_toggler}': ['rate<0.01'],
     // SSE는 timeout이 정상 종료이므로 http_req_failed 대신 check 성공률로 평가
     'checks{scenario:sse_watchers}': ['rate>0.95'],
+    'checks{scenario:map_stream_watchers}': ['rate>0.95'],
   },
 };
 
@@ -152,7 +161,7 @@ export function toggleScenario() {
   }
 }
 
-// ── SSE 연결 유저 시나리오 ────────────────────────────────────
+// ── 지역 SSE 연결 유저 시나리오 ──────────────────────────────
 // timer_toggler가 만드는 이벤트를 SSE 연결이 실제로 받는지 확인
 // timeout(error_code 1050)은 연결이 유지됐다는 의미이므로 성공으로 처리
 export function sseScenario() {
@@ -169,6 +178,23 @@ export function sseScenario() {
 
   check(res, {
     'sse connected': (r) => r.status === 200 || r.error_code === 1050,
+  });
+
+  sleep(5);
+}
+
+// ── 전국 맵 스트림 연결 유저 시나리오 ────────────────────────
+// /map/activity-stream에 연결 — heatmap:update + users:overlay 이벤트 수신 확인
+// api_users가 물주기를 실행하는 동안 실시간 오버레이 갱신이 전달되는지 검증
+export function mapStreamScenario() {
+  const res = http.get(`${TARGET_URL}/map/activity-stream`, {
+    headers: { Accept: 'text/event-stream' },
+    timeout: '30s',
+    tags: { name: 'GET /map/activity-stream' },
+  });
+
+  check(res, {
+    'map stream connected': (r) => r.status === 200 || r.error_code === 1050,
   });
 
   sleep(5);

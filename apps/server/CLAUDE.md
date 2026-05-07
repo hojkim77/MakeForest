@@ -20,9 +20,10 @@
 - 물주기 성공 시 타이머에서 30분 차감 (`resetWaterProgress`: `elapsedSec - 1800`)
 - 물주기 버튼 직접 입력만 반영 (자동 물주기 없음, 자정 처리는 cron 담당)
 - **하루 6시간(21600초) 총량 제한** — `checkDailyCapExceeded` 서버 검증, 초과 시 409
-- 물주기 1회당 경험치 반영 → 동네 생명체 진화 단계 실시간 업데이트 (SSE/WebSocket 푸시)
-- 물주기 성공 시 동네 전체에 토스트 이벤트 발행
-- UI: 6시간을 12개 세그먼트(각 30분)로 나눈 단일 게이지바로 표시
+- 물주기 1회당 개인 `UserCreature` 진화 단계 업데이트 (응답에 `userCreature: { stage, waterCount }` 포함)
+- 물주기 성공 시 동네 전체에 `water:toast` SSE 이벤트 발행, `users:overlay` 즉시 재브로드캐스트
+- 응답 형식: `{ myWaterCount: number, userCreature: { stage: number, waterCount: number } }`
+- UI: 6시간을 12개 세그먼트(각 30분)로 나눈 단일 게이지바로 표시 (growthPercent = waterCount / 12 * 100)
 
 ## 마이페이지 통계 API (H)
 

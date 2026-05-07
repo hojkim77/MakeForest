@@ -86,7 +86,7 @@ function loginSession(regionCode = '11') {
 function setupDefaultFetch() {
   mockFetch.mockImplementation((url: string, opts?: RequestInit) => {
     if (url.includes('/api/creature/'))
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ stage: 0, waterCount: 0 }) });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ userCount: 0, avgStage: 0, maxStage: 0, totalWaterCount: 0, date: '2026-05-07' }) });
     if (url.includes('/api/water/me'))
       return Promise.resolve({ ok: true, json: () => Promise.resolve({ waterCount: 0 }) });
     if (url === '/api/sessions' && opts?.method === 'POST')
@@ -97,7 +97,7 @@ function setupDefaultFetch() {
       return Promise.resolve({
         ok: true, json: () => Promise.resolve({
           myWaterCount: 1,
-          creature: { stage: 1, waterCount: 5 },
+          userCreature: { stage: 1, waterCount: 1 },
         })
       });
     if (url === '/api/push/notify' && opts?.method === 'POST')
@@ -301,8 +301,19 @@ describe('자동 정지 (autoPaused)', () => {
   });
 });
 
-describe('SSE creature:update 수신', () => {
-  it('creature:update 이벤트 → 오류 없이 처리', async () => {
+describe('SSE 연결', () => {
+  it('로그인 시 /sse/:regionCode 연결', async () => {
+    loginSession('11');
+    setupDefaultFetch();
+    render(<Panel />);
+
+    await waitFor(() => MockEventSource.instances.length > 0);
+    const sseInstance = MockEventSource.instances.find(es => es.url.includes('/sse/'));
+    expect(sseInstance).toBeDefined();
+    expect(sseInstance?.url).toContain('11');
+  });
+
+  it('creature:update 이벤트를 더 이상 수신하지 않음 (핸들러 없음)', async () => {
     loginSession();
     setupDefaultFetch();
     render(<Panel />);
@@ -311,10 +322,10 @@ describe('SSE creature:update 수신', () => {
     const sseInstance = MockEventSource.instances.find(es => es.url.includes('/sse/'));
     expect(sseInstance).toBeDefined();
 
-    act(() => {
-      sseInstance?.triggerEvent('creature:update', { stage: 3, waterCount: 25 });
-    });
-
+    // creature:update 핸들러가 제거됐으므로 이벤트를 트리거해도 오류 없이 무시
+    expect(() => {
+      act(() => { sseInstance?.triggerEvent('creature:update', { stage: 3, waterCount: 25 }); });
+    }).not.toThrow();
     expect(screen.getByTestId('water-btn')).toBeInTheDocument();
   });
 });
