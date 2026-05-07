@@ -18,7 +18,7 @@ const FALLBACK_DONG_CODES = [
 // POST /test/login — 부하 테스트용
 // testId 기반으로 User 레코드를 upsert하고 x-internal-secret에 쓸 secret 반환
 // users.json 없이 k6가 직접 호출해 유저를 생성할 수 있도록 설계
-testRouter.post('/login', requireInternalAuth, async (req: Request, res: Response) => {
+testRouter.post('/login', async (req: Request, res: Response) => {
   const { testId } = req.body as { testId: string };
 
   if (!testId) {
