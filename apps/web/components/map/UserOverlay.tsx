@@ -18,7 +18,7 @@ const STATUS_OPACITY: Record<string, number> = {
 };
 
 const SPRITE_SIZE = 2;
-const JITTER_RADIUS = 2;
+const JITTER_RADIUS = 0.4; // scale transform 내부라 화면상 훨씬 크게 보임
 
 function jitteredPositions(users: MapUser[], mapW: number, mapH: number) {
   const grouped = new Map<string, MapUser[]>();
@@ -39,8 +39,8 @@ function jitteredPositions(users: MapUser[], mapW: number, mapH: number) {
     let jy = 0;
     if (count > 1) {
       const angle = (2 * Math.PI * idx) / count;
-      jx = Math.round(Math.cos(angle) * JITTER_RADIUS);
-      jy = Math.round(Math.sin(angle) * JITTER_RADIUS);
+      jx = Math.cos(angle) * JITTER_RADIUS;
+      jy = Math.sin(angle) * JITTER_RADIUS;
     }
 
     return { user, baseLeft, baseTop, jx, jy };
