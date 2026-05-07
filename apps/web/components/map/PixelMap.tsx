@@ -215,7 +215,7 @@ export function PixelMap({ onRegionClick }: PixelMapProps) {
 
           const cached = creatureCache.get(rc);
           if (cached) {
-            setTooltipStats({ userCount: cached.userCount, totalWaterCount: cached.totalWaterCount });
+            setTooltipStats({ userCount: regionStats.get(rc)?.totalUsers ?? 0, totalWaterCount: cached.totalWaterCount });
             return;
           }
 
@@ -224,7 +224,7 @@ export function PixelMap({ onRegionClick }: PixelMapProps) {
             .then((data: RegionAggregate) => {
               creatureCache.set(rc, data);
               if (activeRegionRef.current !== rc) return;
-              setTooltipStats({ userCount: data.userCount, totalWaterCount: data.totalWaterCount });
+              setTooltipStats({ userCount: regionStats.get(rc)?.totalUsers ?? 0, totalWaterCount: data.totalWaterCount });
             })
             .catch(() => { /* 조용히 무시 — 지역명만 표시됨 */ });
         }, HOVER_DELAY_MS);
