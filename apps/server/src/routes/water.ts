@@ -43,17 +43,14 @@ waterRouter.post('/', async (req: Request, res: Response) => {
       data: { userId, dongCode, date: today },
     });
 
-    const existing = await tx.userCreature.findUnique({
-      where: { userId_date: { userId, date: today } },
-    });
-
+    const existing = await tx.userCreature.findUnique({ where: { userId } });
     const newWaterCount = (existing?.waterCount ?? 0) + 1;
     const newStage = calcPersonalStage(newWaterCount);
 
     const updated = await tx.userCreature.upsert({
-      where: { userId_date: { userId, date: today } },
+      where: { userId },
       update: { waterCount: newWaterCount, stage: newStage },
-      create: { userId, date: today, waterCount: newWaterCount, stage: newStage },
+      create: { userId, waterCount: newWaterCount, stage: newStage },
     });
 
     // DailySession 업데이트 (물주기 횟수 + 누적 집중 시간)
