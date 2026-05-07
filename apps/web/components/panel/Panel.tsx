@@ -41,15 +41,14 @@ export function Panel() {
   const [growthPercent, setGrowthPercent] = useState(0);
   const [isWatering, setIsWatering] = useState(false);
 
-  const fetchCreature = useCallback(async (regionCode: string) => {
-    try {
-      const res = await fetch(`/api/creature/${encodeURIComponent(regionCode)}`);
-      if (!res.ok) return;
-      const data = await res.json() as { stage: number; waterCount: number };
-      setCreatureStage(Math.min(data.stage, 4) as CreatureStage);
-      setGrowthPercent(Math.min(Math.round((data.waterCount / 45) * 100), 100));
-    } catch { /* 실패 시 기본값 유지 */ }
-  }, []);
+  const PERSONAL_THRESHOLDS = [0, 1, 3, 6, 10];
+  function personalStage(wc: number): CreatureStage {
+    let s = 0;
+    for (let i = PERSONAL_THRESHOLDS.length - 1; i >= 0; i--) {
+      if (wc >= PERSONAL_THRESHOLDS[i]!) { s = i; break; }
+    }
+    return Math.min(s, 4) as CreatureStage;
+  }
 
   const fetchMyWaterCount = useCallback(async () => {
     if (!isLoggedIn) return;
@@ -58,13 +57,10 @@ export function Panel() {
       if (!res.ok) return;
       const data = await res.json() as { waterCount: number };
       setMyWaterCount(data.waterCount);
+      setCreatureStage(personalStage(data.waterCount));
+      setGrowthPercent(Math.min(Math.round((data.waterCount / 12) * 100), 100));
     } catch { /* 실패 시 기본값 유지 */ }
   }, [isLoggedIn]);
-
-  useEffect(() => {
-    if (!activeRegionCode) return;
-    fetchCreature(activeRegionCode);
-  }, [activeRegionCode, fetchCreature]);
 
   useEffect(() => {
     fetchMyWaterCount();
@@ -77,12 +73,6 @@ export function Panel() {
 
     const es = new EventSource(`${SERVER_URL}/sse/${encodeURIComponent(activeRegionCode)}`);
     sseRef.current = es;
-
-    es.addEventListener('creature:update', (e) => {
-      const data = JSON.parse((e as MessageEvent).data) as { stage: number; waterCount: number };
-      setCreatureStage(Math.min(data.stage, 4) as CreatureStage);
-      setGrowthPercent(Math.min(Math.round((data.waterCount / 45) * 100), 100));
-    });
 
     return () => { es.close(); sseRef.current = null; };
   }, [activeRegionCode]);
@@ -141,10 +131,10 @@ export function Panel() {
         body: JSON.stringify({ totalElapsedSec }),
       });
       if (!res.ok) return;
-      const data = await res.json() as { myWaterCount: number; creature: { stage: number; waterCount: number } };
+      const data = await res.json() as { myWaterCount: number; userCreature: { stage: number; waterCount: number } };
       setMyWaterCount(data.myWaterCount);
-      setCreatureStage(Math.min(data.creature.stage, 4) as CreatureStage);
-      setGrowthPercent(Math.min(Math.round((data.creature.waterCount / 45) * 100), 100));
+      setCreatureStage(Math.min(data.userCreature.stage, 4) as CreatureStage);
+      setGrowthPercent(Math.min(Math.round((data.userCreature.waterCount / 12) * 100), 100));
       useTimerStore.getState().resetWaterProgress();
     } catch { /* 실패 시 조용히 무시 */ }
     finally { setIsWatering(false); }
@@ -197,6 +187,7 @@ export function Panel() {
         <NeighborhoodStats
           neighborhoodName={neighborhoodName}
           growthPercent={growthPercent}
+          regionCode={activeRegionCode}
         />
 
         {isLoggedIn ? (
