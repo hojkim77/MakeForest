@@ -103,10 +103,11 @@ export function apiScenario() {
   sleep(1);
 
   // 2) 물주기 (30분 집중 후 가능한 상황 시뮬레이션)
+  // 409(일일 한도 소진)는 정상 비즈니스 응답 — http_req_failed 집계에서 제외
   const waterRes = http.post(
     `${TARGET_URL}/water`,
     JSON.stringify({ userId, dongCode, nickname: `LT${__VU}`, totalElapsedSec: 1800 }),
-    { headers, tags: { name: 'POST /water' } }
+    { headers, tags: { name: 'POST /water' }, responseCallback: http.expectedStatuses({ min: 200, max: 399 }, 409) }
   );
   // 409 = 오늘 캡 도달 (정상), 200 = 물주기 성공
   check(waterRes, { 'water ok': (r) => r.status === 200 || r.status === 409 });
