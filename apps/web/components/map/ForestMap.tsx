@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { usePixelMapData } from '@/hooks/usePixelMapData';
 import { useActivityStream } from '@/hooks/useActivityStream';
+import { UserOverlay } from './UserOverlay';
 import { regionOf } from './PixelMap';
 
 const PIXEL_SIZE = 4;
@@ -25,7 +26,7 @@ interface ForestMapProps {
 export function ForestMap({ regionCode, active }: ForestMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { data: pixelMap } = usePixelMapData();
-  const activity = useActivityStream();
+  const { activity, activeUsers } = useActivityStream();
 
   const visibleCells = useMemo(
     () =>
@@ -33,6 +34,11 @@ export function ForestMap({ regionCode, active }: ForestMapProps) {
         ? pixelMap.cells.filter((c) => regionOf(c.code, c.name) === regionCode)
         : pixelMap.cells,
     [pixelMap.cells, regionCode],
+  );
+
+  const regionUsers = useMemo(
+    () => activeUsers.filter((u) => visibleCells.some((c) => c.code === u.dongCode)),
+    [activeUsers, visibleCells],
   );
 
   const render = useCallback((timestamp: number) => {
@@ -73,6 +79,9 @@ export function ForestMap({ regionCode, active }: ForestMapProps) {
         className="w-full h-full"
         style={{ imageRendering: 'pixelated' }}
       />
+      {active && (
+        <UserOverlay users={regionUsers} mapW={pixelMap.w} mapH={pixelMap.h} />
+      )}
     </div>
   );
 }

@@ -14,7 +14,7 @@ const LEGEND = [
  * Pointer-events are disabled on the grid; legend/title are interactive-safe.
  */
 export function MapOverlay() {
-  const activity = useActivityStream();
+  const { activity } = useActivityStream();
   const activeUsers = Object.values(activity).reduce((sum, n) => sum + n, 0);
 
   return (
