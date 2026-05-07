@@ -53,6 +53,7 @@ export const options = {
 };
 
 // VU당 캐시 — 첫 iteration에 /test/login 호출 후 재사용
+// waterLimitReached: 일일 한도(12회) 도달 후 true → 이후 이터레이션에서 /water 스킵 (프론트엔드 동작 재현)
 const vuCache = {};
 
 function getVuUser() {
@@ -102,15 +103,17 @@ export function apiScenario() {
   const sessionId = sessionRes.json('sessionId');
   sleep(1);
 
-  // 2) 물주기 (30분 집중 후 가능한 상황 시뮬레이션)
-  // 409(일일 한도 소진)는 정상 비즈니스 응답 — http_req_failed 집계에서 제외
-  const waterRes = http.post(
-    `${TARGET_URL}/water`,
-    JSON.stringify({ userId, dongCode, nickname: `LT${__VU}`, totalElapsedSec: 1800 }),
-    { headers, tags: { name: 'POST /water' }, responseCallback: http.expectedStatuses({ min: 200, max: 399 }, 409) }
-  );
-  // 409 = 오늘 캡 도달 (정상), 200 = 물주기 성공
-  check(waterRes, { 'water ok': (r) => r.status === 200 || r.status === 409 });
+  // 2) 물주기 — 일일 한도 도달 전까지만 호출 (프론트엔드 버튼 비활성화 동작 재현)
+  if (!user.waterLimitReached) {
+    const waterRes = http.post(
+      `${TARGET_URL}/water`,
+      JSON.stringify({ userId, dongCode, nickname: `LT${__VU}`, totalElapsedSec: 1800 }),
+      { headers, tags: { name: 'POST /water' } }
+    );
+    // 409 = 오늘 한도 소진 → 이후 이터레이션부터 스킵
+    if (waterRes.status === 409) user.waterLimitReached = true;
+    check(waterRes, { 'water ok': (r) => r.status === 200 || r.status === 409 });
+  }
   sleep(1);
 
   // 3) 통계 조회
