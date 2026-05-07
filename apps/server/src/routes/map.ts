@@ -28,19 +28,14 @@ export async function buildUsersOverlay(): Promise<MapUser[]> {
 
   const activeUserIds = new Set(activeSessions.map((s) => s.userId));
 
-  // 오늘 UserCreature가 있지만 현재 활성 세션 없는 유저 (IDLE)
-  const idleCreatures = await prisma.userCreature.findMany({
-    where: {
-      date: today,
-      userId: { notIn: [...activeUserIds] },
-    },
-    select: { userId: true, waterCount: true, stage: true },
+  // 오늘 활동했지만 현재 활성 세션 없는 유저 (IDLE) — DailySession 기준
+  const idleDailies = await prisma.dailySession.findMany({
+    where: { date: today, userId: { notIn: [...activeUserIds] }, elapsedSec: { gt: 0 } },
+    select: { userId: true },
   });
+  const idleUserIds = idleDailies.map((d) => d.userId);
 
-  const allUserIds = [
-    ...activeUserIds,
-    ...idleCreatures.map((c) => c.userId),
-  ];
+  const allUserIds = [...activeUserIds, ...idleUserIds];
   if (allUserIds.length === 0) return [];
 
   // 유저 정보와 dongCode 조회
@@ -58,13 +53,13 @@ export async function buildUsersOverlay(): Promise<MapUser[]> {
   const userMap = new Map(users.map((u) => [u.id, u]));
   const dongMap = new Map(dongs.map((d) => [d.code, d]));
 
-  // 활성 세션 유저의 오늘 UserCreature 조회
-  const activeCreatures = await prisma.userCreature.findMany({
-    where: { date: today, userId: { in: [...activeUserIds] } },
+  // 영구 생명체 조회 (date 필터 없음)
+  const creatures = await prisma.userCreature.findMany({
+    where: { userId: { in: allUserIds } },
     select: { userId: true, waterCount: true, stage: true },
   });
   const creatureMap = new Map<string, { waterCount: number; stage: number }>(
-    activeCreatures.map((c) => [c.userId, c]),
+    creatures.map((c) => [c.userId, c]),
   );
 
   const unranked: Omit<MapUser, 'neighborhoodRank'>[] = [];
@@ -91,15 +86,16 @@ export async function buildUsersOverlay(): Promise<MapUser[]> {
     });
   }
 
-  for (const creature of idleCreatures) {
-    const user = userMap.get(creature.userId);
+  for (const userId of idleUserIds) {
+    const user = userMap.get(userId);
     if (!user?.dongCode) continue;
     const dong = dongMap.get(user.dongCode);
     if (!dong) continue;
     const { pixelX, pixelY } = toPixel(dong.lat, dong.lng);
+    const creature = creatureMap.get(userId) ?? { waterCount: 0, stage: 0 };
 
     unranked.push({
-      userId: creature.userId,
+      userId,
       nickname: user.nickname,
       dongCode: user.dongCode,
       pixelX,

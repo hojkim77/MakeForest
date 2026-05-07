@@ -28,13 +28,22 @@ creatureRouter.get('/:regionCode', async (req: Request, res: Response) => {
     return res.json({ userCount: 0, avgStage: 0, maxStage: 0, totalWaterCount: 0, date: today });
   }
 
-  const creatures = await prisma.userCreature.findMany({
-    where: { date: today, userId: { in: userIds } },
-    select: { stage: true, waterCount: true },
+  // 오늘 물을 준 유저만 집계 (DailySession 기준)
+  const dailies = await prisma.dailySession.findMany({
+    where: { date: today, userId: { in: userIds }, waterCount: { gt: 0 } },
+    select: { userId: true, waterCount: true },
   });
 
-  const userCount = creatures.length;
-  const totalWaterCount = creatures.reduce((sum, c) => sum + c.waterCount, 0);
+  const activeUserIds = dailies.map((d) => d.userId);
+  const totalWaterCount = dailies.reduce((sum, d) => sum + d.waterCount, 0);
+  const userCount = activeUserIds.length;
+
+  // 영구 생명체 단계 집계 (date 필터 없음)
+  const creatures = await prisma.userCreature.findMany({
+    where: { userId: { in: activeUserIds } },
+    select: { stage: true },
+  });
+
   const avgStage = userCount > 0 ? Math.round(creatures.reduce((sum, c) => sum + c.stage, 0) / userCount) : 0;
   const maxStage = userCount > 0 ? Math.max(...creatures.map((c) => c.stage)) : 0;
 
