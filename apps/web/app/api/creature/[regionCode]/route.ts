@@ -1,29 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@makeforest/db';
 
-function getKstDateString(): string {
-  return new Date().toLocaleDateString('ko-KR', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).replace(/\. /g, '-').replace(/\.$/, '');
-}
+const SERVER_URL = process.env.SERVER_URL ?? 'http://localhost:4000';
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: { regionCode: string } },
 ) {
-  const regionCode = decodeURIComponent(params.regionCode);
-  const today = getKstDateString();
-
-  const creature = await prisma.creature.findUnique({
-    where: { regionCode_date: { regionCode, date: today } },
-  });
-
-  return NextResponse.json({
-    stage: creature?.stage ?? 0,
-    waterCount: creature?.waterCount ?? 0,
-    date: today,
-  });
+  const regionCode = encodeURIComponent(params.regionCode);
+  const res = await fetch(`${SERVER_URL}/creature/${regionCode}`);
+  const data = await res.json() as {
+    userCount: number;
+    avgStage: number;
+    maxStage: number;
+    totalWaterCount: number;
+    date: string;
+  };
+  return NextResponse.json(data);
 }
