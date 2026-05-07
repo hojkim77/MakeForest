@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import type { MapUser } from '@makeforest/types';
 
 // dongCode → 활성 유저 수
 export type ActivityMap = Record<string, number>;
+export type { MapUser };
 
 let aliasCache: Record<string, string> | null = null;
 
@@ -22,6 +24,7 @@ async function loadAlias(): Promise<Record<string, string>> {
 
 export function useActivityStream() {
   const [activity, setActivity] = useState<ActivityMap>({});
+  const [activeUsers, setActiveUsers] = useState<MapUser[]>([]);
 
   useEffect(() => {
     const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
@@ -32,6 +35,11 @@ export function useActivityStream() {
 
     const connect = () => {
       es = new EventSource(`${SERVER_URL}/map/activity-stream`);
+
+      es.addEventListener('users:overlay', (e: MessageEvent<string>) => {
+        const users = JSON.parse(e.data) as MapUser[];
+        setActiveUsers(users);
+      });
 
       es.addEventListener('heatmap:update', async (e: MessageEvent<string>) => {
         retryDelay = 1000;
@@ -64,5 +72,5 @@ export function useActivityStream() {
     };
   }, []);
 
-  return activity;
+  return { activity, activeUsers };
 }

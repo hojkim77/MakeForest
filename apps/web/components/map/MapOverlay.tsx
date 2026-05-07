@@ -1,6 +1,10 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { useActivityStream } from '@/hooks/useActivityStream';
+import { usePixelMapData } from '@/hooks/usePixelMapData';
+import { useMapStore } from '@/store';
+import { regionDisplayName, regionOf } from '@makeforest/types';
 
 const LEGEND = [
   { colorClass: 'bg-primary', label: 'Old Growth' },
@@ -8,25 +12,61 @@ const LEGEND = [
   { colorClass: 'bg-outline', label: 'Soil' },
 ] as const;
 
-/**
- * Decorative overlay rendered on top of the map canvas.
- * Contains the floating title card and density legend.
- * Pointer-events are disabled on the grid; legend/title are interactive-safe.
- */
 export function MapOverlay() {
-  const activity = useActivityStream();
-  const activeUsers = Object.values(activity).reduce((sum, n) => sum + n, 0);
+  const { activity } = useActivityStream();
+  const globalActiveUsers = Object.values(activity).reduce((sum, n) => sum + n, 0);
+  const { mapMode, focusedRegionCode } = useMapStore();
+  const { data: pixelMap } = usePixelMapData();
+
+  // 현재 집중 중인 유저 수 — activity stream 기반 (real-time)
+  const focusingCount = useMemo(() => {
+    if (mapMode !== 'forest' || !focusedRegionCode) return 0;
+    let total = 0;
+    for (const cell of pixelMap.cells) {
+      if (regionOf(cell.code, cell.name) === focusedRegionCode) {
+        total += activity[cell.code] ?? 0;
+      }
+    }
+    return total;
+  }, [pixelMap.cells, activity, focusedRegionCode, mapMode]);
+
+  const [totalWaterCount, setTotalWaterCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (mapMode !== 'forest' || !focusedRegionCode) {
+      setTotalWaterCount(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/creature/${encodeURIComponent(focusedRegionCode)}`)
+      .then((r) => r.json())
+      .then((data: { totalWaterCount: number }) => { if (!cancelled) setTotalWaterCount(data.totalWaterCount); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [mapMode, focusedRegionCode]);
+
+  const isForest = mapMode === 'forest';
 
   return (
     <>
       {/* Title card — top left */}
       <div className="absolute top-6 left-6 z-10 p-md bg-background border border-outline">
         <p className="font-mono text-pixel-stat text-primary-container uppercase tracking-wider">
-          Pixel Forest
+          {isForest && focusedRegionCode
+            ? regionDisplayName(focusedRegionCode)
+            : 'Pixel Forest'}
         </p>
-        <p className="font-mono text-label text-outline mt-xs">
-          Live Sync: {activeUsers.toLocaleString()} users active
-        </p>
+
+        {isForest && focusedRegionCode ? (
+          <div className="mt-xs font-mono text-label text-outline space-y-0.5">
+            <p>집중 중 {focusingCount}명</p>
+            <p>오늘 물주기 {totalWaterCount ?? '…'}회</p>
+          </div>
+        ) : (
+          <p className="font-mono text-label text-outline mt-xs">
+            Live Sync: {globalActiveUsers.toLocaleString()} users active
+          </p>
+        )}
       </div>
 
       {/* Legend — bottom right */}

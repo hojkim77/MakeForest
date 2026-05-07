@@ -94,8 +94,8 @@ describe('heatmap:update 이벤트', () => {
       });
     });
 
-    await waitFor(() => result.current['target'] !== undefined);
-    expect(result.current).toEqual({ target: 5, '9999000': 1 });
+    await waitFor(() => result.current.activity['target'] !== undefined);
+    expect(result.current.activity).toEqual({ target: 5, '9999000': 1 });
   });
 });
 
@@ -159,7 +159,7 @@ describe('오류 및 재연결 (지수 백오프)', () => {
     await act(async () => {
       MockEventSource.lastInstance!.triggerEvent('heatmap:update', { '1111': 1 });
     });
-    await waitFor(() => result.current['1111'] !== undefined);
+    await waitFor(() => result.current.activity['1111'] !== undefined);
 
     // 다시 오류 → retryDelay 리셋됐으므로 1000ms 후 재연결
     act(() => { MockEventSource.lastInstance!.triggerError(); });

@@ -1,7 +1,7 @@
 import type { Todo } from './session';
 
 // SSE 이벤트 타입 (Express → Client)
-export type SSEEventType = 'dong:users' | 'heatmap:update' | 'water:toast' | 'creature:update' | 'ping';
+export type SSEEventType = 'dong:users' | 'heatmap:update' | 'water:toast' | 'users:overlay' | 'ping';
 
 export interface ActiveUser {
   nickname: string;
@@ -23,17 +23,27 @@ export interface WaterToastPayload {
   nickname: string;
 }
 
-export interface CreatureUpdatePayload {
+export interface MapUser {
+  userId: string;
+  nickname: string;
   dongCode: string;
-  stage: number;
-  waterCount: number;
+  pixelX: number;
+  pixelY: number;
+  waterCount: number;      // 생애 누적 물주기 횟수 (stage 계산용)
+  todayWaterCount: number; // 오늘 물주기 횟수 (표시·순위용, 최대 12)
+  creatureStage: number;
+  sessionStatus: 'RUNNING' | 'PAUSED' | 'IDLE';
+  todos: Todo[];
+  neighborhoodRank: number; // 같은 동 내 오늘 물주기 순위 (1-based)
 }
+
+export type UsersOverlayPayload = MapUser[];
 
 export type SSEPayload =
   | DongUsersPayload
   | HeatmapUpdatePayload
   | WaterToastPayload
-  | CreatureUpdatePayload;
+  | UsersOverlayPayload;
 
 export interface SSEEvent {
   type: SSEEventType;

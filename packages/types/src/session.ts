@@ -38,4 +38,10 @@ export interface ActiveSessionCache {
   durationSec: number;
   todos: Todo[];
   status: SessionStatus;
+  nickname: string;
+  pixelX: number;
+  pixelY: number;
+  waterCount: number;
+  creatureStage: number;
+  todosPublic: boolean;
 }

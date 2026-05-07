@@ -1,6 +1,6 @@
 interface NeighborhoodStatsProps {
   neighborhoodName: string;
-  /** 0–100 */
+  /** 0–100 (personal water progress: waterCount / 12 * 100) */
   growthPercent: number;
 }
 
@@ -15,7 +15,7 @@ export function NeighborhoodStats({ neighborhoodName, growthPercent }: Neighborh
 
       <div className="flex justify-between items-center">
         <span className="font-mono text-pixel-stat text-on-surface">
-          {neighborhoodName} 숲 성장률
+          {neighborhoodName} 내 성장률
         </span>
         <span className="font-mono text-pixel-stat text-primary">{clamped}%</span>
       </div>

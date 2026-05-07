@@ -32,8 +32,8 @@ app.get('/health', (_req, res) => {
   res.json({ ok: true, ts: new Date().toISOString() });
 });
 
-// 부하 테스트 전용 엔드포인트 — test 환경에서만 노출
-if (process.env.NODE_ENV === 'test') {
+// 부하 테스트 전용 엔드포인트 — test 환경 또는 LOAD_TEST=1 시 노출
+if (process.env.NODE_ENV === 'test' || process.env.LOAD_TEST === '1') {
   app.use('/test', testRouter);
 }
 

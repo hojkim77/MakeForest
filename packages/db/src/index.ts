@@ -18,7 +18,7 @@ export type {
   FocusSession,
   Dong,
   DailySession,
-  Creature,
+  UserCreature,
   Fossil,
   WateringLog,
   PushSubscription,

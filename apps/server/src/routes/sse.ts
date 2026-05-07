@@ -45,8 +45,12 @@ sseRouter.get('/:regionCode', async (req: Request, res: Response) => {
   clients.get(regionCode)!.add(res);
 
   // 초기 접속 시 현재 지역 유저 목록 전송
-  const users = await buildRegionUsers(regionCode);
-  res.write(`event: dong:users\ndata: ${JSON.stringify({ regionCode, users })}\n\n`);
+  try {
+    const users = await buildRegionUsers(regionCode);
+    res.write(`event: dong:users\ndata: ${JSON.stringify({ regionCode, users })}\n\n`);
+  } catch (err) {
+    console.error('[sse] initial user list error:', err);
+  }
 
   // 핑 (30초 간격, 연결 유지)
   const pingInterval = setInterval(() => res.write(': ping\n\n'), 30_000);

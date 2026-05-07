@@ -24,6 +24,8 @@ model User {
   wateringLogs      WateringLog[]
   dailySessions     DailySession[]
   pushSubscriptions PushSubscription[]
+  userCreatures     UserCreature[]
+  fossils           Fossil[]
 
   @@unique([provider, providerId])
   @@index([dongCode])
@@ -47,9 +49,10 @@ model FocusSession {
   @@index([status])
 }
 
-// 자정 cron이 Creature를 박제하여 생성하는 영구 기록
+// 자정 cron이 UserCreature를 박제하여 생성하는 영구 기록
 model Fossil {
   id           String   @id @default(uuid())
+  userId       String
   dongCode     String
   date         String   // KST "YYYY-MM-DD"
   creatureType String
@@ -58,7 +61,10 @@ model Fossil {
   fossilY      Int
   createdAt    DateTime @default(now())
 
-  @@unique([dongCode, date])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
   @@index([dongCode])
 }
 
@@ -74,18 +80,16 @@ model Dong {
   @@index([sidoCode])
 }
 
-// 날짜별 시/군 단위 오늘의 생명체
-model Creature {
+// 유저별 영구 생명체 (하루 최대 12회 물주기, 누적 성장)
+model UserCreature {
   id         String   @id @default(uuid())
-  regionCode String
-  date       String   // KST "YYYY-MM-DD"
-  stage      Int      @default(0) // 0=씨앗 1=새싹 2=나무1 3=나무2 4=나무3
-  waterCount Int      @default(0) // 시/군 전체 누적 물주기 수
+  userId     String   @unique
+  stage      Int      @default(0) // 0~9, 누적 waterCount 기반 자동 계산
+  waterCount Int      @default(0) // 생애 누적 물주기 횟수
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  @@unique([regionCode, date])
-  @@index([regionCode])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // 유저별 날짜별 물주기 이력
@@ -108,7 +112,7 @@ model DailySession {
   userId     String
   date       String // KST "YYYY-MM-DD"
   elapsedSec Int    @default(0)
-  waterCount Int    @default(0) // 오늘 내가 준 물 (최대 3)
+  waterCount Int    @default(0) // 오늘 내가 준 물 (최대 12)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

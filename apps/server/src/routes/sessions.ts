@@ -74,6 +74,22 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
     // Redis 캐싱 + SSE 브로드캐스트 (실패해도 세션 생성은 성공)
     void (async () => {
       try {
+        // 표시용 메타데이터 조회 (nickname, 좌표, 생명체 상태)
+        const [user, dong, todayCreature] = await Promise.all([
+          prisma.user.findUnique({
+            where: { id: userId },
+            select: { nickname: true, todosPublic: true },
+          }),
+          prisma.dong.findUnique({ where: { code: dongCode }, select: { lat: true, lng: true } }),
+          prisma.userCreature.findUnique({
+            where: { userId },
+            select: { waterCount: true, stage: true },
+          }),
+        ]);
+
+        const { toPixel } = await import('./map');
+        const { pixelX, pixelY } = dong ? toPixel(dong.lat, dong.lng) : { pixelX: 0, pixelY: 0 };
+
         await setSession(session.id, {
           userId,
           dongCode,
@@ -81,6 +97,12 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
           durationSec,
           todos,
           status: 'RUNNING',
+          nickname: user?.nickname ?? '누군가',
+          pixelX,
+          pixelY,
+          waterCount: todayCreature?.waterCount ?? 0,
+          creatureStage: todayCreature?.stage ?? 0,
+          todosPublic: user?.todosPublic ?? true,
         });
         await addActiveDong(dongCode, session.id);
 

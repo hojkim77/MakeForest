@@ -1,13 +1,19 @@
-import { calcStage, getKstDateString, checkDailyCapExceeded } from '../water.logic';
+import { calcPersonalStage, getKstDateString, checkDailyCapExceeded } from '../water.logic';
 
-describe('calcStage', () => {
-  // STAGE_THRESHOLDS = [0, 5, 12, 25, 45] — 경계값과 상한 클램프만 검증
-  it('0회 → stage 0', () => expect(calcStage(0)).toBe(0));
-  it('5회 → stage 1 (정확히 임계값)', () => expect(calcStage(5)).toBe(1));
-  it('12회 → stage 2 (정확히 임계값)', () => expect(calcStage(12)).toBe(2));
-  it('25회 → stage 3 (정확히 임계값)', () => expect(calcStage(25)).toBe(3));
-  it('45회 → stage 4 (정확히 임계값)', () => expect(calcStage(45)).toBe(4));
-  it('100회 → stage 4 (상한 클램프)', () => expect(calcStage(100)).toBe(4));
+describe('calcPersonalStage', () => {
+  // PERSONAL_STAGE_THRESHOLDS = [0, 12, 36, 72, 132, 216, 336, 504, 744, 1080] — 10단계
+  it('0회 → stage 0', () => expect(calcPersonalStage(0)).toBe(0));
+  it('11회 → stage 0 (임계값 미달)', () => expect(calcPersonalStage(11)).toBe(0));
+  it('12회 → stage 1 (정확히 임계값)', () => expect(calcPersonalStage(12)).toBe(1));
+  it('36회 → stage 2 (정확히 임계값)', () => expect(calcPersonalStage(36)).toBe(2));
+  it('72회 → stage 3 (정확히 임계값)', () => expect(calcPersonalStage(72)).toBe(3));
+  it('132회 → stage 4 (정확히 임계값)', () => expect(calcPersonalStage(132)).toBe(4));
+  it('216회 → stage 5 (정확히 임계값)', () => expect(calcPersonalStage(216)).toBe(5));
+  it('336회 → stage 6 (정확히 임계값)', () => expect(calcPersonalStage(336)).toBe(6));
+  it('504회 → stage 7 (정확히 임계값)', () => expect(calcPersonalStage(504)).toBe(7));
+  it('744회 → stage 8 (정확히 임계값)', () => expect(calcPersonalStage(744)).toBe(8));
+  it('1080회 → stage 9 (최고 단계)', () => expect(calcPersonalStage(1080)).toBe(9));
+  it('9999회 → stage 9 (상한 클램프)', () => expect(calcPersonalStage(9999)).toBe(9));
 });
 
 describe('getKstDateString — KST 자정 경계', () => {

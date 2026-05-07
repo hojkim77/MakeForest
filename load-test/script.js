@@ -6,6 +6,7 @@ const INTERNAL_SECRET = __ENV.INTERNAL_SECRET || '';
 const API_VUS = parseInt(__ENV.API_VUS || '25');
 const TOGGLE_VUS = parseInt(__ENV.TOGGLE_VUS || '5');
 const SSE_VUS = parseInt(__ENV.SSE_VUS || '20');
+const MAP_VUS = parseInt(__ENV.MAP_VUS || '10');
 const DURATION = __ENV.DURATION || '1m';
 
 export const options = {
@@ -24,12 +25,19 @@ export const options = {
       duration: DURATION,
       exec: 'toggleScenario',
     },
-    // 지도 열람 유저: SSE 연결을 맺고 이벤트 수신 확인
+    // 지도 열람 유저: 지역 SSE 연결을 맺고 이벤트 수신 확인
     sse_watchers: {
       executor: 'constant-vus',
       vus: SSE_VUS,
       duration: DURATION,
       exec: 'sseScenario',
+    },
+    // 전국 맵 스트림 유저: /map/activity-stream 연결 후 users:overlay 수신 확인
+    map_stream_watchers: {
+      executor: 'constant-vus',
+      vus: MAP_VUS,
+      duration: DURATION,
+      exec: 'mapStreamScenario',
     },
   },
   thresholds: {
@@ -40,10 +48,13 @@ export const options = {
     'http_req_failed{scenario:timer_toggler}': ['rate<0.01'],
     // SSE는 timeout이 정상 종료이므로 http_req_failed 대신 check 성공률로 평가
     'checks{scenario:sse_watchers}': ['rate>0.95'],
+    'checks{scenario:map_stream_watchers}': ['rate>0.95'],
   },
 };
 
 // VU당 캐시 — 첫 iteration에 /test/login 호출 후 재사용
+// waterCount: 성공한 물주기 횟수를 추적. 12회 도달 시 /water 호출 자체를 하지 않음
+// (프론트엔드가 waterCount를 보고 버튼을 비활성화하는 동작과 동일)
 const vuCache = {};
 
 function getVuUser() {
@@ -65,6 +76,7 @@ function getVuUser() {
     userId: res.json('userId'),
     dongCode: res.json('dongCode'),
     secret: res.json('secret') || INTERNAL_SECRET,
+    waterCount: 0,
   };
 
   return vuCache[__VU];
@@ -93,14 +105,18 @@ export function apiScenario() {
   const sessionId = sessionRes.json('sessionId');
   sleep(1);
 
-  // 2) 물주기 (30분 집중 후 가능한 상황 시뮬레이션)
-  const waterRes = http.post(
-    `${TARGET_URL}/water`,
-    JSON.stringify({ userId, dongCode, nickname: `LT${__VU}`, totalElapsedSec: 1800 }),
-    { headers, tags: { name: 'POST /water' } }
-  );
-  // 409 = 오늘 캡 도달 (정상), 200 = 물주기 성공
-  check(waterRes, { 'water ok': (r) => r.status === 200 || r.status === 409 });
+  // 2) 물주기 — waterCount < 12일 때만 호출, 12회 도달 시 요청 자체를 안 보냄
+  // 프론트엔드가 waterCount를 보고 버튼을 비활성화하는 동작과 동일
+  // → 서버에서 409가 반환될 상황 자체를 원천 차단
+  if (user.waterCount < 12) {
+    const waterRes = http.post(
+      `${TARGET_URL}/water`,
+      JSON.stringify({ userId, dongCode, nickname: `LT${__VU}`, totalElapsedSec: 1800 }),
+      { headers, tags: { name: 'POST /water' } }
+    );
+    if (waterRes.status === 200) user.waterCount++;
+    check(waterRes, { 'water ok': (r) => r.status === 200 });
+  }
   sleep(1);
 
   // 3) 통계 조회
@@ -152,7 +168,7 @@ export function toggleScenario() {
   }
 }
 
-// ── SSE 연결 유저 시나리오 ────────────────────────────────────
+// ── 지역 SSE 연결 유저 시나리오 ──────────────────────────────
 // timer_toggler가 만드는 이벤트를 SSE 연결이 실제로 받는지 확인
 // timeout(error_code 1050)은 연결이 유지됐다는 의미이므로 성공으로 처리
 export function sseScenario() {
@@ -169,6 +185,23 @@ export function sseScenario() {
 
   check(res, {
     'sse connected': (r) => r.status === 200 || r.error_code === 1050,
+  });
+
+  sleep(5);
+}
+
+// ── 전국 맵 스트림 연결 유저 시나리오 ────────────────────────
+// /map/activity-stream에 연결 — heatmap:update + users:overlay 이벤트 수신 확인
+// api_users가 물주기를 실행하는 동안 실시간 오버레이 갱신이 전달되는지 검증
+export function mapStreamScenario() {
+  const res = http.get(`${TARGET_URL}/map/activity-stream`, {
+    headers: { Accept: 'text/event-stream' },
+    timeout: '30s',
+    tags: { name: 'GET /map/activity-stream' },
+  });
+
+  check(res, {
+    'map stream connected': (r) => r.status === 200 || r.error_code === 1050,
   });
 
   sleep(5);

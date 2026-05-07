@@ -15,7 +15,7 @@ const FALLBACK_DONG_CODES = [
   '1121510100', // 노원구 월계1동
 ];
 
-// POST /test/login — 부하 테스트용 (NODE_ENV=test 환경에서만 마운트됨)
+// POST /test/login — 부하 테스트용
 // testId 기반으로 User 레코드를 upsert하고 x-internal-secret에 쓸 secret 반환
 // users.json 없이 k6가 직접 호출해 유저를 생성할 수 있도록 설계
 testRouter.post('/login', async (req: Request, res: Response) => {
@@ -76,7 +76,7 @@ testRouter.post('/run-midnight', requireInternalAuth, async (_req: Request, res:
 // DELETE /test/cleanup — CI 종료 직전 Redis 테스트 데이터 정리
 // test 유저들의 RUNNING 세션을 Redis에서 제거하고 DB 상태도 COMPLETED로 업데이트
 // 프로덕션 Redis를 CI와 공유할 때 실사용자 지도에 load-test 유저가 노출되는 것을 방지
-testRouter.delete('/cleanup', requireInternalAuth, async (req: Request, res: Response) => {
+testRouter.delete('/cleanup', requireInternalAuth, async (_req: Request, res: Response) => {
   try {
     const testUsers = await prisma.user.findMany({
       where: { provider: 'test' },

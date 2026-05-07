@@ -31,15 +31,13 @@ function dongColor(count: number): string {
   return `hsl(148,60%,${l.toFixed(0)}%)`;
 }
 
-const STAGE_EMOJIS = ['🌱', '🌿', '🌳', '🌲', '🌲'] as const;
 
-interface CreatureData { stage: number; waterCount: number; }
-const creatureCache = new Map<string, CreatureData>();
+interface RegionAggregate { userCount: number; totalWaterCount: number; }
+const creatureCache = new Map<string, RegionAggregate>();
 
 interface TooltipStats {
-  stage: string;
-  water: number;
-  totalUsers: number;
+  userCount: number;
+  totalWaterCount: number;
 }
 
 interface HoverLabel {
@@ -50,13 +48,13 @@ interface HoverLabel {
 }
 
 interface PixelMapProps {
-  onRegionClick: (regionCode: string, bounds: RegionBounds) => void;
+  onRegionClick?: (regionCode: string, bounds: RegionBounds) => void;
 }
 
 export function PixelMap({ onRegionClick }: PixelMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { data: pixelMap, loading } = usePixelMapData();
-  const activity = useActivityStream();
+  const { activity } = useActivityStream();
 
   const [hoverLabel, setHoverLabel] = useState<HoverLabel | null>(null);
   const [tooltipStats, setTooltipStats] = useState<TooltipStats | null>(null);
@@ -217,24 +215,16 @@ export function PixelMap({ onRegionClick }: PixelMapProps) {
 
           const cached = creatureCache.get(rc);
           if (cached) {
-            setTooltipStats({
-              stage: STAGE_EMOJIS[Math.min(cached.stage, 4)] as string,
-              water: Math.min(cached.waterCount, 3),
-              totalUsers: regionStats.get(rc)?.totalUsers ?? 0,
-            });
+            setTooltipStats({ userCount: regionStats.get(rc)?.totalUsers ?? 0, totalWaterCount: cached.totalWaterCount });
             return;
           }
 
           fetch(`/api/creature/${encodeURIComponent(rc)}`)
             .then((res) => res.json())
-            .then((data: { stage: number; waterCount: number }) => {
+            .then((data: RegionAggregate) => {
               creatureCache.set(rc, data);
               if (activeRegionRef.current !== rc) return;
-              setTooltipStats({
-                stage: STAGE_EMOJIS[Math.min(data.stage, 4)] as string,
-                water: Math.min(data.waterCount, 3),
-                totalUsers: regionStats.get(rc)?.totalUsers ?? 0,
-              });
+              setTooltipStats({ userCount: regionStats.get(rc)?.totalUsers ?? 0, totalWaterCount: data.totalWaterCount });
             })
             .catch(() => { /* 조용히 무시 — 지역명만 표시됨 */ });
         }, HOVER_DELAY_MS);
@@ -255,7 +245,7 @@ export function PixelMap({ onRegionClick }: PixelMapProps) {
       const rc = regionOf(cell.code, cell.name);
       const bounds = regionMeta.bounds.get(rc);
       if (!bounds || bounds.minX === Infinity) return;
-      onRegionClick(rc, bounds);
+      onRegionClick?.(rc, bounds);
     },
     [getCellFromEvent, gridMap, regionMeta.bounds, onRegionClick],
   );
@@ -287,14 +277,8 @@ export function PixelMap({ onRegionClick }: PixelMapProps) {
         >
           <div className="font-medium">{hoverLabel.displayName}</div>
           {tooltipStats && (
-            <div className="mt-0.5 text-xs animate-fade-in-up">
-              <span className="text-primary-fixed">{tooltipStats.stage}</span>
-              <span className="ml-1 text-outline-variant">
-                {'💧'.repeat(tooltipStats.water)}{'🩶'.repeat(3 - tooltipStats.water)}
-              </span>
-              {tooltipStats.totalUsers > 0 && (
-                <div className="mt-0.5 text-secondary-fixed">{tooltipStats.totalUsers}명 집중 중</div>
-              )}
+            <div className="mt-0.5 text-xs animate-fade-in-up text-secondary-fixed">
+              집중 {tooltipStats.userCount}명 / 물주기 총 {tooltipStats.totalWaterCount}회
             </div>
           )}
         </div>,

@@ -17,7 +17,7 @@ import { usePushNotification } from '@/hooks/usePushNotification';
 const WATER_THRESHOLD_SEC = 30 * 60;
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
 
-type CreatureStage = 0 | 1 | 2 | 3 | 4;
+type CreatureStage = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 export function Panel() {
   const { data: session, status } = useSession();
@@ -41,30 +41,18 @@ export function Panel() {
   const [growthPercent, setGrowthPercent] = useState(0);
   const [isWatering, setIsWatering] = useState(false);
 
-  const fetchCreature = useCallback(async (regionCode: string) => {
-    try {
-      const res = await fetch(`/api/creature/${encodeURIComponent(regionCode)}`);
-      if (!res.ok) return;
-      const data = await res.json() as { stage: number; waterCount: number };
-      setCreatureStage(Math.min(data.stage, 4) as CreatureStage);
-      setGrowthPercent(Math.min(Math.round((data.waterCount / 45) * 100), 100));
-    } catch { /* 실패 시 기본값 유지 */ }
-  }, []);
-
   const fetchMyWaterCount = useCallback(async () => {
     if (!isLoggedIn) return;
     try {
       const res = await fetch('/api/water/me');
       if (!res.ok) return;
-      const data = await res.json() as { waterCount: number };
+      const data = await res.json() as { waterCount: number; creatureStage: number; creatureWaterCount: number };
       setMyWaterCount(data.waterCount);
+      setCreatureStage(Math.min(data.creatureStage, 9) as CreatureStage);
+      // growthPercent = 오늘 하루 물주기 진행도 (일일 12회 기준)
+      setGrowthPercent(Math.min(Math.round((data.waterCount / 12) * 100), 100));
     } catch { /* 실패 시 기본값 유지 */ }
   }, [isLoggedIn]);
-
-  useEffect(() => {
-    if (!activeRegionCode) return;
-    fetchCreature(activeRegionCode);
-  }, [activeRegionCode, fetchCreature]);
 
   useEffect(() => {
     fetchMyWaterCount();
@@ -77,12 +65,6 @@ export function Panel() {
 
     const es = new EventSource(`${SERVER_URL}/sse/${encodeURIComponent(activeRegionCode)}`);
     sseRef.current = es;
-
-    es.addEventListener('creature:update', (e) => {
-      const data = JSON.parse((e as MessageEvent).data) as { stage: number; waterCount: number };
-      setCreatureStage(Math.min(data.stage, 4) as CreatureStage);
-      setGrowthPercent(Math.min(Math.round((data.waterCount / 45) * 100), 100));
-    });
 
     return () => { es.close(); sseRef.current = null; };
   }, [activeRegionCode]);
@@ -141,10 +123,11 @@ export function Panel() {
         body: JSON.stringify({ totalElapsedSec }),
       });
       if (!res.ok) return;
-      const data = await res.json() as { myWaterCount: number; creature: { stage: number; waterCount: number } };
+      const data = await res.json() as { myWaterCount: number; userCreature: { stage: number; waterCount: number } };
       setMyWaterCount(data.myWaterCount);
-      setCreatureStage(Math.min(data.creature.stage, 4) as CreatureStage);
-      setGrowthPercent(Math.min(Math.round((data.creature.waterCount / 45) * 100), 100));
+      setCreatureStage(Math.min(data.userCreature.stage, 9) as CreatureStage);
+      // growthPercent = 오늘 하루 물주기 진행도 (일일 12회 기준)
+      setGrowthPercent(Math.min(Math.round((data.myWaterCount / 12) * 100), 100));
       useTimerStore.getState().resetWaterProgress();
     } catch { /* 실패 시 조용히 무시 */ }
     finally { setIsWatering(false); }
@@ -192,12 +175,14 @@ export function Panel() {
         <SloganSection neighborhoodName={neighborhoodName} />
         <WaterToast regionCode={activeRegionCode} />
 
-        <CreatureSection stage={creatureStage} />
+        {isLoggedIn && <CreatureSection stage={creatureStage} />}
 
-        <NeighborhoodStats
-          neighborhoodName={neighborhoodName}
-          growthPercent={growthPercent}
-        />
+        {isLoggedIn && (
+          <NeighborhoodStats
+            neighborhoodName={neighborhoodName}
+            growthPercent={growthPercent}
+          />
+        )}
 
         {isLoggedIn ? (
           <>
