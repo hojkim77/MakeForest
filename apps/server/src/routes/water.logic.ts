@@ -1,9 +1,9 @@
-const STAGE_THRESHOLDS = [0, 5, 12, 25, 45];
+const PERSONAL_STAGE_THRESHOLDS = [0, 1, 3, 6, 10];
 const DAILY_CAP_SEC = 6 * 60 * 60; // 21600
 
-export function calcStage(totalWaters: number): number {
-  for (let i = STAGE_THRESHOLDS.length - 1; i >= 0; i--) {
-    if (totalWaters >= STAGE_THRESHOLDS[i]!) return i;
+export function calcPersonalStage(waterCount: number): number {
+  for (let i = PERSONAL_STAGE_THRESHOLDS.length - 1; i >= 0; i--) {
+    if (waterCount >= PERSONAL_STAGE_THRESHOLDS[i]!) return i;
   }
   return 0;
 }
