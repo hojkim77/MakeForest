@@ -113,9 +113,9 @@ export function UserOverlay({ users, mapW, mapH }: UserOverlayProps) {
             </p>
           )}
 
-          {/* 물주기 횟수 */}
+          {/* 오늘 물주기 횟수 */}
           <p className="text-blue-300 text-[10px]">
-            💧 {hovered.user.waterCount}/12회
+            💧 {hovered.user.todayWaterCount}/12회
           </p>
 
           {/* 오늘의 할일 */}

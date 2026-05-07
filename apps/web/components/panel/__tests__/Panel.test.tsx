@@ -88,7 +88,7 @@ function setupDefaultFetch() {
     if (url.includes('/api/creature/'))
       return Promise.resolve({ ok: true, json: () => Promise.resolve({ userCount: 0, avgStage: 0, maxStage: 0, totalWaterCount: 0, date: '2026-05-07' }) });
     if (url.includes('/api/water/me'))
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ waterCount: 0 }) });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ waterCount: 0, creatureStage: 0, creatureWaterCount: 0 }) });
     if (url === '/api/sessions' && opts?.method === 'POST')
       return Promise.resolve({ ok: true, json: () => Promise.resolve({ sessionId: 'sess-1' }) });
     if (url.includes('/api/sessions/') && opts?.method === 'PATCH')
@@ -97,7 +97,7 @@ function setupDefaultFetch() {
       return Promise.resolve({
         ok: true, json: () => Promise.resolve({
           myWaterCount: 1,
-          userCreature: { stage: 1, waterCount: 1 },
+          userCreature: { stage: 1, waterCount: 12 }, // waterCount는 누적 총량
         })
       });
     if (url === '/api/push/notify' && opts?.method === 'POST')
