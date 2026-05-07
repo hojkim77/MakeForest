@@ -17,8 +17,9 @@ const STATUS_OPACITY: Record<string, number> = {
   IDLE: 0.25,
 };
 
-const SPRITE_SIZE = 2;
-const JITTER_RADIUS = 0.4; // scale transform 내부라 화면상 훨씬 크게 보임
+const SPRITE_SIZE = 2;    // 시각적 크기 (px)
+const HIT_SIZE = 1;       // 호버 hit area (px) — div 크기
+const JITTER_RADIUS = 1;  // hit area가 겹치지 않도록 보장하는 최소 이격 (>= HIT_SIZE)
 
 function jitteredPositions(users: MapUser[], mapW: number, mapH: number) {
   const grouped = new Map<string, MapUser[]>();
@@ -76,14 +77,19 @@ export function UserOverlay({ users, mapW, mapH }: UserOverlayProps) {
               top: `${baseTop}%`,
               transform: `translate(calc(-50% + ${jx}px), calc(-50% + ${jy}px))`,
               opacity,
+              width: HIT_SIZE,
+              height: HIT_SIZE,
+              overflow: 'visible',
             }}
             onMouseEnter={(e) => {
               const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-              setHovered({ user, screenX: rect.left + rect.width / 2, screenY: rect.bottom });
+              setHovered({ user, screenX: rect.left + rect.width / 2, screenY: rect.top + rect.height / 2 });
             }}
             onMouseLeave={() => setHovered(null)}
           >
-            <CreatureSprite stage={stage} size={SPRITE_SIZE} />
+            <div style={{ position: 'absolute', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }}>
+              <CreatureSprite stage={stage} size={SPRITE_SIZE} />
+            </div>
           </div>
         );
       })}
