@@ -40,35 +40,6 @@ export function Panel() {
   const [myWaterCount, setMyWaterCount] = useState(0);
   const [growthPercent, setGrowthPercent] = useState(0);
   const [isWatering, setIsWatering] = useState(false);
-  const [remoteSessions, setRemoteSessions] = useState<{ id: string; status: string }[]>([]);
-  const [isAbandoningRemote, setIsAbandoningRemote] = useState(false);
-
-  useEffect(() => {
-    if (!isLoggedIn || timerStatus !== 'IDLE') return;
-    fetch('/api/sessions/active')
-      .then((r) => r.json())
-      .then((data: { sessions: { id: string; status: string }[] }) => {
-        if (data.sessions.length > 0) setRemoteSessions(data.sessions);
-      })
-      .catch(() => {});
-  }, [isLoggedIn]);
-
-  async function handleAbandonRemote() {
-    setIsAbandoningRemote(true);
-    try {
-      await Promise.all(
-        remoteSessions.map((s) =>
-          fetch(`/api/sessions/${s.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'abandon' }),
-          }),
-        ),
-      );
-    } catch { /* 실패해도 배너는 숨김 */ }
-    setRemoteSessions([]);
-    setIsAbandoningRemote(false);
-  }
 
   const fetchMyWaterCount = useCallback(async () => {
     if (!isLoggedIn) return;
@@ -211,19 +182,6 @@ export function Panel() {
             neighborhoodName={neighborhoodName}
             growthPercent={growthPercent}
           />
-        )}
-
-        {isLoggedIn && remoteSessions.length > 0 && !isPeeking && (
-          <div className="flex flex-col gap-sm p-sm bg-error-container border border-error text-on-error-container text-sm font-mono">
-            <span>다른 기기에서 타이머가 진행 중입니다. 확인을 누르면 기존 타이머가 종료됩니다.</span>
-            <button
-              onClick={() => void handleAbandonRemote()}
-              disabled={isAbandoningRemote}
-              className="self-end px-sm py-xs bg-error text-on-error font-mono text-label uppercase tracking-wider hover:brightness-95 active:translate-y-px disabled:opacity-60"
-            >
-              {isAbandoningRemote ? '처리 중…' : '확인'}
-            </button>
-          </div>
         )}
 
         {isLoggedIn ? (
