@@ -15,7 +15,14 @@
     "load:seed": "npx tsx load-test/seed-users.ts",
     "load:ci": "k6 run load-test/script.js --env API_VUS=25 --env TOGGLE_VUS=5 --env SSE_VUS=20 --env DURATION=1m",
     "load:full": "k6 run load-test/script.js --env API_VUS=180 --env TOGGLE_VUS=20 --env SSE_VUS=500 --env DURATION=5m",
-    "load:post": "node load-test/post-result.js"
+    "load:post": "node load-test/post-result.js",
+    "db:up": "docker-compose up -d",
+    "db:down": "docker-compose down",
+    "db:reset": "docker-compose down -v && docker-compose up -d",
+    "db:migrate": "yarn workspace @makeforest/db db:migrate",
+    "db:seed": "yarn workspace @makeforest/db db:seed",
+    "db:studio": "yarn workspace @makeforest/db db:studio",
+    "setup": "yarn db:up && sleep 3 && yarn db:migrate && yarn db:seed"
   },
   "devDependencies": {
     "turbo": "^2.3.3",

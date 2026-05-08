@@ -3,17 +3,13 @@ import { RedisKeys, SESSION_TTL_SECONDS } from './keys';
 import type { ActiveSessionCache } from '@makeforest/types';
 
 export async function setSession(sessionId: string, data: ActiveSessionCache): Promise<void> {
-  await redis.set(RedisKeys.session(sessionId), JSON.stringify(data), {
-    ex: SESSION_TTL_SECONDS,
-  });
+  await redis.set(RedisKeys.session(sessionId), JSON.stringify(data), 'EX', SESSION_TTL_SECONDS);
 }
 
 export async function getSession(sessionId: string): Promise<ActiveSessionCache | null> {
-  const raw = await redis.get<ActiveSessionCache>(RedisKeys.session(sessionId));
+  const raw = await redis.get(RedisKeys.session(sessionId));
   if (!raw) return null;
-  // Upstash 클라이언트가 JSON을 자동 역직렬화하므로 이미 객체일 수 있음
-  if (typeof raw === 'string') return JSON.parse(raw) as ActiveSessionCache;
-  return raw;
+  return JSON.parse(raw) as ActiveSessionCache;
 }
 
 export async function deleteSession(sessionId: string): Promise<void> {

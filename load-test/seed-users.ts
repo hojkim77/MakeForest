@@ -20,7 +20,7 @@ async function main() {
   });
 
   if (seoulDongs.length === 0) {
-    throw new Error('서울 동 코드가 DB에 없습니다. generate-pixel-map.ts를 먼저 실행하세요.');
+    throw new Error('서울 동 코드가 DB에 없습니다. yarn db:seed를 먼저 실행하세요.');
   }
 
   console.log(`서울 동 ${seoulDongs.length}개 로드됨`);

@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "@makeforest/db": "*",
-    "@makeforest/redis": "*",
     "@makeforest/types": "*",
     "next": "14.2.35",
     "next-auth": "^5.0.0-beta.25",

@@ -73,9 +73,8 @@ testRouter.post('/run-midnight', requireInternalAuth, async (_req: Request, res:
   }
 });
 
-// DELETE /test/cleanup — CI 종료 직전 Redis 테스트 데이터 정리
-// test 유저들의 RUNNING 세션을 Redis에서 제거하고 DB 상태도 COMPLETED로 업데이트
-// 프로덕션 Redis를 CI와 공유할 때 실사용자 지도에 load-test 유저가 노출되는 것을 방지
+// DELETE /test/cleanup — 로컬 부하 테스트 후 수동 정리용
+// Docker 환경(CI/로컬)에서는 down으로 전체 정리되므로 주로 수동 실행 시 사용
 testRouter.delete('/cleanup', requireInternalAuth, async (_req: Request, res: Response) => {
   try {
     const testUsers = await prisma.user.findMany({

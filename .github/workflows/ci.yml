@@ -38,8 +38,6 @@ jobs:
       - name: Start test environment
         run: docker compose -f docker-compose.test.yml up -d --wait
         env:
-          UPSTASH_REDIS_REST_URL: ${{ secrets.CI_UPSTASH_URL }}
-          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.CI_UPSTASH_TOKEN }}
           INTERNAL_API_SECRET: ${{ secrets.INTERNAL_API_SECRET }}
 
       - name: Server logs (on failure)
@@ -94,14 +92,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-
-      # 5) Redis 테스트 데이터 정리 — docker compose down 전에 서버가 살아있을 때 호출
-      #    프로덕션 Upstash 공유 시 실사용자 지도에 load-test 유저가 노출되는 것을 방지
-      - name: Cleanup Redis test data
-        if: always()
-        run: |
-          curl -sf -X DELETE http://localhost:4000/test/cleanup \
-            -H "x-internal-secret: ${{ secrets.INTERNAL_API_SECRET }}" || true
 
       - name: Cleanup Docker
         if: always()
