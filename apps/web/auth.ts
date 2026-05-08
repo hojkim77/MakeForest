@@ -2,7 +2,6 @@ import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
 import Kakao from 'next-auth/providers/kakao';
 import { prisma } from '@makeforest/db';
-import { redis, RedisKeys } from '@makeforest/redis';
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
 const INTERNAL_SECRET = process.env.INTERNAL_SECRET ?? '';
@@ -49,6 +48,7 @@ const nextAuth = NextAuth({
       (user as Record<string, unknown>).regionCode = dbUser.regionCode ?? undefined;
 
       // 새 loginToken 발급 → Redis 저장 (30일 TTL) + 기존 기기 force_logout 브로드캐스트
+      const { redis, RedisKeys } = await import('@makeforest/redis');
       const loginToken = crypto.randomUUID();
       await redis.set(RedisKeys.loginToken(dbUser.id), loginToken, { ex: 30 * 24 * 60 * 60 });
       (user as Record<string, unknown>).loginToken = loginToken;
