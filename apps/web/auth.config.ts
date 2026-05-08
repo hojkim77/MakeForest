@@ -22,6 +22,7 @@ export const authConfig: NextAuthConfig = {
     session({ session, token }) {
       if (token.id) session.user.id = token.id as string;
       if (token.dongCode) session.user.dongCode = token.dongCode as string;
+      if (token.loginToken) session.user.loginToken = token.loginToken as string;
       return session;
     },
   },

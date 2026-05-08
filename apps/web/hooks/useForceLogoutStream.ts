@@ -5,17 +5,18 @@ import { signOut } from 'next-auth/react';
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
 
-export function useForceLogoutStream(userId: string | null) {
+export function useForceLogoutStream(userId: string | null, loginToken: string | null) {
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !loginToken) return;
 
+    const url = `${SERVER_URL}/sse/user?userId=${encodeURIComponent(userId)}&loginToken=${encodeURIComponent(loginToken)}`;
     let es: EventSource;
     let retryDelay = 1000;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     let destroyed = false;
 
     const connect = () => {
-      es = new EventSource(`${SERVER_URL}/sse/user?userId=${encodeURIComponent(userId)}`);
+      es = new EventSource(url);
 
       es.addEventListener('force_logout', () => {
         es.close();
@@ -41,5 +42,5 @@ export function useForceLogoutStream(userId: string | null) {
       if (retryTimer) clearTimeout(retryTimer);
       es?.close();
     };
-  }, [userId]);
+  }, [userId, loginToken]);
 }

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { getActiveRegionSessions, getSession } from '@makeforest/redis';
+import { getActiveRegionSessions, getSession, redis, RedisKeys } from '@makeforest/redis';
 import type { SSEEvent } from '@makeforest/types';
 
 export const sseRouter = Router();
@@ -53,16 +53,25 @@ sseRouter.post('/internal/force-logout', (req: Request, res: Response) => {
   return res.json({ ok: true });
 });
 
-// GET /sse/user?userId=xxx — 유저별 개인 채널 (force_logout 수신용)
-sseRouter.get('/user', (req: Request, res: Response): void => {
+// GET /sse/user?userId=xxx&loginToken=yyy — 유저별 개인 채널
+// 연결 시점에 loginToken을 Redis와 대조 — 불일치면 force_logout 즉시 발송
+sseRouter.get('/user', async (req: Request, res: Response): Promise<void> => {
   const userId = String(req.query['userId'] ?? '');
-  if (!userId) { res.status(400).end(); return; }
+  const loginToken = String(req.query['loginToken'] ?? '');
+  if (!userId || !loginToken) { res.status(400).end(); return; }
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
+
+  const redisToken = await redis.get<string>(RedisKeys.loginToken(userId));
+  if (redisToken && redisToken !== loginToken) {
+    res.write(`event: force_logout\ndata: {}\n\n`);
+    res.end();
+    return;
+  }
 
   if (!userClients.has(userId)) userClients.set(userId, new Set());
   userClients.get(userId)!.add(res);

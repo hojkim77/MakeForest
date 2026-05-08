@@ -86,6 +86,7 @@ const nextAuth = NextAuth({
       if (token.id) session.user.id = token.id as string;
       if (token.dongCode) session.user.dongCode = token.dongCode as string;
       if (token.regionCode) session.user.regionCode = token.regionCode as string;
+      if (token.loginToken) session.user.loginToken = token.loginToken as string;
       return session;
     },
   },
@@ -106,6 +107,7 @@ declare module 'next-auth' {
       image?: string | null;
       dongCode?: string;
       regionCode?: string;
+      loginToken?: string;
     };
   }
 }
