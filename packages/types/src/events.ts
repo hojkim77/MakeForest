@@ -1,7 +1,7 @@
 import type { Todo } from './session';
 
 // SSE 이벤트 타입 (Express → Client)
-export type SSEEventType = 'dong:users' | 'heatmap:update' | 'water:toast' | 'users:overlay' | 'ping';
+export type SSEEventType = 'dong:users' | 'heatmap:update' | 'water:toast' | 'users:overlay' | 'ping' | 'force_logout';
 
 export interface ActiveUser {
   nickname: string;
@@ -43,7 +43,8 @@ export type SSEPayload =
   | DongUsersPayload
   | HeatmapUpdatePayload
   | WaterToastPayload
-  | UsersOverlayPayload;
+  | UsersOverlayPayload
+  | Record<string, never>;
 
 export interface SSEEvent {
   type: SSEEventType;

@@ -8,6 +8,7 @@ export const RedisKeys = {
   heatmapSido: (sidoCode: string) => `heatmap:sido:${sidoCode}`,
   heatmapSigungu: (sigunguCode: string) => `heatmap:sigungu:${sigunguCode}`,
   heatmapDong: () => `heatmap:dong`,
+  loginToken: (userId: string) => `user:${userId}:login_token`,
 } as const;
 
 export const SESSION_TTL_SECONDS = 6 * 60 * 60; // 6시간
