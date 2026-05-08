@@ -1,11 +1,13 @@
 import NextAuth from 'next-auth';
 import { authConfig } from './auth.config';
+import { getToken } from 'next-auth/jwt';
 import { NextResponse } from 'next/server';
-import type { NextMiddleware } from 'next/server';
+import type { NextRequest, NextMiddleware } from 'next/server';
+import { redis, RedisKeys } from '@makeforest/redis';
 
 const { auth } = NextAuth(authConfig);
 
-export default auth((req) => {
+export default auth(async (req: NextRequest & Parameters<Parameters<typeof auth>[0]>[0]) => {
   const { pathname } = req.nextUrl;
   const session = req.auth;
   const isLoggedIn = !!session?.user?.id;
@@ -22,9 +24,23 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  // 로그인은 됐지만 동네 미설정 → 온보딩 강제
   if (isLoggedIn && !hasDong) {
     return NextResponse.redirect(new URL('/onboarding', req.url));
+  }
+
+  // loginToken 검증: 다른 기기 로그인 시 기존 JWT 무효화
+  if (isLoggedIn) {
+    const rawToken = await getToken({ req, secret: process.env.AUTH_SECRET! });
+    const jwtLoginToken = rawToken?.loginToken as string | undefined;
+    if (jwtLoginToken) {
+      const redisToken = await redis.get<string>(RedisKeys.loginToken(session!.user.id));
+      if (redisToken && redisToken !== jwtLoginToken) {
+        const res = NextResponse.redirect(new URL('/login', req.url));
+        res.cookies.delete('authjs.session-token');
+        res.cookies.delete('__Secure-authjs.session-token');
+        return res;
+      }
+    }
   }
 
   return NextResponse.next();
