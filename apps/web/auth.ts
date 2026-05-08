@@ -2,6 +2,10 @@ import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
 import Kakao from 'next-auth/providers/kakao';
 import { prisma } from '@makeforest/db';
+import { redis, RedisKeys } from '@makeforest/redis';
+
+const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
+const INTERNAL_SECRET = process.env.INTERNAL_SECRET ?? '';
 
 const nextAuth = NextAuth({
   providers: [
@@ -44,6 +48,17 @@ const nextAuth = NextAuth({
       (user as Record<string, unknown>).dongCode = dbUser.dongCode ?? undefined;
       (user as Record<string, unknown>).regionCode = dbUser.regionCode ?? undefined;
 
+      // 새 loginToken 발급 → Redis 저장 (30일 TTL) + 기존 기기 force_logout 브로드캐스트
+      const loginToken = crypto.randomUUID();
+      await redis.set(RedisKeys.loginToken(dbUser.id), loginToken, { ex: 30 * 24 * 60 * 60 });
+      (user as Record<string, unknown>).loginToken = loginToken;
+
+      void fetch(`${SERVER_URL}/sse/internal/force-logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-internal-secret': INTERNAL_SECRET },
+        body: JSON.stringify({ userId: dbUser.id }),
+      }).catch(() => {});
+
       return true;
     },
 
@@ -52,6 +67,7 @@ const nextAuth = NextAuth({
         token.id = user.id;
         token.dongCode = (user as Record<string, unknown>).dongCode as string | undefined;
         token.regionCode = (user as Record<string, unknown>).regionCode as string | undefined;
+        token.loginToken = (user as Record<string, unknown>).loginToken as string | undefined;
       }
 
       if (trigger === 'update' && token.id) {
