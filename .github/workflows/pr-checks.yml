@@ -72,10 +72,11 @@ jobs:
       - name: k6 load test
         run: |
           k6 run load-test/script.js \
-            --env API_VUS=25 \
-            --env TOGGLE_VUS=5 \
-            --env SSE_VUS=20 \
+            --env ACTIVE_VUS=100 \
+            --env SSE_VUS=100 \
+            --env MAP_VUS=150 \
             --env DURATION=1m \
+            --env SSE_TIMEOUT=65s \
             --env TARGET_URL=http://localhost:4000 \
             --env INTERNAL_SECRET=${{ secrets.INTERNAL_API_SECRET }}
 
