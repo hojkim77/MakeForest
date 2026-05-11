@@ -1,10 +1,13 @@
-interface NeighborhoodStatsProps {
-  neighborhoodName: string;
-  /** 0–100 (personal water progress: waterCount / 12 * 100) */
-  growthPercent: number;
-}
+'use client';
 
-export function NeighborhoodStats({ neighborhoodName, growthPercent }: NeighborhoodStatsProps) {
+import { useMapStore, useWaterStore } from '@/store';
+import { regionDisplayName } from '@makeforest/types';
+
+export function NeighborhoodStats({ myRegionCode }: { myRegionCode: string | null }) {
+  const growthPercent = useWaterStore((s) => s.growthPercent);
+  const focusedRegionCode = useMapStore((s) => s.focusedRegionCode);
+  const activeRegionCode = focusedRegionCode ?? myRegionCode;
+  const neighborhoodName = activeRegionCode ? regionDisplayName(activeRegionCode) : '내 동네';
   const clamped = Math.max(0, Math.min(100, growthPercent));
 
   return (

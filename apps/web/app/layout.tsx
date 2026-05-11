@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { IBM_Plex_Mono, Inter } from 'next/font/google';
 import { SessionProvider } from 'next-auth/react';
+import { PushSubscriber } from '@/components/PushSubscriber';
 import './globals.css';
 
 const monoFont = IBM_Plex_Mono({
@@ -32,7 +33,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="bg-background text-on-background font-sans selection:bg-primary-fixed selection:text-on-primary-fixed min-h-screen">
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider>
+          <PushSubscriber />
+          {children}
+        </SessionProvider>
       </body>
     </html>
   );

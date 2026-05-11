@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import type { SessionStatus } from '@makeforest/types';
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useMapStore, useTimerStore, useWaterStore } from '@/store';
 import { Icon } from '@/components/ui/Icon';
 
+const WATER_THRESHOLD_SEC = 30 * 60;
 const TOTAL_SEGMENTS = 12;
 const SEGMENT_SEC = 1800;
 const DAILY_MAX_SEC = 21600;
@@ -22,37 +24,102 @@ function formatTimer(sec: number) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-interface TimerWaterSectionProps {
-  status: SessionStatus | 'IDLE';
-  elapsedSec: number;
-  myWaterCount: number;
-  canWater: boolean;
-  autoPaused?: boolean;
-  onStart: () => void;
-  onStop: () => void;
-  onResume: () => void;
-  onWater: () => void;
-}
+export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | null }) {
+  const { data: session, status } = useSession();
+  const isLoggedIn = status === 'authenticated' && !!session?.user?.id;
 
-export function TimerWaterSection({
-  status,
-  elapsedSec,
-  myWaterCount,
-  canWater,
-  autoPaused = false,
-  onStart,
-  onStop,
-  onResume,
-  onWater,
-}: TimerWaterSectionProps) {
-  const isRunning = status === 'RUNNING';
-  const isPaused = status === 'PAUSED';
-  const totalSec = Math.min(myWaterCount * SEGMENT_SEC + elapsedSec, DAILY_MAX_SEC);
+  const focusedRegionCode = useMapStore((s) => s.focusedRegionCode);
+  const isPeeking = focusedRegionCode !== null && focusedRegionCode !== myRegionCode;
+
+  const { status: timerStatus, elapsedSec, autoPaused, todos, start, pause } = useTimerStore();
+  const { waterCount, isWatering, setIsWatering, applyWaterResponse } = useWaterStore();
 
   const [showInfo, setShowInfo] = useState(false);
 
-  function dismissInfo() {
-    setShowInfo(!showInfo);
+  useEffect(() => {
+    if (!autoPaused || !isLoggedIn) return;
+    const { sessionId } = useTimerStore.getState();
+    if (sessionId) {
+      fetch(`/api/sessions/${sessionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'pause' }),
+      }).catch(() => {});
+    }
+    fetch('/api/push/notify', { method: 'POST' }).catch(() => {});
+  }, [autoPaused, isLoggedIn]);
+
+  if (isPeeking) return null;
+
+  const canWater =
+    isLoggedIn &&
+    !isWatering &&
+    (timerStatus === 'RUNNING' || (timerStatus === 'PAUSED' && autoPaused)) &&
+    elapsedSec >= WATER_THRESHOLD_SEC;
+
+  const totalSec = Math.min(waterCount * SEGMENT_SEC + elapsedSec, DAILY_MAX_SEC);
+  const isRunning = timerStatus === 'RUNNING';
+  const isPaused = timerStatus === 'PAUSED';
+
+  async function handleStart() {
+    if (!isLoggedIn) return;
+    try {
+      const res = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ durationSec: 7200, todos }),
+      });
+      if (res.ok) {
+        const data = await res.json() as { sessionId: string };
+        useTimerStore.getState().setSession(data.sessionId);
+      }
+    } catch { /* 세션 생성 실패 시에도 로컬 타이머는 동작 */ }
+    start();
+  }
+
+  async function handleStop() {
+    pause();
+    const { sessionId } = useTimerStore.getState();
+    if (!sessionId) return;
+    try {
+      await fetch(`/api/sessions/${sessionId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'pause' }),
+      });
+    } catch { /* 실패 시 조용히 무시 */ }
+  }
+
+  async function handleResume() {
+    const { sessionId } = useTimerStore.getState();
+    if (sessionId) {
+      try {
+        await fetch(`/api/sessions/${sessionId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'resume' }),
+        });
+      } catch { /* 실패 시 조용히 무시 */ }
+    }
+    start();
+  }
+
+  async function handleWater() {
+    if (isWatering) return;
+    setIsWatering(true);
+    const totalElapsedSec = waterCount * 1800 + elapsedSec;
+    try {
+      const res = await fetch('/api/water', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ totalElapsedSec }),
+      });
+      if (!res.ok) return;
+      const data = await res.json() as { myWaterCount: number; userCreature: { stage: number; waterCount: number } };
+      applyWaterResponse(data);
+      useTimerStore.getState().resetWaterProgress();
+    } catch { /* 실패 시 조용히 무시 */ }
+    finally { setIsWatering(false); }
   }
 
   return (
@@ -70,7 +137,7 @@ export function TimerWaterSection({
           <div
             className="absolute bottom-full mb-2 whitespace-nowrap bg-primary text-on-primary font-mono text-xs px-2 py-1 pointer-events-none z-10"
             style={{
-              left: `${Math.min((myWaterCount + 0.5) / TOTAL_SEGMENTS, 1) * 100}%`,
+              left: `${Math.min((waterCount + 0.5) / TOTAL_SEGMENTS, 1) * 100}%`,
               transform: 'translateX(-50%)',
             }}
           >
@@ -79,8 +146,8 @@ export function TimerWaterSection({
           </div>
         )}
         {Array.from({ length: TOTAL_SEGMENTS }, (_, i) => {
-          const isFilled = i < myWaterCount;
-          const isCurrent = i === myWaterCount;
+          const isFilled = i < waterCount;
+          const isCurrent = i === waterCount;
           const fillPct = isCurrent
             ? Math.min((elapsedSec / SEGMENT_SEC) * 100, 100)
             : 0;
@@ -126,11 +193,10 @@ export function TimerWaterSection({
         </span>
       </div>
 
-      {/* pomodoro description */}
       {showInfo && (
         <div className="relative bg-surface-container-high border border-outline-variant p-sm font-mono text-label text-on-surface-variant">
           <button
-            onClick={dismissInfo}
+            onClick={() => setShowInfo(false)}
             className="absolute top-1 right-1 text-outline hover:text-on-surface transition-none"
             aria-label="닫기"
           >
@@ -147,11 +213,10 @@ export function TimerWaterSection({
 
       {/* Controls */}
       <div className="flex gap-sm">
-        {/* State button (left) */}
         <div className="flex-1">
-          {status === 'IDLE' && (
+          {timerStatus === 'IDLE' && (
             <button
-              onClick={onStart}
+              onClick={handleStart}
               className="w-full flex items-center justify-center gap-sm py-sm font-mono text-label uppercase tracking-wider border bg-primary border-primary text-on-primary transition-none active:translate-y-px"
             >
               <Icon name="play_arrow" filled size={18} />
@@ -160,7 +225,7 @@ export function TimerWaterSection({
           )}
           {isRunning && (
             <button
-              onClick={onStop}
+              onClick={handleStop}
               className="w-full flex items-center justify-center gap-sm py-sm font-mono text-label uppercase tracking-wider border bg-surface-container-high border-outline text-on-surface transition-none active:translate-y-px"
             >
               <Icon name="stop" filled size={18} />
@@ -169,7 +234,7 @@ export function TimerWaterSection({
           )}
           {isPaused && (
             <button
-              onClick={onResume}
+              onClick={handleResume}
               disabled={autoPaused}
               className="w-full flex items-center justify-center gap-sm py-sm font-mono text-label uppercase tracking-wider border bg-primary border-primary text-on-primary transition-none active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed"
             >
@@ -179,9 +244,8 @@ export function TimerWaterSection({
           )}
         </div>
 
-        {/* Water button (right) */}
         <button
-          onClick={onWater}
+          onClick={handleWater}
           disabled={!canWater}
           data-testid="water-btn"
           className="flex items-center justify-center gap-xs px-lg py-sm font-mono text-label uppercase tracking-wider border border-primary bg-primary-container text-on-primary transition-none active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed"
