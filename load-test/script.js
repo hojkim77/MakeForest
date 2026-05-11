@@ -3,57 +3,44 @@ import { check, sleep } from 'k6';
 
 const TARGET_URL = __ENV.TARGET_URL || 'http://localhost:4000';
 const INTERNAL_SECRET = __ENV.INTERNAL_SECRET || '';
-const ACTIVE_VUS = parseInt(__ENV.ACTIVE_VUS || '25');
-const SSE_VUS = parseInt(__ENV.SSE_VUS || '20');
-const MAP_VUS = parseInt(__ENV.MAP_VUS || '10');
-const DURATION = __ENV.DURATION || '1m';
-// SSE_TIMEOUT은 DURATION보다 크게 설정 — 테스트 종료 전 자연 timeout이 없어야 재연결이 없음
-// gracefulStop(10s) 안에 timeout이 발생해야 check()가 평가됨: DURATION + 5s
-const SSE_TIMEOUT = __ENV.SSE_TIMEOUT || '65s';
+const MAIN_VUS = parseInt(__ENV.MAIN_VUS || '10');
+const MYPAGE_VUS = parseInt(__ENV.MYPAGE_VUS || '5');
+const DURATION = __ENV.DURATION || '2m';
 
 export const options = {
   scenarios: {
-    // S1: 타이머 사용 유저 — 세션/물주기 API를 호출해 브로드캐스트를 트리거
-    // broadcastHeatmap(세션 변경 시) + broadcastToRegion(전 이벤트) 두 채널 모두 발생
-    active_users: {
+    // S1: 메인페이지 유저 플로우
+    // 세션 생명주기 + 물주기 write 경로 회귀 감지
+    // broadcastToRegion / broadcastHeatmap 비용이 PATCH/POST 응답 시간에 반영됨
+    main_users: {
       executor: 'constant-vus',
-      vus: ACTIVE_VUS,
+      vus: MAIN_VUS,
       duration: DURATION,
-      exec: 'activeUserScenario',
+      exec: 'mainUserScenario',
     },
-    // S2: 지역 SSE 구독자 — /sse/:regionCode 연결을 테스트 종료까지 유지
-    // S1 이벤트가 broadcastToRegion() forEach로 이 연결들에 write됨
-    // → forEach가 SSE_VUS번 반복되는 비용이 S1 p95 latency에 반영됨
-    // gracefulStop: DURATION 종료 후 SSE_TIMEOUT이 발화해 check()가 평가될 시간 확보
-    sse_watchers: {
+    // S2: 마이페이지 stats 조회
+    // streak·rank·weekly·Fossil 집계 쿼리 회귀 감지
+    mypage_users: {
       executor: 'constant-vus',
-      vus: SSE_VUS,
+      vus: MYPAGE_VUS,
       duration: DURATION,
-      exec: 'sseScenario',
-      gracefulStop: '10s',
-    },
-    // S3: 전국 맵 구독자 — /map/activity-stream 연결을 테스트 종료까지 유지
-    // S1 세션 이벤트가 broadcastHeatmap() forEach로 이 연결들에 write됨
-    // → forEach가 MAP_VUS번 반복되는 비용이 S1 p95 latency에 반영됨
-    // gracefulStop: DURATION 종료 후 SSE_TIMEOUT이 발화해 check()가 평가될 시간 확보
-    map_stream_watchers: {
-      executor: 'constant-vus',
-      vus: MAP_VUS,
-      duration: DURATION,
-      exec: 'mapStreamScenario',
-      gracefulStop: '10s',
+      exec: 'mypageUserScenario',
     },
   },
   thresholds: {
-    'http_req_duration{scenario:active_users}': ['p(95)<500'],
-    'http_req_failed{scenario:active_users}': ['rate<0.01'],
-    'checks{scenario:sse_watchers}': ['rate>0.95'],
-    'checks{scenario:map_stream_watchers}': ['rate>0.95'],
+    // CI 환경(server/DB/Redis 동일 VM) 기준 — 치명적 장애 감지용
+    // 절대 수치가 아닌 baseline 대비 변화율로 회귀를 판단 (post-result.js)
+    'http_req_duration{scenario:main_users}':   ['p(95)<3000'],
+    'http_req_failed{scenario:main_users}':     ['rate<0.05'],
+    'http_req_duration{scenario:mypage_users}': ['p(95)<2000'],
+    'http_req_failed{scenario:mypage_users}':   ['rate<0.05'],
+    // name 태그 임계값 → result.json에 해당 메트릭이 반드시 포함됨
+    'http_req_duration{name:GET /stats/me}':    ['p(95)<1500'],
   },
 };
 
 // VU당 캐시 — 첫 iteration에 /test/login 호출 후 재사용
-// waterCount: 12회 도달 시 /water 호출 안 함 (프론트엔드 버튼 비활성화와 동일)
+// waterCount: 12회 도달 시 /water 호출 안 함 (비즈니스 로직 재현)
 const vuCache = {};
 
 function getVuUser() {
@@ -70,29 +57,24 @@ function getVuUser() {
   }
 
   vuCache[__VU] = {
-    userId: res.json('userId'),
-    dongCode: res.json('dongCode'),
+    userId:     res.json('userId'),
+    dongCode:   res.json('dongCode'),
     regionCode: res.json('regionCode'),
-    secret: res.json('secret') || INTERNAL_SECRET,
+    secret:     res.json('secret') || INTERNAL_SECRET,
     waterCount: 0,
   };
 
   return vuCache[__VU];
 }
 
-// ── S1: 통합 활성 유저 시나리오 ────────────────────────────────
-// 세션 시작 → 일시정지 → 재개 → 물주기 → 통계 조회 → 종료
-// 각 단계에서 발생하는 브로드캐스트:
-//   세션 시작/정지/재개/종료 → broadcastHeatmap + broadcastToRegion(dong:users)
-//   물주기                   → broadcastToRegion(water:toast, users:overlay)
-export function activeUserScenario() {
+// ── S1: 메인페이지 유저 플로우 ─────────────────────────────────
+// POST /sessions → PATCH pause → PATCH resume → POST /water → GET /creature → PATCH complete
+// 각 단계에서 발생하는 브로드캐스트 비용이 응답 latency에 반영됨
+export function mainUserScenario() {
   const user = getVuUser();
-  if (!user) {
-    sleep(1);
-    return;
-  }
+  if (!user) { sleep(1); return; }
 
-  const { userId, dongCode, secret } = user;
+  const { userId, dongCode, regionCode, secret } = user;
   const headers = {
     'Content-Type': 'application/json',
     'x-internal-secret': secret,
@@ -105,90 +87,83 @@ export function activeUserScenario() {
     { headers, tags: { name: 'POST /sessions' } },
   );
   const ok = check(sessionRes, { 'session created': (r) => r.status === 200 });
-  if (!ok) {
-    sleep(1);
-    return;
-  }
+  if (!ok) { sleep(1); return; }
 
   const sessionId = sessionRes.json('sessionId');
-  sleep(2);
+  sleep(1);
 
   // 2) 일시정지
-  http.patch(`${TARGET_URL}/sessions/${sessionId}`, JSON.stringify({ action: 'pause' }), {
-    headers,
-    tags: { name: 'PATCH /sessions/:id (pause)' },
-  });
+  http.patch(
+    `${TARGET_URL}/sessions/${sessionId}`,
+    JSON.stringify({ action: 'pause' }),
+    { headers, tags: { name: 'PATCH /sessions/:id (pause)' } },
+  );
   sleep(1);
 
   // 3) 재개
-  http.patch(`${TARGET_URL}/sessions/${sessionId}`, JSON.stringify({ action: 'resume' }), {
-    headers,
-    tags: { name: 'PATCH /sessions/:id (resume)' },
-  });
-  sleep(2);
+  http.patch(
+    `${TARGET_URL}/sessions/${sessionId}`,
+    JSON.stringify({ action: 'resume' }),
+    { headers, tags: { name: 'PATCH /sessions/:id (resume)' } },
+  );
+  sleep(1);
 
   // 4) 물주기 (12회 미만일 때만)
+  //    totalElapsedSec = waterCount * 1800 + 60
+  //    → 최대 11 * 1800 + 60 = 19860 < 21600(6시간 캡) — 항상 통과
+  //    409 = 12회 초과 or 6시간 캡 → 정상 비즈니스 응답 (실패 아님)
   if (user.waterCount < 12) {
+    const totalElapsedSec = user.waterCount * 1800 + 60;
     const waterRes = http.post(
       `${TARGET_URL}/water`,
-      JSON.stringify({ userId, dongCode, nickname: `LT${__VU}`, totalElapsedSec: 1800 }),
+      JSON.stringify({ userId, dongCode, nickname: `LT${__VU}`, totalElapsedSec }),
       { headers, tags: { name: 'POST /water' } },
     );
     if (waterRes.status === 200) user.waterCount++;
-    check(waterRes, { 'water ok': (r) => r.status === 200 });
+    check(waterRes, { 'water ok': (r) => r.status === 200 || r.status === 409 });
   }
   sleep(1);
 
-  // 5) 통계 조회
-  const statsRes = http.get(`${TARGET_URL}/stats/me?userId=${userId}`, {
-    tags: { name: 'GET /stats/me' },
-  });
-  check(statsRes, { 'stats ok': (r) => r.status === 200 });
+  // 5) 숲 모드 — 지역 생명체 집계 조회
+  http.get(
+    `${TARGET_URL}/creature/${encodeURIComponent(regionCode)}`,
+    { tags: { name: 'GET /creature/:regionCode' } },
+  );
 
   // 6) 세션 종료
-  http.patch(`${TARGET_URL}/sessions/${sessionId}`, JSON.stringify({ action: 'complete' }), {
-    headers,
-    tags: { name: 'PATCH /sessions/:id (complete)' },
-  });
+  http.patch(
+    `${TARGET_URL}/sessions/${sessionId}`,
+    JSON.stringify({ action: 'complete' }),
+    { headers, tags: { name: 'PATCH /sessions/:id (complete)' } },
+  );
   sleep(1);
 }
 
-// ── S2: 지역 SSE 구독자 시나리오 ──────────────────────────────
-// DURATION 동안 /sse/:regionCode 연결을 단 1회 유지 (재연결 없음)
-// SSE_TIMEOUT > DURATION 이므로 자연 timeout 없이 DURATION 종료 후 gracefulStop(10s) 안에 발화
-// 연결이 열려 있는 동안 S1 이벤트가 broadcastToRegion() 으로 이 연결에 write됨
-export function sseScenario() {
+// ── S2: 마이페이지 stats 조회 ──────────────────────────────────
+// GET /stats/me: streak·rank·weekly·Fossil 복합 집계 쿼리
+// GET /water/me: 오늘 물주기 횟수 단순 조회
+// dongCode를 포함해야 neighborhoodRank 집계 경로가 실행됨
+export function mypageUserScenario() {
   const user = getVuUser();
-  if (!user) {
-    sleep(1);
-    return;
-  }
+  if (!user) { sleep(1); return; }
 
-  const res = http.get(`${TARGET_URL}/sse/${user.regionCode}`, {
-    headers: { Accept: 'text/event-stream' },
-    timeout: SSE_TIMEOUT,
-    tags: { name: 'GET /sse/:regionCode' },
-  });
+  const { userId, dongCode } = user;
 
-  check(res, {
-    'sse connected': (r) => r.status === 200 || r.error_code === 1050,
-  });
-}
+  // 1) stats 집계 쿼리 (핵심 측정 대상)
+  const statsRes = http.get(
+    `${TARGET_URL}/stats/me?userId=${userId}&dongCode=${dongCode}`,
+    { tags: { name: 'GET /stats/me' } },
+  );
+  check(statsRes, { 'stats ok': (r) => r.status === 200 });
+  sleep(1);
 
-// ── S3: 전국 맵 구독자 시나리오 ────────────────────────────────
-// DURATION 동안 /map/activity-stream 연결을 단 1회 유지 (재연결 없음)
-// SSE_TIMEOUT > DURATION 이므로 자연 timeout 없이 DURATION 종료 후 gracefulStop(10s) 안에 발화
-// 연결이 열려 있는 동안 S1 세션 이벤트가 broadcastHeatmap() 으로 이 연결에 write됨
-export function mapStreamScenario() {
-  const res = http.get(`${TARGET_URL}/map/activity-stream`, {
-    headers: { Accept: 'text/event-stream' },
-    timeout: SSE_TIMEOUT,
-    tags: { name: 'GET /map/activity-stream' },
-  });
-
-  check(res, {
-    'map stream connected': (r) => r.status === 200 || r.error_code === 1050,
-  });
+  // 2) 오늘 물주기 현황 조회
+  const waterMeRes = http.get(
+    `${TARGET_URL}/water/me?userId=${userId}`,
+    { tags: { name: 'GET /water/me' } },
+  );
+  check(waterMeRes, { 'water/me ok': (r) => r.status === 200 });
+  sleep(1);
 }
 
 export function handleSummary(data) {
