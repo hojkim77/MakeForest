@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
 import { deleteSession, removeActiveDong } from '@makeforest/redis';
+import { regionOf } from '@makeforest/types';
 import { requireInternalAuth } from '../middleware/auth';
 import { runMidnightBatch } from '../cron/midnight';
 
@@ -29,16 +30,18 @@ testRouter.post('/login', async (req: Request, res: Response) => {
     // Dong 테이블에서 서울 동 코드 랜덤 선택, 비어 있으면 폴백 사용
     const dongs = await prisma.dong.findMany({
       where: { sidoCode: '11' },
-      select: { code: true },
+      select: { code: true, name: true },
       take: 100,
     });
 
     const dongPool = dongs.length > 0
-      ? dongs.map((d) => d.code)
-      : FALLBACK_DONG_CODES;
+      ? dongs
+      : FALLBACK_DONG_CODES.map((code) => ({ code, name: '서울특별시 강남구 역삼1동' }));
 
     const hash = testId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-    const dongCode = dongPool[hash % dongPool.length]!;
+    const selected = dongPool[hash % dongPool.length]!;
+    const dongCode = selected.code;
+    const regionCode = regionOf(dongCode, selected.name);
 
     const user = await prisma.user.upsert({
       where: { provider_providerId: { provider: 'test', providerId: testId } },
@@ -54,6 +57,7 @@ testRouter.post('/login', async (req: Request, res: Response) => {
     return res.json({
       userId: user.id,
       dongCode: user.dongCode ?? dongCode,
+      regionCode,
       secret: process.env.INTERNAL_API_SECRET ?? '',
     });
   } catch (err) {

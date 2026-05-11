@@ -3,6 +3,8 @@ name: PR Checks
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
 
 jobs:
   lint-test:
@@ -29,7 +31,7 @@ jobs:
 
   load-test:
     name: Load Test (Docker k6)
-    if: github.base_ref == 'main'
+    if: github.base_ref == 'main' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -59,8 +61,35 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/makeforest_test
           DIRECT_URL: postgresql://postgres:postgres@localhost:5432/makeforest_test
 
-      # 3) k6 중간 부하 (API 25VU + Toggle 5VU + SSE 20VU / 1분)
-      #    thresholds 초과 시 exit 1 → 잡 실패 → merge 차단
+      # 3) main 브랜치 baseline 다운로드 (PR 실행 시만, 없으면 skip)
+      #    baseline = 마지막으로 성공한 main push 실행의 result.json
+      - name: Download k6 baseline
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BASELINE_RUN_ID=$(gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --branch main \
+            --workflow "pr-checks.yml" \
+            --status success \
+            --limit 10 \
+            --json databaseId,event \
+            --jq '[.[] | select(.event == "push")] | .[0].databaseId')
+
+          if [ -n "$BASELINE_RUN_ID" ] && [ "$BASELINE_RUN_ID" != "null" ]; then
+            echo "Downloading baseline from run $BASELINE_RUN_ID"
+            gh run download "$BASELINE_RUN_ID" \
+              --repo "$GITHUB_REPOSITORY" \
+              --name k6-baseline \
+              --dir load-test/baseline
+            echo "Baseline ready: load-test/baseline/result.json"
+          else
+            echo "No baseline found — first run or no successful main push yet"
+          fi
+
+      # 4) k6 부하 테스트
       - name: Install k6
         run: |
           curl -fsSL https://dl.k6.io/key.gpg \
@@ -72,26 +101,32 @@ jobs:
       - name: k6 load test
         run: |
           k6 run load-test/script.js \
-            --env API_VUS=25 \
-            --env TOGGLE_VUS=5 \
-            --env SSE_VUS=20 \
+            --env MAIN_VUS=50 \
+            --env MYPAGE_VUS=25 \
             --env DURATION=1m \
             --env TARGET_URL=http://localhost:4000 \
             --env INTERNAL_SECRET=${{ secrets.INTERNAL_API_SECRET }}
 
-      - name: Debug files
-        run: |
-          pwd
-          ls -R
+      # 5) main 머지 후 baseline 갱신 (push 이벤트 + k6 성공 시만)
+      - name: Upload k6 baseline
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-baseline
+          path: load-test/result.json
+          retention-days: 90
+          overwrite: true
 
-      # 4) 결과를 PR에 코멘트 (성공/실패 무관)
+      # 6) 결과를 PR에 코멘트 (PR 실행 시만, 성공/실패 무관)
+      #    baseline이 있으면 비교 테이블, 없으면 절대값 테이블로 대체
       - name: Post result to PR
-        if: always()
+        if: always() && github.event_name == 'pull_request'
         run: node load-test/post-result.js
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          BASELINE_PATH: load-test/baseline/result.json
 
       - name: Cleanup Docker
         if: always()
