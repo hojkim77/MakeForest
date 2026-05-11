@@ -140,27 +140,28 @@ export function mainUserScenario() {
 }
 
 // ── S2: 마이페이지 stats 조회 ──────────────────────────────────
-// GET /stats/me: streak·rank·weekly·Fossil 복합 집계 쿼리
-// GET /water/me: 오늘 물주기 횟수 단순 조회
+// GET /stats/me: streak·rank·weekly·Fossil 복합 집계 쿼리 (Public — 인증 불필요)
+// GET /water/me: 오늘 물주기 횟수 단순 조회 (/water 전체가 requireInternalAuth 대상)
 // dongCode를 포함해야 neighborhoodRank 집계 경로가 실행됨
 export function mypageUserScenario() {
   const user = getVuUser();
   if (!user) { sleep(1); return; }
 
-  const { userId, dongCode } = user;
+  const { userId, dongCode, secret } = user;
+  const headers = { 'x-internal-secret': secret };
 
-  // 1) stats 집계 쿼리 (핵심 측정 대상)
+  // 1) stats 집계 쿼리 (핵심 측정 대상) — /stats는 Public이므로 헤더 없어도 동작하나 일관성을 위해 포함
   const statsRes = http.get(
     `${TARGET_URL}/stats/me?userId=${userId}&dongCode=${dongCode}`,
-    { tags: { name: 'GET /stats/me' } },
+    { headers, tags: { name: 'GET /stats/me' } },
   );
   check(statsRes, { 'stats ok': (r) => r.status === 200 });
   sleep(1);
 
-  // 2) 오늘 물주기 현황 조회
+  // 2) 오늘 물주기 현황 조회 — /water는 requireInternalAuth 대상이므로 헤더 필수
   const waterMeRes = http.get(
     `${TARGET_URL}/water/me?userId=${userId}`,
-    { tags: { name: 'GET /water/me' } },
+    { headers, tags: { name: 'GET /water/me' } },
   );
   check(waterMeRes, { 'water/me ok': (r) => r.status === 200 });
   sleep(1);
