@@ -1,0 +1,19 @@
+'use client';
+
+import { useRef } from 'react';
+import { useWaterStore } from '@/store';
+
+interface Props {
+  waterCount: number;
+  creatureStage: number;
+  growthPercent: number;
+}
+
+export function WaterStoreInitializer(props: Props) {
+  const done = useRef(false);
+  if (!done.current) {
+    done.current = true;
+    useWaterStore.getState().init(props);
+  }
+  return null;
+}
