@@ -219,7 +219,7 @@ export function PixelMap({ onRegionClick }: PixelMapProps) {
             return;
           }
 
-          fetch(`/api/creature/${encodeURIComponent(rc)}`)
+          fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/creature/${encodeURIComponent(rc)}`)
             .then((res) => res.json())
             .then((data: RegionAggregate) => {
               creatureCache.set(rc, data);
