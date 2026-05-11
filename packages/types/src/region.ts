@@ -1,3 +1,10 @@
+export interface RegionBounds {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+}
+
 // 특별시/광역시/특별자치시 → 시 전체를 단위로
 export const METROPOLITAN = new Set(['11', '26', '27', '28', '29', '30', '31', '36']);
 
