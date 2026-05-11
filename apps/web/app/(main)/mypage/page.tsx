@@ -17,23 +17,23 @@ export default async function MypagePage() {
     <>
       <TopAppBar />
       <main className="pt-[49px]">
-      <div className="max-w-[1000px] mx-auto py-8 px-6 space-y-6">
-        <Suspense fallback={<ProfileHeaderSkeleton />}>
-          <ProfileHeader userId={userId} />
-        </Suspense>
+        <div className="max-w-[1000px] mx-auto py-8 px-6 space-y-6">
+          <Suspense fallback={<ProfileHeaderSkeleton />}>
+            <ProfileHeader userId={userId} />
+          </Suspense>
 
-        <Suspense fallback={<StatsGridSkeleton />}>
-          <StatsGrid userId={userId} dongCode={dongCode} />
-        </Suspense>
+          <Suspense fallback={<StatsGridSkeleton />}>
+            <StatsGrid userId={userId} dongCode={dongCode} />
+          </Suspense>
 
-        <Suspense fallback={<WeeklyChartSkeleton />}>
-          <WeeklyChartSection userId={userId} />
-        </Suspense>
+          <Suspense fallback={<WeeklyChartSkeleton />}>
+            <WeeklyChartSection userId={userId} />
+          </Suspense>
 
-        <Suspense fallback={<MyCreatureSkeleton />}>
-          <MyCreature userId={userId} />
-        </Suspense>
-      </div>
+          <Suspense fallback={<MyCreatureSkeleton />}>
+            <MyCreature userId={userId} />
+          </Suspense>
+        </div>
       </main>
     </>
   );
