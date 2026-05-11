@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { usePixelMapData } from '@/hooks/usePixelMapData';
 import { useActivityStream } from '@/hooks/useActivityStream';
 import { UserOverlay } from './UserOverlay';
-import { regionOf } from './PixelMap';
+import { regionOf } from '@makeforest/types';
 
 const PIXEL_SIZE = 4;
 const SEA_COLOR = '#0e2318';
