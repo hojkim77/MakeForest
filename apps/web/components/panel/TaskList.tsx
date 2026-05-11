@@ -1,30 +1,29 @@
 'use client';
 
 import { useState, type KeyboardEvent } from 'react';
+import { useMapStore, useTimerStore } from '@/store';
 import { Icon } from '@/components/ui/Icon';
-import type { Todo } from '@makeforest/types';
 
-interface TaskListProps {
-  todos: Todo[];
-  onToggle: (id: string) => void;
-  onAdd: (text: string) => void;
-}
-
-export function TaskList({ todos, onToggle, onAdd }: TaskListProps) {
+export function TaskList({ myRegionCode }: { myRegionCode: string | null }) {
   const [input, setInput] = useState('');
-  const doneCount = todos.filter((t) => t.done).length;
+  const focusedRegionCode = useMapStore((s) => s.focusedRegionCode);
+  const isPeeking = focusedRegionCode !== null && focusedRegionCode !== myRegionCode;
+  const { todos, addTodo, toggleTodo } = useTimerStore();
+
+  if (isPeeking) return null;
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.nativeEvent.isComposing) return;
     if (e.key === 'Enter' && input.trim()) {
-      onAdd(input.trim());
+      addTodo(input.trim());
       setInput('');
     }
   }
 
+  const doneCount = todos.filter((t) => t.done).length;
+
   return (
     <div className="flex flex-col gap-md">
-      {/* Header */}
       <div className="flex justify-between items-end border-b border-outline-variant pb-xs">
         <h2 className="font-mono text-label uppercase tracking-widest text-outline">
           Today&apos;s Focus
@@ -34,14 +33,13 @@ export function TaskList({ todos, onToggle, onAdd }: TaskListProps) {
         </span>
       </div>
 
-      {/* List */}
       {todos.length > 0 && (
         <ul className="flex flex-col border-l border-outline-variant">
           {todos.map((todo) => (
             <li
               key={todo.id}
               className="flex items-center gap-md p-md border-b border-outline-variant hover:bg-surface-container-high transition-none cursor-pointer"
-              onClick={() => onToggle(todo.id)}
+              onClick={() => toggleTodo(todo.id)}
             >
               <Icon
                 name={todo.done ? 'check_box' : 'check_box_outline_blank'}
@@ -62,7 +60,6 @@ export function TaskList({ todos, onToggle, onAdd }: TaskListProps) {
         </ul>
       )}
 
-      {/* Add task input */}
       <div className="flex items-center gap-xs border border-outline-variant bg-surface-container-lowest focus-within:border-outline">
         <input
           type="text"
@@ -74,7 +71,7 @@ export function TaskList({ todos, onToggle, onAdd }: TaskListProps) {
         />
         {input.trim() && (
           <button
-            onClick={() => { onAdd(input.trim()); setInput(''); }}
+            onClick={() => { addTodo(input.trim()); setInput(''); }}
             className="px-sm text-primary"
             aria-label="추가"
           >

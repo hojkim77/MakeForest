@@ -1,14 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useMapStore } from '@/store';
 
 interface ToastMessage {
   id: number;
   nickname: string;
-}
-
-interface WaterToastProps {
-  regionCode: string | null;
 }
 
 const SERVER_URL =
@@ -16,9 +13,11 @@ const SERVER_URL =
     ? (process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000')
     : 'http://localhost:4000';
 
-export function WaterToast({ regionCode }: WaterToastProps) {
+export function WaterToast({ myRegionCode }: { myRegionCode: string | null }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const counterRef = useRef(0);
+  const focusedRegionCode = useMapStore((s) => s.focusedRegionCode);
+  const regionCode = focusedRegionCode ?? myRegionCode;
 
   useEffect(() => {
     if (!regionCode) return;
@@ -29,7 +28,6 @@ export function WaterToast({ regionCode }: WaterToastProps) {
       const data = JSON.parse((e as MessageEvent).data) as { nickname: string };
       const id = ++counterRef.current;
       setToasts((prev) => [...prev, { id, nickname: data.nickname }]);
-      // 3초 후 자동 제거
       setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== id));
       }, 3000);
