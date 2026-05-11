@@ -35,7 +35,9 @@ export const options = {
     'http_req_duration{scenario:mypage_users}': ['p(95)<2000'],
     'http_req_failed{scenario:mypage_users}':   ['rate<0.05'],
     // name 태그 임계값 → result.json에 해당 메트릭이 반드시 포함됨
-    'http_req_duration{name:GET /stats/me}':    ['p(95)<1500'],
+    'http_req_duration{name:GET /stats/focus}':  ['p(95)<1000'],
+    'http_req_duration{name:GET /stats/rank}':   ['p(95)<2000'],
+    'http_req_duration{name:GET /stats/weekly}': ['p(95)<1000'],
   },
 };
 
@@ -140,8 +142,8 @@ export function mainUserScenario() {
 }
 
 // ── S2: 마이페이지 stats 조회 ──────────────────────────────────
-// GET /stats/me: streak·rank·weekly·Fossil 복합 집계 쿼리 (Public — 인증 불필요)
-// GET /water/me: 오늘 물주기 횟수 단순 조회 (/water 전체가 requireInternalAuth 대상)
+// /stats/focus, /stats/weekly, /stats/rank 분리 엔드포인트 병렬 측정
+// /user/me: 유저 기본 상태 + userCreature 조회
 // dongCode를 포함해야 neighborhoodRank 집계 경로가 실행됨
 export function mypageUserScenario() {
   const user = getVuUser();
@@ -150,15 +152,37 @@ export function mypageUserScenario() {
   const { userId, dongCode, secret } = user;
   const headers = { 'x-internal-secret': secret };
 
-  // 1) stats 집계 쿼리 (핵심 측정 대상) — /stats는 Public이므로 헤더 없어도 동작하나 일관성을 위해 포함
-  const statsRes = http.get(
-    `${TARGET_URL}/stats/me?userId=${userId}&dongCode=${dongCode}`,
-    { headers, tags: { name: 'GET /stats/me' } },
+  // 1) 유저 기본 상태 조회
+  const userRes = http.get(
+    `${TARGET_URL}/user/me?userId=${userId}`,
+    { headers, tags: { name: 'GET /user/me' } },
   );
-  check(statsRes, { 'stats ok': (r) => r.status === 200 });
+  check(userRes, { 'user/me ok': (r) => r.status === 200 });
+
+  // 2) 집중시간·스트릭 조회 (빠른 쿼리)
+  const focusRes = http.get(
+    `${TARGET_URL}/stats/focus?userId=${userId}`,
+    { headers, tags: { name: 'GET /stats/focus' } },
+  );
+  check(focusRes, { 'stats/focus ok': (r) => r.status === 200 });
+
+  // 3) 주간 기여 조회 (빠른 쿼리)
+  const weeklyRes = http.get(
+    `${TARGET_URL}/stats/weekly?userId=${userId}`,
+    { headers, tags: { name: 'GET /stats/weekly' } },
+  );
+  check(weeklyRes, { 'stats/weekly ok': (r) => r.status === 200 });
   sleep(1);
 
-  // 2) 오늘 물주기 현황 조회 — /water는 requireInternalAuth 대상이므로 헤더 필수
+  // 4) 동네 순위 조회 (느린 집계 쿼리 — 핵심 측정 대상)
+  const rankRes = http.get(
+    `${TARGET_URL}/stats/rank?userId=${userId}&dongCode=${dongCode}`,
+    { headers, tags: { name: 'GET /stats/rank' } },
+  );
+  check(rankRes, { 'stats/rank ok': (r) => r.status === 200 });
+  sleep(1);
+
+  // 5) 오늘 물주기 현황 조회 — requireInternalAuth 대상이므로 헤더 필수
   const waterMeRes = http.get(
     `${TARGET_URL}/water/me?userId=${userId}`,
     { headers, tags: { name: 'GET /water/me' } },
