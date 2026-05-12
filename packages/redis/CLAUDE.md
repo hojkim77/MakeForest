@@ -1,37 +1,38 @@
-# Redis — 실시간 상태 캐싱 규칙
+# Redis — Real-time State Caching Rules
 
-## 저장 대상
+## What Gets Stored
 
-**활성 세션 캐시**
+**Active session cache**
 - key: `session:{sessionId}`
-- value: `ActiveSessionCache` — 아래 필드 전체 JSON
+- value: `ActiveSessionCache` — full JSON with these fields:
   ```
   userId, dongCode, startedAt, durationSec, todos, status
-  nickname, pixelX, pixelY           // ForestMap 오버레이 표시용
-  waterCount, creatureStage          // 물주기 시 갱신
-  todosPublic                        // 프라이버시 제어
+  nickname, pixelX, pixelY           // for ForestMap overlay display
+  waterCount, creatureStage          // updated on each water
+  todosPublic                        // privacy control
   ```
-- 세션 시작(`POST /sessions`) 시 저장, 물주기·일시정지·재개 시 갱신
-- 자정 배치 후 RUNNING 세션 ABANDONED 처리 시 삭제
+- TTL: **6 hours** (`SESSION_TTL_SECONDS = 21600`) — midnight batch abandons RUNNING sessions, but TTL also exists as a safety net
+- Written on `POST /sessions`; updated on water, pause, and resume
+- After midnight batch marks RUNNING sessions as ABANDONED, the `session:` keys expire via TTL (no explicit delete)
 
-**동네별 활성 세션 Set**
+**Per-dong active session set**
 - key: `dong:{dongCode}:active`
-- value: 해당 동에서 RUNNING 중인 sessionId Set
-- 히트맵 계산 및 `users:overlay` 조립에 사용
+- value: Set of sessionIds currently RUNNING in that dong
+- Used for heatmap calculation and `users:overlay` assembly
 
-**시/군별 활성 세션 Set**
-- key: `region:{regionCode}:active`
-- value: 해당 시/군에서 활성 중인 sessionId Set
-- `/sse/:regionCode` 구독자에게 `dong:users` 브로드캐스트 시 사용
+**Per-city/district active session set**
+- key: `region:{encodeURIComponent(regionCode)}:active`
+- value: Set of active sessionIds in that city/district
+- Used in `/map/activity-stream` SSE for user overlay assembly
 
-**히트맵 해시**
+**Heatmap hash**
 - key: `heatmap:dong`
-- value: `{ [dongCode]: activeCount }` 해시
-- `heatmap:update` SSE 이벤트의 원천 데이터
+- value: `{ [dongCode]: activeCount }` hash
+- Source data for the `heatmap:update` SSE event
 
-## 원칙
+## Rules
 
-- Redis는 실시간 조회용 캐시 — 정본은 항상 DB
-- 세션 캐시 TTL 없음 (자정 배치가 명시적으로 삭제)
-- `creature:stage` 키 없음 — 개인 생명체 상태는 세션 캐시의 `waterCount`/`creatureStage` 필드로 관리
-- 자정 배치 후 heatmapDong 해시 전체 삭제 + dongActive / regionActive Set 정리
+- Redis is a real-time read cache — the DB is always the source of truth
+- Session cache TTL = 6 hours; midnight batch explicitly deletes dongActive / regionActive / heatmapDong; session keys expire via TTL
+- No `creature:stage` key — individual creature state is managed through `waterCount` / `creatureStage` fields inside the session cache
+- After midnight batch: entire heatmapDong hash deleted + dongActive / regionActive sets cleaned up

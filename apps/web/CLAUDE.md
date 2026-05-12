@@ -1,33 +1,41 @@
-# Web — 레이아웃 & 인증 UI
+# Web — Layout & Auth UI
 
-## B. 메인 레이아웃
+## B. Main Layout
 
-- 왼쪽 패널 + 오른쪽 맵 고정 분할 (비율 변경 없음)
-- 최초 진입 → 내 동네의 시/구 숲으로 줌인 + 패널 내 동네 현황으로 초기화
+- Fixed split: left panel + right map (ratio is fixed, not adjustable)
+- On first load: zoom into the user's city/district forest + initialize panel to their neighborhood
 
-## A. 인증 UI / 온보딩
+## A. Auth UI / Onboarding
 
-**로그인**
-- 소셜 로그인만: 카카오 / 구글
-- 비로그인 유저의 타이머/물주기 시도 → 패널 내에서 로그인 유도 (별도 팝업 없음)
+**Login**
+- Social login only: Kakao / Google
+- Unauthenticated user attempting timer/watering → show `LoginPrompt` inside the panel (no popup)
 
-**동네 설정 (최초 1회)**
-- 로그인 직후 전용 화면으로 전환 (당근마켓 스타일)
-- GPS 권한 요청 → 자동 감지 → "OO동 맞나요?" 확인 UI
-- GPS 거부 또는 감지 실패 → 안내 문구 + 텍스트 검색 모드 자동 전환
-- 동네 1개만 설정, 변경 기능 추후
+**Neighborhood setup (once)**
+- Dedicated screen immediately after first login (Karrot-style flow)
+- Request GPS permission → auto-detect → "Is this OO-dong?" confirmation UI
+- GPS denied or detection failed → guidance text + auto-switch to text search mode
+- One neighborhood only; change flow is not yet implemented
 
-## H. 마이페이지 UI
+## H. Mypage UI
 
-**프로필**: 닉네임 + 프로필 이모지 / 내 동네 이름 / 가입일
+**Profile**: nickname + avatarUrl / neighborhood name / join date
 
-**통계 표시**
-- 총 집중 시간 / 현재 스트릭 / 역대 최장 스트릭 / 내 동네 기여 순위
+**Stats (`StatsGrid`)** — parallel calls to `/stats/focus` and `/stats/rank`
+- Total focus time (cumulative sum of DailySession.elapsedSec)
+- Current streak / all-time longest streak
+- Neighborhood contribution rank (neighborhoodRank / neighborhoodTotal)
 
-**생명체 도감**
-- 내가 물 준 날 완성된 생명체 → 캘린더 또는 그리드
-- 클릭 시 날짜/단계/동네 표시
+**Weekly chart (`WeeklyChartSection`)** — calls `/stats/weekly`
+- Bar chart of water counts for the last 4 weeks
+- 4-week average water count
 
-**내가 키운 나무들**
-- 최종 단계별 모아보기 (씨앗/새싹/풀/나무)
-- 나무 단계 별도 하이라이트
+**My creature (`MyCreature`)** — calls `/user/me?userId=`
+- Current UserCreature sprite (stage 0–9)
+- Stage names: 씨앗 / 새싹 / 나무1 / 나무2 / 나무3 / 고목 / 노거수 / 정령수 / 신수 / 세계수
+- Lifetime cumulative water count
+- Stage progress badges (current stage highlighted)
+
+**Unimplemented**
+- Creature collection: Fossil calendar/grid for days the user watered (Fossil table exists, UI not built)
+- Per-stage tree list

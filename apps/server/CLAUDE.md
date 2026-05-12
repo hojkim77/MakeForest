@@ -1,35 +1,48 @@
-# Server — 타이머 & 물주기 API (E)
+# Server — Timer & Watering API (E)
 
-## 인증 (A)
+## Auth (A)
 
-- 카카오 / 구글 소셜 로그인만 지원
-- 세션/토큰 발급 후 동네 설정 여부 확인 → 미설정 시 온보딩 플로우로 리다이렉트
+- Kakao / Google social login only
+- After token issuance, check whether the user has set a neighborhood — redirect to onboarding if not
 
-## 타이머 (E)
+## Timer (E)
 
-- 누적 시간 계산은 **서버 기준** (클라이언트 시간 미신뢰)
-- 시작 시각 서버에 기록, 종료 시각 기록 후 누적 합산
-- **유저당 RUNNING 세션은 1개** — `POST /sessions` 시 기존 RUNNING/PAUSED 세션 모두 ABANDONED 처리 + Redis(dongActive, regionActive) 즉시 정리
-- 자정(KST 00:00) 기준으로 날짜 분리 — 자정을 걸친 세션은 이전날/다음날 분리 계산
-- 하루 최대 누적: 6시간 (21600초) — 서버 총량 제한 기준
+- Elapsed time is **server-authoritative** (client time is never trusted)
+- Start time recorded on server; end time recorded on stop; elapsed time accumulated server-side
+- **One RUNNING session per user** — `POST /sessions` immediately ABBANDONs any existing RUNNING/PAUSED session + clears Redis (dongActive, regionActive)
+- Day boundary = KST 00:00 — sessions crossing midnight are split across the previous and next day
+- Daily maximum: 6 hours (21600 seconds) — enforced server-side as a hard cap
 
-## 물주기 API (E)
+## Watering API (E)
 
-- **뽀모도로 방식**: 30분 집중마다 물주기 1회 가능 (하루 최대 12회)
-- 물주기 버튼 활성화 조건: `RUNNING` 상태 + `elapsedSec >= 1800` (프론트엔드 guard)
-- 물주기 성공 시 타이머에서 30분 차감 (`resetWaterProgress`: `elapsedSec - 1800`)
-- 물주기 버튼 직접 입력만 반영 (자동 물주기 없음, 자정 처리는 cron 담당)
-- **하루 6시간(21600초) 총량 제한** — `checkDailyCapExceeded` 서버 검증, 초과 시 409
-- 물주기 1회당 개인 `UserCreature` 진화 단계 업데이트 (응답에 `userCreature: { stage, waterCount }` 포함)
-- 물주기 성공 시 동네 전체에 `water:toast` SSE 이벤트 발행, `users:overlay` 즉시 재브로드캐스트
-- 응답 형식: `{ myWaterCount: number, userCreature: { stage: number, waterCount: number } }`
-  - `myWaterCount`: 오늘 내가 준 물 횟수 (1~12, DailySession 기반)
-  - `userCreature.waterCount`: **생애 누적** 물주기 총량 (stage 계산 기반)
-  - `userCreature.stage`: 누적 waterCount 기반 현재 단계 (0~9)
-- UI: 6시간을 12개 세그먼트(각 30분)로 나눈 단일 게이지바로 표시 (growthPercent = myWaterCount / 12 * 100, 오늘 기준)
+- **Pomodoro style**: 1 water per 30 minutes of focus (max 12/day)
+- Water button activation condition: `RUNNING` state OR (`PAUSED` && `autoPaused`) + `elapsedSec >= 1800` (frontend guard)
+- Successful water deducts 30 minutes from the timer (frontend: `resetWaterProgress()` — `elapsedSec - 1800`)
+- Only manual button presses count — no automatic watering; midnight auto-watering is handled by cron
+- **6-hour daily cap (21600s)** — `checkDailyCapExceeded` server validation, returns 409 if exceeded
+- **12-water daily limit** — `DailySession.waterCount >= 12` returns 409
+- Each water updates the user's `UserCreature` evolution stage (response includes `userCreature: { stage, waterCount }`)
+- On success: broadcasts `water:toast` SSE to the whole neighborhood + immediately re-broadcasts `users:overlay`
+- Response format: `{ myWaterCount: number, userCreature: { stage: number, waterCount: number } }`
+  - `myWaterCount`: waters given today (1–12, based on DailySession)
+  - `userCreature.waterCount`: **lifetime** cumulative water count (used to compute stage)
+  - `userCreature.stage`: current stage (0–9) based on cumulative waterCount
+- UI: 6-hour range split into 12 segments (30 min each); `growthPercent = myWaterCount / 12 * 100` (today only)
 
-## 마이페이지 통계 API (H)
+## Mypage Stats API (H)
 
-- 총 집중 시간: 누적 물주기 시간 합산
-- 스트릭: 연속 기여 일수 (물주기 1회 이상인 날 기준)
-- 동네 기여 순위: 해당 동네 유저 중 누적 물주기 횟수 순위
+Stats are split across 3 endpoints:
+
+### `GET /stats/focus?userId=`
+- `totalFocusSec`: total cumulative focus time (sum of all DailySession.elapsedSec)
+- `currentStreak`: consecutive contribution days (days with ≥1 water, counted backwards from today or yesterday)
+- `maxStreak`: all-time longest consecutive streak
+
+### `GET /stats/weekly?userId=`
+- `weeklyData`: last 4 weeks of water totals `[{ week: 1–4, waterCount: number }]` (week 1 = oldest)
+- `weeklyAvg`: 4-week average water count (rounded to integer)
+
+### `GET /stats/rank?userId=&dongCode=`
+- `neighborhoodRank`: user's cumulative water rank within their neighborhood (1-based)
+- `neighborhoodTotal`: total user count in the neighborhood
+- If `dongCode` is omitted: returns `{ neighborhoodRank: 0, neighborhoodTotal: 0 }`

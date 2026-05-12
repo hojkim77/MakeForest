@@ -1,43 +1,57 @@
-# Panel — 왼쪽 패널 명세 (C)
+# Panel — Left Panel Spec (C)
 
-## 내 동네 모드 (기본)
+## Component Tree (Panel.tsx)
 
-**상단**
-- 동네 이름
-- 오늘의 생명체 픽셀 이미지 (현재 진화 단계 실시간 반영)
-- 진화 단계 텍스트: 씨앗 / 새싹 / 풀 / 나무
-- 동네 전체 경험치 바
-- 물주기 토스트: 실시간 "OOO님이 물을 줬어요 💧" (동네 누군가 물 줄 때마다)
+Render order:
+1. `WaterStoreInitializer` — injects server-fetched initial waterCount/creatureStage/growthPercent into zustand store (no UI)
+2. `PeekingBanner` — shows "go back to my neighborhood" button when in peeking mode
+3. `SloganSection` — service slogan + currently selected neighborhood name
+4. `WaterToast` — real-time watering toast
+5. `CreatureSection` — user's creature sprite + stage name (logged-in only)
+6. `NeighborhoodStats` — personal growth rate gauge bar (logged-in only)
+7. `TimerWaterSection` + `TaskList` — timer/watering/todos (logged-in only)
+8. `LoginPrompt` — login prompt for unauthenticated users (unauthenticated only)
 
-**중간 — 집중/물주기 통합 섹션**
-- 12세그먼트 게이지바 (30분 = 1세그먼트, 6시간 = 100%, 물 색깔 + 흐르는 애니메이션)
-- 오늘 총 집중 시간 텍스트: `Xh Xm / 6h`
-- 하단 버튼 2개:
-  - 좌: 상태 버튼 — IDLE:"시작" / RUNNING:"중지" / PAUSED:"재개" + 작은 재시작 버튼
-  - 우: 물주기 버튼 — RUNNING 상태 + 30분 달성 시 활성화 (하루 최대 12회)
-- 오늘 할 일 입력 — 타이머 시작 전 1개 이상 필수
+## My Neighborhood Mode (default)
 
-**하단**
-- 동네 탐색 검색창
+**Top**
+- Service slogan + neighborhood name
+- Water toast: real-time "OOO watered 💧" (fires whenever anyone in the neighborhood waters)
+- Today's creature pixel image (reflects `creatureStage` from waterStore in real time)
+- Stage name: 씨앗 / 새싹 / 나무1 / 나무2 / 나무3 / 고목 / 노거수 / 정령수 / 신수 / 세계수
 
-## 엿보기 모드 (다른 동네 선택 시)
+**Middle — Personal Growth Rate**
+- Personal growth rate gauge bar (`growthPercent = myWaterCount / 12 * 100`) — based on today's waters by the user
+- Neighborhood name + growth rate % text
 
-- 최상단 고정: "내 동네로 돌아가기" 버튼
-- 선택한 동네 이름
-- 오늘의 생명체 픽셀 이미지 (현재 진화 단계)
-- 진화 단계 텍스트
-- 동네 전체 경험치 바
-- 타이머 / 물주기 없음 (읽기 전용)
-- 동네 탐색 검색창
+**Bottom — Focus/Watering Combined Section (`TimerWaterSection`)**
+- 12-segment gauge bar (30 min = 1 segment, 6 hours = 100%; water color + flowing animation)
+- Today's total focus time text: `Xh Xm / 6h`
+- Timer display (MM:SS)
+- Two buttons:
+  - Left: state button — IDLE: "시작" / RUNNING: "중지" / PAUSED: "재개"
+  - Right: water button — active when (`RUNNING` OR (`PAUSED` && `autoPaused`)) AND `elapsedSec >= 1800` (max 12/day)
+- `autoPaused` state: speech bubble shown above the gauge on 30-min auto-pause; resume button disabled; water button remains active
+- Task list (`TaskList`) — free-text input, add/toggle (not required, no forced entry before timer start)
 
-## 패널 전환 트리거
+**Unimplemented**
+- Neighborhood search input (`NeighborhoodSearch` component exists but is not rendered in `Panel.tsx`)
 
-- 패널 검색창에서 동네 선택 → 패널 + 맵 동시 전환
-- 맵에서 동네 픽셀 클릭 → 패널 + 맵 동시 전환
-- 두 트리거 모두 동일한 상태 전환 경로 사용
+## Peeking Mode (when another neighborhood is selected)
 
-## 실시간 구독 항목
+- `PeekingBanner` pinned at top: "내 동네로 돌아가기" button
+- `SloganSection` reflects the selected neighborhood name
+- `TimerWaterSection`, `TaskList` — return null when `isPeeking` is true (hidden)
+- Neighborhood search input not implemented
 
-- 물주기 토스트 (SSE/WebSocket)
-- 경험치 바 & 진화 단계 (SSE/WebSocket)
-- 생명체 픽셀 이미지 (진화 단계 변경 시)
+## Panel Switch Triggers
+
+- Select a neighborhood in the search input → panel + map switch together
+- Click a neighborhood pixel on the map → panel + map switch together
+- Both triggers use the same state transition path
+
+## Real-time Subscriptions
+
+- Water toast (SSE `water:toast`)
+- Creature evolution stage — reflected in `CreatureSection` via waterStore updates
+- Growth rate gauge — reflected via waterStore `growthPercent` updates

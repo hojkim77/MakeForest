@@ -1,45 +1,78 @@
-# MakeForest — 글로벌 규칙 & 도메인 인덱스
+# MakeForest
 
-## 프로젝트 구조
+## Project Structure
 
 ```
-apps/web      — Next.js 프론트엔드
-apps/server   — 백엔드 API 서버
-packages/db   — Prisma 스키마/클라이언트
-packages/redis — Redis 클라이언트/유틸
-packages/types — 공유 타입 정의
+apps/web      — Next.js frontend
+apps/server   — Backend API server
+packages/db   — Prisma schema & client
+packages/redis — Redis client & utilities
+packages/types — Shared type definitions
 ```
 
-## 도메인별 CLAUDE.md 위치
+## Domain CLAUDE.md Paths
 
-| 작업 대상 | 참조 파일 |
+| Area | File |
 |---|---|
-| 레이아웃, 인증 UI, 온보딩 | `apps/web/CLAUDE.md` |
-| 왼쪽 패널 (내 동네 / 엿보기) | `apps/web/components/panel/CLAUDE.md` |
-| 맵 (숲 모드 / 픽셀 모드) | `apps/web/components/map/CLAUDE.md` |
-| 타이머 / 물주기 API | `apps/server/CLAUDE.md` |
-| 자정 배치 / 생명체 박제 / 숲 누적 | `apps/server/src/cron/CLAUDE.md` |
-| DB 스키마 / 데이터 모델 | `packages/db/CLAUDE.md` |
-| Redis 실시간 상태 | `packages/redis/CLAUDE.md` |
+| Layout, auth UI, onboarding | `apps/web/CLAUDE.md` |
+| Left panel (my neighborhood / peeking) | `apps/web/components/panel/CLAUDE.md` |
+| Map (pixel mode / forest mode) | `apps/web/components/map/CLAUDE.md` |
+| Timer / watering API | `apps/server/CLAUDE.md` |
+| Midnight batch / fossil / forest accumulation | `apps/server/src/cron/CLAUDE.md` |
+| DB schema / data model | `packages/db/CLAUDE.md` |
+| Redis real-time state | `packages/redis/CLAUDE.md` |
 
----
+## Core Rules
 
-## 글로벌 불변 규칙
+### Think Before Coding
 
-- **시간 계산은 서버 기준** — 클라이언트 시간 미신뢰
-- **일일 리셋 기준은 KST 00:00**
-- **실시간 반영 대상**: 히트맵, 물주기 토스트, 경험치 바, 생명체 진화 단계 → SSE 또는 WebSocket
-- **비로그인 유저**: 맵 탐색만 허용, 타이머/물주기 불가, 시도 시 패널 내 로그인 유도 (팝업 없음)
+Don't assume. Don't hide confusion. Surface tradeoffs.
 
----
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them — don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
 
-## 엣지케이스 (I)
+### Simplicity First
 
-| 상황 | 처리 |
-|---|---|
-| 자정에 타이머 돌아가는 중 | 자정 배치가 해당 세션 ABANDONED 처리, 2시간 이상이면 자동 물주기 반영 후 전날 생명체 확정 |
-| 자정에 물주기 미입력 | 당일 2시간 이상 집중한 유저에 한해 cron이 자동 1회 물주기 반영 |
-| 자정 배치 처리 중 물주기 요청 | 미구현 (현재는 race condition 허용, 영향 범위 미미) |
-| 2시간 누적이 자정을 넘겨 완성 | 누적 시작한 날 기준으로 전날 생명체에 반영 |
-| 브라우저 종료/새로고침 후 새 세션 시작 | 기존 RUNNING/PAUSED 세션 ABANDONED 처리 + Redis 정리 후 새 세션 생성 |
-| 물주기 3회 소진 후 | 타이머 계속 + "오늘 물주기 완료! 🎉" 안내 |
+Minimum code that solves the problem. Nothing speculative.
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+### Surgical Changes
+
+Touch only what you must. Clean up only your own mess.
+
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it — don't delete it.
+- Remove imports/variables/functions that YOUR changes made unused. Don't remove pre-existing dead code unless asked.
+
+Every changed line should trace directly to the user's request.
+
+### Goal-Driven Execution
+
+Define success criteria. Loop until verified.
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+
+For multi-step tasks, state a brief plan before starting:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+```
+
+### Project-Specific Invariants
+
+- **Time is server-authoritative** — never trust client time
+- **Daily reset = KST 00:00**
+- **Real-time targets**: heatmap, water toast, XP bar, creature evolution stage → SSE
+- **Unauthenticated users**: map browsing only — no timer/watering; show login prompt inside panel (no popup)

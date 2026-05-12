@@ -1,53 +1,53 @@
-# Map — 맵 시스템 명세 (D)
+# Map — Map System Spec (D)
 
-## 모드 구분 방식 (기획 수정됨)
+## Mode Distinction
 
-- **픽셀 모드** (기본): 전국 조감 — 시/군 단위 호버, 클릭 시 숲 모드 진입
-- **숲 모드**: 클릭된 시/군 영역만 표시 — 읍/면/동 픽셀 + 브리딩 애니메이션 + 유저 오버레이
-- **전환 방식**: 스케일이 아닌 클릭 여부로 결정
+- **Pixel mode** (default): national overview — hover by city/district, click to enter forest mode
+- **Forest mode**: shows only the clicked city/district area — dong-level pixels + breathing animation + user overlay
+- **Mode switch**: determined by click, not by zoom level
 
-## 픽셀 모드
+## Pixel Mode
 
-- 읍/면/동 단위 픽셀 표시 (1픽셀 = 1동)
-- 집중 중인 유저 있는 동네 → 초록 명도로 활성도 표현
-- 아무도 없는 동네 → 회색 (#707972)
-- **호버 단위: 시/군**
-  - 특별시/광역시(서울·부산·대구·인천·광주·대전·울산·세종): '시' 전체를 단위로 (dongCode 앞 2자리)
-  - 도 지역(경기·강원 등): '시/군구' 단위 (dongCode 앞 5자리)
-- **호버 효과**: 해당 시/군 전체 영역 반투명 밝은 초록 오버레이로 즉시 하이라이트
-- **호버 0.5초 유지 시** → 툴팁: 지역명 + `/api/creature/:regionCode` 집계 데이터
-- **클릭** → 해당 시/군을 화면 꽉차게 확대하며 숲 모드 전환
+- Displays dong-level pixels (1 pixel = 1 dong)
+- Dongs with active users → green brightness reflects activity level
+- Dongs with no active users → gray (#707972)
+- **Hover unit: city/district**
+  - Special/metropolitan cities (Seoul, Busan, Daegu, Incheon, Gwangju, Daejeon, Ulsan, Sejong): the whole 시 is one unit (first 2 chars of dongCode)
+  - Provincial regions (Gyeonggi, Gangwon, etc.): 시/군구 unit (first 5 chars of dongCode)
+- **Hover effect**: immediately highlights the entire city/district area with a translucent light-green overlay
+- **Hover held for 0.5s** → tooltip: region name + aggregated data from `/api/creature/:regionCode`
+- **Click** → zoom to fill screen with the city/district, switch to forest mode
 
-## 숲 모드
+## Forest Mode
 
-- 클릭된 시/군 영역 픽셀만 렌더링 (나머지는 배경색 #0e2318)
-- 해당 영역이 뷰포트에 꽉 찰 만큼 scale·translate 자동 조정 (92% 패딩)
-- 픽셀 = 읍/면/동 단위 — 활성 유저 수에 따른 초록 명도
-- 활성 유저 있는 동 → **브리딩 애니메이션** (밝기가 사인파로 진동, 주기 약 900ms)
-- 아무도 없는 동 → 회색 (#707972), 애니메이션 없음
-- **유저 오버레이** (`UserOverlay.tsx`): 오늘 활동한 유저를 각자의 dongCode lat/lng 위치에 생명체 스프라이트로 표시
-  - 투명도: RUNNING 0.75 / PAUSED 0.5 / IDLE 0.25
-  - 같은 동 유저 이격: 인덱스 기반 원형 배치 (JITTER_RADIUS 0.5px — hit area 절반, 겹침 없음 보장)
-  - hit area: 1×1px div (overflow: visible로 2px 스프라이트 시각적 표시), 이격 보장으로 모든 유저 호버 가능
-  - 호버 팝오버: 닉네임 + 동네 순위(#N위) + 세션 상태 + `todayWaterCount`(오늘 물주기 횟수 N/12) + 할 일 목록 (todosPublic=false면 미표시)
-  - 팝오버는 `createPortal`로 `document.body`에 렌더링 (canvas scale transform 영향 없음)
-- **화면 이동 불가** (드래그·휠 잠금)
-- 우측 하단 버튼 → 뒤로가기(픽셀 모드 복귀)
+- Only pixels within the clicked city/district are rendered (background: #0e2318)
+- Scale and translate auto-adjusted so the region fills the viewport (92% padding)
+- Pixels = dong level — green brightness based on active user count
+- Dongs with active users → **breathing animation** (brightness oscillates as a sine wave, ~900ms period)
+- Dongs with no active users → gray (#707972), no animation
+- **User overlay** (`UserOverlay.tsx`): renders each active user's creature sprite at their dongCode lat/lng position
+  - Opacity: RUNNING 0.75 / PAUSED 0.5 / IDLE 0.25
+  - Users in the same dong are spread in a circular layout by index (JITTER_RADIUS 0.5px — half the hit area, no overlap)
+  - Hit area: 1×1px div (overflow: visible shows a 2px sprite visually); spread ensures every user is hoverable
+  - Hover popover: nickname + neighborhood rank (#N위) + session status + `todayWaterCount` (N/12) + task list (hidden if `todosPublic=false`)
+  - Popover rendered via `createPortal` to `document.body` (unaffected by canvas scale transform)
+- **No panning** (drag and wheel locked)
+- Bottom-right button → back to pixel mode
 
-## 공통
+## Common
 
-- 픽셀 모드에서 마우스 휠 / 트랙패드 핀치 → 줌인/아웃 (모드 전환 없음)
-- 드래그로 이동 (픽셀 모드만)
-- 우측 하단 버튼: 픽셀 모드 = 전체 보기 리셋 / 숲 모드 = 픽셀 모드 복귀
+- Pixel mode: mouse wheel / trackpad pinch → zoom in/out (no mode switch)
+- Drag to pan (pixel mode only)
+- Bottom-right button: pixel mode = reset to full view / forest mode = return to pixel mode
 
-## 픽셀 모드 툴팁 표시 항목 (`/api/creature/:regionCode` 응답 기반)
+## Pixel Mode Tooltip Fields (`/api/creature/:regionCode` response)
 
-| 항목 | 내용 |
+| Field | Content |
 |---|---|
-| 집중 인원 | 오늘 활성 유저 수 (`userCount`) |
-| 물주기 합계 | 지역 총 물주기 횟수 (`totalWaterCount`) |
+| Active users | Today's active user count (`userCount`) |
+| Water total | Region's total water count (`totalWaterCount`) |
 
-## 실시간 구독 항목
+## Real-time Subscriptions
 
-- 동네별 활성도 히트맵 (SSE `heatmap:update` — `/map/activity-stream`)
-- 유저 오버레이 위치·상태 (SSE `users:overlay` — `/map/activity-stream`, 10초 주기 + 물주기/세션 변경 시 즉시)
+- Per-dong activity heatmap (SSE `heatmap:update` — `/map/activity-stream`)
+- User overlay positions and states (SSE `users:overlay` — `/map/activity-stream`, 10s interval + immediate on water/session change)

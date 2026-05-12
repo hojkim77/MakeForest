@@ -1,45 +1,45 @@
-# DB — 스키마 & 데이터 모델
+# DB — Schema & Data Model
 
-## 핵심 엔티티
+## Core Entities
 
-**User** — 유저 프로필, 소속 동네(`dongCode`, `regionCode`), 닉네임, todosPublic
+**User** — user profile, neighborhood (`dongCode`, `regionCode`), nickname, `todosPublic`
 
-**Dong** — 읍/면/동 단위, 위경도(`lat`, `lng`) 포함
+**Dong** — dong/eup/myeon level administrative unit, includes lat/lng coordinates
 
-**DailySession** — 유저별 날짜별 누적 집중 시간(`elapsedSec`), 일일 물주기 횟수(`waterCount`, 최대 12)
+**DailySession** — per-user per-day cumulative focus time (`elapsedSec`) and daily water count (`waterCount`, max 12)
 
-**FocusSession** — 개별 집중 세션 로그 (RUNNING / PAUSED / COMPLETED / ABANDONED)
-- 자정 분리 계산 및 Redis 캐시의 정본 역할
+**FocusSession** — individual focus session log (RUNNING / PAUSED / COMPLETED / ABANDONED)
+- Used for midnight split calculation and as the source of truth backing the Redis cache
 
-**UserCreature** — 유저별 **영구** 생명체 (1인 1개, date 없음)
-- `@@unique([userId])` — 유저당 하나, 삭제·리셋 없음
-- `stage` 0~9, `waterCount` 생애 누적 물주기 총량
-- 진화 임계값: `[0, 12, 36, 72, 132, 216, 336, 504, 744, 1080]` (`water.logic.ts`에 하드코딩)
-- 일일 물주기 한도(12회)는 `DailySession.waterCount`로 별도 추적
+**UserCreature** — permanent single creature per user (one per user, no date field)
+- `@@unique([userId])` — one per user, never deleted or reset
+- `stage` 0–9, `waterCount` = lifetime cumulative waters
+- Evolution thresholds: `[0, 12, 36, 72, 132, 216, 336, 504, 744, 1080]` (hardcoded in `water.logic.ts`)
+- Daily water limit (12/day) is tracked separately via `DailySession.waterCount`
 
-**Fossil** (박제된 생명체) — 물을 준 날마다 생성되는 일일 스냅샷
-- `@@unique([userId, date])` — 유저 1명 × 하루 1개
-- `userId`로 소유자 확정, `dongCode`는 위치 기록용
-- `stage`: 박제 시점의 영구 생명체 현재 단계 스냅샷
-- `fossilX`, `fossilY`: 전국 250×290 그리드 픽셀 좌표 + ±3px jitter
-- `creatureType`: CREATURE_TYPES 14종 순환 (day-of-year + userId 해시 % 14)
+**Fossil** (preserved creature) — daily snapshot created on each day the user waters
+- `@@unique([userId, date])` — one per user per day
+- `userId` identifies the owner; `dongCode` records the location
+- `stage`: snapshot of UserCreature.stage at fossil creation time
+- `fossilX`, `fossilY`: national 250×290 grid pixel coordinates + ±3px jitter
+- `creatureType`: one of 14 CREATURE_TYPES, cycled by (day-of-year + userId hash) % 14
 
-**WateringLog** — 물주기 이력 (유저별·동코드별·날짜별 로그)
-- `createUserFossils`에서 "오늘 물 준 유저" 탐지에 사용
+**WateringLog** — watering history (per user, dong, date)
+- Used by `createUserFossils` to detect "users who watered today"
 
-**PushSubscription** — 웹 푸시 구독 정보
+**PushSubscription** — web push subscription data
 
-## 스키마 설계 원칙
+## Schema Design Principles
 
-- 시간 컬럼은 전부 UTC 저장, 비즈니스 로직에서 KST 변환
-- 날짜 컬럼(`date`)은 KST "YYYY-MM-DD" 문자열로 저장
-- Fossil은 UserCreature와 분리된 영구 불변 테이블
-- 진화 임계값은 `water.logic.ts`에 하드코딩 (Config 테이블 미구현)
-- `Creature` 테이블 제거됨 — 지역 공유 생명체 개념 폐기, 개인 `UserCreature`로 전환
+- All timestamp columns stored in UTC; KST conversion done in business logic
+- Date columns (`date`) stored as KST "YYYY-MM-DD" strings
+- Fossil is a separate, append-only table independent from UserCreature
+- Evolution thresholds hardcoded in `water.logic.ts` (Config table not implemented)
+- `Creature` table removed — region-shared creature concept abolished, replaced by personal `UserCreature`
 
-## 생명체 진화 임계값 (누적 waterCount 기준)
+## Evolution Thresholds (cumulative waterCount)
 
-| 단계 | 누적 필요량 | 단계별 추가 필요량 |
+| Stage | Cumulative needed | Additional needed |
 |---|---|---|
 | 0→1 | 12 | 12 |
 | 1→2 | 36 | 24 |
@@ -51,4 +51,4 @@
 | 7→8 | 744 | 240 |
 | 8→9 | 1080 | 336 |
 
-최대 속도(하루 12회)로 90일(약 3개월)에 최고 단계 달성 가능.
+At maximum rate (12/day), stage 9 is reachable in ~90 days.
