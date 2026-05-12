@@ -2,8 +2,9 @@
 
 ## Execution Order (implemented)
 
-1. **Auto-water unwatered users** — for yesterday (KST), users whose FocusSession total with `endedAt != null` is ≥ 7200s AND `DailySession.waterCount = 0` receive 1 automatic water (WateringLog created + UserCreature upsert + `calcPersonalStage`)
-   - ⚠️ Sessions RUNNING at midnight have no `endedAt` and are excluded from this step — focus time from RUNNING sessions is not counted toward auto-watering
+1. **Auto-water unwatered users** — for yesterday (KST), users whose FocusSession total ≥ 7200s AND `DailySession.waterCount = 0` receive 1 automatic water (WateringLog created + UserCreature upsert + `calcPersonalStage`)
+   - Completed sessions: elapsed = `endedAt - startedAt`
+   - RUNNING sessions at midnight: elapsed = `nextMidnightUtc - startedAt` (self-contained up to day boundary)
 2. **ABANDON all RUNNING sessions** — DB `updateMany` (`status: RUNNING` → `ABANDONED`, `endedAt` = now)
    - PAUSED sessions are not touched here (handled by the client when a new session starts)
 3. **Clean up Redis active sessions** — delete each dongActive Set entry, derive active dongCodes from the heatmap → delete regionActive keys, delete the entire heatmapDong hash, broadcast `heatmap:update` SSE with `{}`
@@ -37,7 +38,7 @@ const kstMidnightUtc = new Date(`${date}T00:00:00+09:00`);
 ## Unimplemented
 
 - Request queue during midnight batch execution (race condition currently allowed)
-- Auto-watering credit for RUNNING session focus time at midnight (excluded because no `endedAt`)
+- Session-splitting for RUNNING sessions that started before yesterday but cross into yesterday
 - Weather/season-based `creatureType` selection
 - Evolution threshold Config table
 

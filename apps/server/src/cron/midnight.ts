@@ -57,14 +57,28 @@ export async function runMidnightBatch(): Promise<void> {
 async function autoWaterUnwatered(date: string): Promise<void> {
   // 해당 날짜 KST 00:00 = UTC 전날 15:00
   const kstMidnightUtc = new Date(`${date}T00:00:00+09:00`);
-  const sessions = await prisma.focusSession.findMany({
-    where: { startedAt: { gte: kstMidnightUtc }, endedAt: { not: null } },
-    select: { userId: true, dongCode: true, startedAt: true, endedAt: true },
-  });
+  const nextMidnightUtc = new Date(kstMidnightUtc.getTime() + 86400000);
+
+  const [sessions, runningSessions] = await Promise.all([
+    prisma.focusSession.findMany({
+      where: { startedAt: { gte: kstMidnightUtc, lt: nextMidnightUtc }, endedAt: { not: null } },
+      select: { userId: true, dongCode: true, startedAt: true, endedAt: true },
+    }),
+    // 자정을 넘긴 RUNNING 세션 — endedAt이 없으므로 자정 시점까지의 시간 계산
+    prisma.focusSession.findMany({
+      where: { startedAt: { gte: kstMidnightUtc, lt: nextMidnightUtc }, status: 'RUNNING' },
+      select: { userId: true, dongCode: true, startedAt: true },
+    }),
+  ]);
 
   const userMap = new Map<string, { totalSec: number; dongCode: string }>();
   for (const s of sessions) {
     const sec = Math.floor((s.endedAt!.getTime() - s.startedAt.getTime()) / 1000);
+    const prev = userMap.get(s.userId) ?? { totalSec: 0, dongCode: s.dongCode };
+    userMap.set(s.userId, { totalSec: prev.totalSec + sec, dongCode: s.dongCode });
+  }
+  for (const s of runningSessions) {
+    const sec = Math.floor((nextMidnightUtc.getTime() - s.startedAt.getTime()) / 1000);
     const prev = userMap.get(s.userId) ?? { totalSec: 0, dongCode: s.dongCode };
     userMap.set(s.userId, { totalSec: prev.totalSec + sec, dongCode: s.dongCode });
   }
