@@ -124,6 +124,18 @@ _(List only affected files from the domain CLAUDE.md table in root CLAUDE.md. Re
 - [ ] Criterion 2
 ```
 
+## Skill Trigger Alignment
+
+This project has three skill files that auto-activate when an implementing agent encounters specific terminology. Your plan output must use the exact trigger vocabulary below so that the right skill fires at implementation time — no extra instruction needed.
+
+| Skill | Trigger vocabulary to use in your plan |
+|---|---|
+| `tdd` | "write a failing test first", "unit test", "Zustand store test", "component test", "hook test", "`*.logic.test.ts`", "`*.test.tsx`" |
+| `frontend-pattern` | "React component", "Zustand store", "SSE subscription", "Canvas rendering", "App Router", "`use client`", "Suspense boundary" |
+| `backend-pattern` | "Express route", "Prisma transaction", "Redis session cache", "SSE broadcast", "midnight batch", "KST date", "`*.logic.ts`" |
+
+Use these terms naturally inside step descriptions and the Testing Strategy section. Do not invent synonyms — e.g. write "Express route" not "API endpoint", "Zustand store" not "state management", "Prisma transaction" not "DB call".
+
 ## Best Practices
 
 1. **Be Specific**: Use exact file paths, function names, variable names
