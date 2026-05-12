@@ -35,8 +35,9 @@ export function HeroSection() {
           </span>
           <h1 className="font-mono text-6xl md:text-7xl text-on-surface leading-tight tracking-tighter">
             집중하면,
-            <br />
-            <span className="text-primary-container">숲이 자란다.</span>
+          </h1>
+          <h1 className="text-primary font-mono text-6xl md:text-7xl text-on-surface leading-tight tracking-tighter">
+            숲이 자란다.
           </h1>
           <p className="font-sans text-on-surface-variant max-w-md leading-relaxed">
             30분 타이머가 끝날 때마다 물을 줄 수 있어요. 당신의 집중이 생명체를 키우고, 동네의 숲을
