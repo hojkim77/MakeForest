@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { usePixelMapData } from '@/hooks/usePixelMapData';
-import { useActivityStream } from '@/hooks/useActivityStream';
+import { useActivityStore } from '@/store';
 import { useCanvasHighlight } from '@/hooks/useCanvasHighlight';
 import { useRegionHover } from '@/hooks/useRegionHover';
 import { PixelMapTooltip } from './PixelMapTooltip';
@@ -31,7 +31,7 @@ interface PixelMapProps {
 export function PixelMap({ onRegionClick }: PixelMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { data: pixelMap, loading } = usePixelMapData();
-  const { activity } = useActivityStream();
+  const activity = useActivityStore((s) => s.activity);
 
   const regionMeta = useMemo(() => {
     const cells = new Map<string, typeof pixelMap.cells>();

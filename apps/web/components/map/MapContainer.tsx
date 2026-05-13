@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useMapStore } from '@/store';
+import { useActivityStream } from '@/hooks/useActivityStream';
 import { usePixelPanZoom } from '@/hooks/usePixelPanZoom';
 import { PixelMap, type RegionBounds } from './PixelMap';
 import { ForestMap } from './ForestMap';
@@ -30,6 +31,7 @@ interface ForestState {
 }
 
 export function MapContainer() {
+  useActivityStream();
   const { data: session, status } = useSession();
   const isLoggedIn = status === 'authenticated' && !!session?.user?.id;
   const { setMapMode, focusRegion, focusedRegionCode } = useMapStore();

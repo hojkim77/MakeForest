@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import type { MapUser } from '@makeforest/types';
+import { useActivityStore } from '@/store/activityStore';
 
-// dongCode → 활성 유저 수
 export type ActivityMap = Record<string, number>;
 export type { MapUser };
 
@@ -23,8 +23,7 @@ async function loadAlias(): Promise<Record<string, string>> {
 }
 
 export function useActivityStream() {
-  const [activity, setActivity] = useState<ActivityMap>({});
-  const [activeUsers, setActiveUsers] = useState<MapUser[]>([]);
+  const { setActivity, setActiveUsers } = useActivityStore();
 
   useEffect(() => {
     const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
@@ -70,7 +69,5 @@ export function useActivityStream() {
       if (retryTimer) clearTimeout(retryTimer);
       es?.close();
     };
-  }, []);
-
-  return { activity, activeUsers };
+  }, [setActivity, setActiveUsers]);
 }

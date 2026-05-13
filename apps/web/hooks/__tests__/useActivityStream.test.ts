@@ -1,5 +1,6 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useActivityStream, _resetAliasCache } from '@/hooks/useActivityStream';
+import { useActivityStore } from '@/store/activityStore';
 
 // ── MockEventSource ──────────────────────────────────────────────────────────
 class MockEventSource {
@@ -51,6 +52,7 @@ beforeEach(() => {
   MockEventSource.callCount = 0;
   mockFetch.mockReset();
   _resetAliasCache();
+  useActivityStore.setState({ activity: {}, activeUsers: [] });
   jest.useFakeTimers();
 });
 
@@ -83,7 +85,7 @@ describe('heatmap:update 이벤트', () => {
   it('alias 합산 + 원본 코드 유지 + 상태 업데이트', async () => {
     // '1111000', '1111001' → 'target' 으로 병합, '9999000' 은 alias 없어 원본 유지
     setupAlias({ '1111000': 'target', '1111001': 'target' });
-    const { result } = renderHook(() => useActivityStream());
+    renderHook(() => useActivityStream());
     await waitFor(() => MockEventSource.lastInstance !== null);
 
     await act(async () => {
@@ -94,8 +96,8 @@ describe('heatmap:update 이벤트', () => {
       });
     });
 
-    await waitFor(() => result.current.activity['target'] !== undefined);
-    expect(result.current.activity).toEqual({ target: 5, '9999000': 1 });
+    await waitFor(() => useActivityStore.getState().activity['target'] !== undefined);
+    expect(useActivityStore.getState().activity).toEqual({ target: 5, '9999000': 1 });
   });
 });
 
@@ -148,7 +150,7 @@ describe('오류 및 재연결 (지수 백오프)', () => {
 
   it('성공적인 이벤트 수신 후 오류 → retryDelay 1000ms로 리셋', async () => {
     setupEmptyAlias();
-    const { result } = renderHook(() => useActivityStream());
+    renderHook(() => useActivityStream());
 
     // 1차 오류 → 재연결
     act(() => { MockEventSource.lastInstance!.triggerError(); });
@@ -159,7 +161,7 @@ describe('오류 및 재연결 (지수 백오프)', () => {
     await act(async () => {
       MockEventSource.lastInstance!.triggerEvent('heatmap:update', { '1111': 1 });
     });
-    await waitFor(() => result.current.activity['1111'] !== undefined);
+    await waitFor(() => useActivityStore.getState().activity['1111'] !== undefined);
 
     // 다시 오류 → retryDelay 리셋됐으므로 1000ms 후 재연결
     act(() => { MockEventSource.lastInstance!.triggerError(); });
