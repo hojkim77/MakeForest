@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useMapStore, useTimerStore, useWaterStore } from '@/store';
 import { Icon } from '@/components/ui/Icon';
 
-const WATER_THRESHOLD_SEC = 30 * 60;
-const TOTAL_SEGMENTS = 12;
+const CYCLE_MS = 30 * 60 * 1000;
 const SEGMENT_SEC = 1800;
+const TOTAL_SEGMENTS = 12;
 const DAILY_MAX_SEC = 21600;
 
 function formatDuration(sec: number) {
@@ -31,35 +31,44 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
   const focusedRegionCode = useMapStore((s) => s.focusedRegionCode);
   const isPeeking = focusedRegionCode !== null && focusedRegionCode !== myRegionCode;
 
-  const { status: timerStatus, elapsedSec, autoPaused, todos, start, pause } = useTimerStore();
+  const { sessionId, startedAt, status: timerStatus, cycleCount, todos, startSession, complete, reset } = useTimerStore();
   const { waterCount, isWatering, setIsWatering, applyWaterResponse } = useWaterStore();
+  const [showDoneToast, setShowDoneToast] = useState(false);
 
-  const [showInfo, setShowInfo] = useState(false);
-
+  // 30분 완료 시 서버 세션 complete + 푸시 알림
+  const completeCalledRef = useRef(false);
   useEffect(() => {
-    if (!autoPaused || !isLoggedIn) return;
-    const { sessionId } = useTimerStore.getState();
-    if (sessionId) {
-      fetch(`/api/sessions/${sessionId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'pause' }),
-      }).catch(() => {});
+    if (timerStatus !== 'complete' || !sessionId || !isLoggedIn) {
+      completeCalledRef.current = false;
+      return;
     }
+    if (completeCalledRef.current) return;
+    completeCalledRef.current = true;
+
+    fetch(`/api/sessions/${sessionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'complete' }),
+    }).catch(() => {});
     fetch('/api/push/notify', { method: 'POST' }).catch(() => {});
-  }, [autoPaused, isLoggedIn]);
+  }, [timerStatus, sessionId, isLoggedIn]);
+
+  // 탭 복귀 시 경과 시간 재계산
+  useEffect(() => {
+    if (timerStatus !== 'running' || !startedAt) return;
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - startedAt >= CYCLE_MS) complete();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [timerStatus, startedAt, complete]);
 
   if (isPeeking) return null;
 
-  const canWater =
-    isLoggedIn &&
-    !isWatering &&
-    (timerStatus === 'RUNNING' || (timerStatus === 'PAUSED' && autoPaused)) &&
-    elapsedSec >= WATER_THRESHOLD_SEC;
-
+  // 현재 사이클 경과 시간
+  const elapsedSec = startedAt ? Math.min(Math.floor((Date.now() - startedAt) / 1000), SEGMENT_SEC) : 0;
   const totalSec = Math.min(waterCount * SEGMENT_SEC + elapsedSec, DAILY_MAX_SEC);
-  const isRunning = timerStatus === 'RUNNING';
-  const isPaused = timerStatus === 'PAUSED';
 
   async function handleStart() {
     if (!isLoggedIn) return;
@@ -67,60 +76,47 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
       const res = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ durationSec: 7200, todos }),
+        body: JSON.stringify({ todos }),
       });
       if (res.ok) {
-        const data = await res.json() as { sessionId: string };
-        useTimerStore.getState().setSession(data.sessionId);
+        const data = await res.json() as { sessionId: string; startedAt: string };
+        startSession(data.sessionId, Date.parse(data.startedAt));
       }
-    } catch { /* 세션 생성 실패 시에도 로컬 타이머는 동작 */ }
-    start();
-  }
-
-  async function handleStop() {
-    pause();
-    const { sessionId } = useTimerStore.getState();
-    if (!sessionId) return;
-    try {
-      await fetch(`/api/sessions/${sessionId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'pause' }),
-      });
-    } catch { /* 실패 시 조용히 무시 */ }
-  }
-
-  async function handleResume() {
-    const { sessionId } = useTimerStore.getState();
-    if (sessionId) {
-      try {
-        await fetch(`/api/sessions/${sessionId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'resume' }),
-        });
-      } catch { /* 실패 시 조용히 무시 */ }
-    }
-    start();
+    } catch { /* 세션 생성 실패 시에도 로컬 타이머 동작 */ }
   }
 
   async function handleWater() {
     if (isWatering) return;
     setIsWatering(true);
-    const totalElapsedSec = waterCount * 1800 + elapsedSec;
     try {
       const res = await fetch('/api/water', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ totalElapsedSec }),
+        body: JSON.stringify({}),
       });
       if (!res.ok) return;
       const data = await res.json() as { myWaterCount: number; userCreature: { stage: number; waterCount: number } };
       applyWaterResponse(data);
-      useTimerStore.getState().resetWaterProgress();
+      if (data.myWaterCount >= TOTAL_SEGMENTS) {
+        setShowDoneToast(true);
+        setTimeout(() => setShowDoneToast(false), 4000);
+      }
+      reset();
     } catch { /* 실패 시 조용히 무시 */ }
     finally { setIsWatering(false); }
   }
+
+  const isDailyDone = waterCount >= TOTAL_SEGMENTS;
+
+  // 버튼 레이블 결정
+  const buttonLabel = (() => {
+    if (isDailyDone) return '오늘의 집중 완료';
+    if (timerStatus === 'complete') return isWatering ? '물주는중' : '물주기';
+    if (timerStatus === 'idle') return cycleCount > 0 ? '재개' : '시작';
+    return '집중중'; // running
+  })();
+
+  const buttonDisabled = isDailyDone || timerStatus === 'running' || (timerStatus === 'complete' && isWatering);
 
   return (
     <div className="flex flex-col gap-sm border-t border-outline-variant pt-md">
@@ -129,28 +125,22 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
           0%   { background-position: 0% 50%; }
           100% { background-position: 200% 50%; }
         }
+        @keyframes dot-blink {
+          0%, 20%  { opacity: 0.2; }
+          50%      { opacity: 1; }
+          100%     { opacity: 0.2; }
+        }
+        .dot-1 { animation: dot-blink 1.4s infinite 0s; }
+        .dot-2 { animation: dot-blink 1.4s infinite 0.2s; }
+        .dot-3 { animation: dot-blink 1.4s infinite 0.4s; }
       `}</style>
 
       {/* 12-segment water gauge */}
-      <div className="relative flex gap-px w-full h-3">
-        {autoPaused && isPaused && (
-          <div
-            className="absolute bottom-full mb-2 whitespace-nowrap bg-primary text-on-primary font-mono text-xs px-2 py-1 pointer-events-none z-10"
-            style={{
-              left: `${Math.min((waterCount + 0.5) / TOTAL_SEGMENTS, 1) * 100}%`,
-              transform: 'translateX(-50%)',
-            }}
-          >
-            집중하느라 고생하셨어요! 물을 주세요 💧
-            <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-primary" />
-          </div>
-        )}
+      <div className="flex gap-px w-full h-3">
         {Array.from({ length: TOTAL_SEGMENTS }, (_, i) => {
           const isFilled = i < waterCount;
           const isCurrent = i === waterCount;
-          const fillPct = isCurrent
-            ? Math.min((elapsedSec / SEGMENT_SEC) * 100, 100)
-            : 0;
+          const fillPct = isCurrent ? Math.min((elapsedSec / SEGMENT_SEC) * 100, 100) : 0;
 
           return (
             <div key={i} className="flex-1 relative bg-surface-variant overflow-hidden">
@@ -170,90 +160,52 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
         })}
       </div>
 
-      {/* Timer + total progress */}
+      {/* 타이머 + 오늘 집중 시간 */}
       <div className="flex items-end justify-between">
-        <div className="flex items-center gap-xs">
-          <span
-            className="font-mono tabular-nums text-3xl leading-none text-on-surface"
-            data-testid="timer-display"
-          >
-            {formatTimer(elapsedSec)}
-          </span>
-          <button
-            onClick={() => setShowInfo((v) => !v)}
-            className="text-outline hover:text-on-surface transition-none p-0.5"
-            aria-label="뽀모도로 설명"
-          >
-            <Icon name="info" size={14} />
-          </button>
-        </div>
+        <span
+          className="font-mono tabular-nums text-3xl leading-none text-on-surface"
+          data-testid="timer-display"
+        >
+          {formatTimer(elapsedSec)}
+        </span>
         <span className="font-mono text-label text-on-surface-variant uppercase tracking-wider">
           오늘 집중&nbsp;
           <span className="text-primary">{formatDuration(totalSec)} / 6h</span>
         </span>
       </div>
 
-      {showInfo && (
-        <div className="relative bg-surface-container-high border border-outline-variant p-sm font-mono text-label text-on-surface-variant">
-          <button
-            onClick={() => setShowInfo(false)}
-            className="absolute top-1 right-1 text-outline hover:text-on-surface transition-none"
-            aria-label="닫기"
-          >
-            <Icon name="close" size={14} />
-          </button>
-          <p className="font-semibold text-on-surface mb-xs">뽀모도로 집중법</p>
-          <ul className="space-y-xs list-none">
-            <li>· 30분 집중하면 물주기 1회 가능</li>
-            <li>· 물주기로 동네 생명체를 성장시켜요</li>
-            <li>· 하루 최대 12회 (6시간) 집중 가능</li>
-          </ul>
+      {/* 오늘 집중 완료 토스트 */}
+      {showDoneToast && (
+        <div className="font-mono text-label text-primary text-center py-xs">
+          오늘 집중 고생하셨어요! 🌱
         </div>
       )}
 
-      {/* Controls */}
-      <div className="flex gap-sm">
-        <div className="flex-1">
-          {timerStatus === 'IDLE' && (
-            <button
-              onClick={handleStart}
-              className="w-full flex items-center justify-center gap-sm py-sm font-mono text-label uppercase tracking-wider border bg-primary border-primary text-on-primary transition-none active:translate-y-px"
-            >
-              <Icon name="play_arrow" filled size={18} />
-              시작
-            </button>
-          )}
-          {isRunning && (
-            <button
-              onClick={handleStop}
-              className="w-full flex items-center justify-center gap-sm py-sm font-mono text-label uppercase tracking-wider border bg-surface-container-high border-outline text-on-surface transition-none active:translate-y-px"
-            >
-              <Icon name="stop" filled size={18} />
-              중지
-            </button>
-          )}
-          {isPaused && (
-            <button
-              onClick={handleResume}
-              disabled={autoPaused}
-              className="w-full flex items-center justify-center gap-sm py-sm font-mono text-label uppercase tracking-wider border bg-primary border-primary text-on-primary transition-none active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Icon name="play_arrow" filled size={18} />
-              재개
-            </button>
-          )}
-        </div>
-
-        <button
-          onClick={handleWater}
-          disabled={!canWater}
-          data-testid="water-btn"
-          className="flex items-center justify-center gap-xs px-lg py-sm font-mono text-label uppercase tracking-wider border border-primary bg-primary-container text-on-primary transition-none active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <Icon name="water_drop" filled size={18} />
-          물 주기
-        </button>
-      </div>
+      {/* 단일 버튼 */}
+      <button
+        onClick={!isDailyDone && timerStatus === 'complete' ? handleWater : handleStart}
+        disabled={buttonDisabled}
+        data-testid="timer-btn"
+        className="w-full flex items-center justify-center gap-sm py-sm font-mono text-label uppercase tracking-wider border transition-none active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed bg-primary border-primary text-on-primary"
+      >
+        {timerStatus === 'running' && !isDailyDone ? (
+          <span className="flex items-center gap-[1px]">
+            집중중
+            <span className="dot-1">.</span>
+            <span className="dot-2">.</span>
+            <span className="dot-3">.</span>
+          </span>
+        ) : (
+          <>
+            <Icon
+              name={timerStatus === 'complete' && !isDailyDone ? 'water_drop' : 'play_arrow'}
+              filled
+              size={18}
+            />
+            {buttonLabel}
+          </>
+        )}
+      </button>
     </div>
   );
 }

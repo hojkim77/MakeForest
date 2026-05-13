@@ -18,9 +18,10 @@ export async function GET() {
   }
 
   const today = getKstDateString();
-  const [daily, creature] = await Promise.all([
-    prisma.dailySession.findUnique({
+  const [focusSession, creature] = await Promise.all([
+    prisma.focusSession.findUnique({
       where: { userId_date: { userId: session.user.id, date: today } },
+      select: { waterCount: true },
     }),
     prisma.userCreature.findUnique({
       where: { userId: session.user.id },
@@ -29,7 +30,7 @@ export async function GET() {
   ]);
 
   return NextResponse.json({
-    waterCount: daily?.waterCount ?? 0,
+    waterCount: focusSession?.waterCount ?? 0,
     date: today,
     creatureStage: creature?.stage ?? 0,
     creatureWaterCount: creature?.waterCount ?? 0,

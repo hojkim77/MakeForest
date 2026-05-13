@@ -15,20 +15,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '동네 설정이 필요합니다.' }, { status: 400 });
   }
 
-  const body = await req.json().catch(() => ({})) as { totalElapsedSec?: number };
-
   const res = await fetch(`${SERVER_URL}/water`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-internal-secret': INTERNAL_SECRET,
     },
-    body: JSON.stringify({
-      userId,
-      dongCode,
-      nickname: nickname ?? '누군가',
-      totalElapsedSec: body.totalElapsedSec ?? 0,
-    }),
+    body: JSON.stringify({ userId, dongCode, nickname: nickname ?? '누군가' }),
   });
 
   const data = await res.json() as unknown;

@@ -27,16 +27,17 @@ export async function Panel() {
   let initialWater = { waterCount: 0, creatureStage: 0, growthPercent: 0 };
   if (isLoggedIn && session?.user?.id) {
     const today = getKstDateString();
-    const [daily, creature] = await Promise.all([
-      prisma.dailySession.findUnique({
+    const [focusSession, creature] = await Promise.all([
+      prisma.focusSession.findUnique({
         where: { userId_date: { userId: session.user.id, date: today } },
+        select: { waterCount: true },
       }),
       prisma.userCreature.findUnique({
         where: { userId: session.user.id },
         select: { stage: true, waterCount: true },
       }),
     ]);
-    const wc = daily?.waterCount ?? 0;
+    const wc = focusSession?.waterCount ?? 0;
     initialWater = {
       waterCount: wc,
       creatureStage: creature?.stage ?? 0,
