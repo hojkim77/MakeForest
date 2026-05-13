@@ -58,6 +58,7 @@ function renderSection(myRegionCode = '11') {
 beforeEach(() => {
   mockMapState = { focusedRegionCode: null, focusRegion: jest.fn() };
   mockFetch.mockReset();
+  mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
   useTimerStore.setState({
     sessionId: null, startedAt: null, status: 'idle', cycleCount: 0, todos: [],
   });

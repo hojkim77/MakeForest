@@ -80,7 +80,7 @@ describe('SSE 연결', () => {
     renderHook(() => useActivityStream());
 
     expect(MockEventSource.lastInstance).not.toBeNull();
-    expect(MockEventSource.lastInstance!.url).toContain('/map/activity-stream');
+    expect(MockEventSource.lastInstance!.url).toContain('/sse/activity-stream');
   });
 
   it('언마운트 시 EventSource.close() 호출', () => {
