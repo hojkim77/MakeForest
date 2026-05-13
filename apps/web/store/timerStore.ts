@@ -17,8 +17,8 @@ interface TimerState {
 
 let _interval: ReturnType<typeof setInterval> | null = null;
 
-const CYCLE_SEC = Number(process.env.NEXT_PUBLIC_CYCLE_SEC ?? 1800);
-const CYCLE_MS = CYCLE_SEC * 1000;
+export const CYCLE_SEC = Number(process.env.NEXT_PUBLIC_CYCLE_SEC ?? 1800);
+export const CYCLE_MS = CYCLE_SEC * 1000;
 
 export const useTimerStore = create<TimerState>((set, get) => ({
   sessionId: null,

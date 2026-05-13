@@ -3,12 +3,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useMapStore, useTimerStore, useWaterStore } from '@/store';
+import { CYCLE_MS, CYCLE_SEC } from '@/store/timerStore';
 import { Icon } from '@/components/ui/Icon';
 
-const CYCLE_MS = 30 * 60 * 1000;
-const SEGMENT_SEC = 1800;
 const TOTAL_SEGMENTS = 12;
-const DAILY_MAX_SEC = 21600;
+const DAILY_MAX_SEC = TOTAL_SEGMENTS * CYCLE_SEC;
 
 function formatDuration(sec: number) {
   const h = Math.floor(sec / 3600);
@@ -67,8 +66,8 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
   if (isPeeking) return null;
 
   // 현재 사이클 경과 시간
-  const elapsedSec = startedAt ? Math.min(Math.floor((Date.now() - startedAt) / 1000), SEGMENT_SEC) : 0;
-  const totalSec = Math.min(waterCount * SEGMENT_SEC + elapsedSec, DAILY_MAX_SEC);
+  const elapsedSec = startedAt ? Math.min(Math.floor((Date.now() - startedAt) / 1000), CYCLE_SEC) : 0;
+  const totalSec = Math.min(waterCount * CYCLE_SEC + elapsedSec, DAILY_MAX_SEC);
 
   async function handleStart() {
     if (!isLoggedIn) return;
@@ -140,7 +139,7 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
         {Array.from({ length: TOTAL_SEGMENTS }, (_, i) => {
           const isFilled = i < waterCount;
           const isCurrent = i === waterCount;
-          const fillPct = isCurrent ? Math.min((elapsedSec / SEGMENT_SEC) * 100, 100) : 0;
+          const fillPct = isCurrent ? Math.min((elapsedSec / CYCLE_SEC) * 100, 100) : 0;
 
           return (
             <div key={i} className="flex-1 relative bg-surface-variant overflow-hidden">
