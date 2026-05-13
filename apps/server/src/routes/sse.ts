@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import { getActiveRegionSessions, getSession } from '@makeforest/redis';
 import type { SSEEvent } from '@makeforest/types';
 
 export const sseRouter = Router();
@@ -19,19 +18,6 @@ export function broadcastToAll(event: SSEEvent): void {
   clients.forEach((room) => room.forEach((res) => res.write(payload)));
 }
 
-export async function buildRegionUsers(regionCode: string) {
-  const sessionIds = await getActiveRegionSessions(regionCode);
-  const users = await Promise.all(
-    sessionIds.map(async (id) => {
-      const s = await getSession(id);
-      if (!s) return null;
-      const elapsedSec = Math.floor((Date.now() - new Date(s.startedAt).getTime()) / 1000);
-      return { nickname: s.userId, elapsedSec, todos: s.todos };
-    }),
-  );
-  return users.filter(Boolean) as NonNullable<(typeof users)[number]>[];
-}
-
 // GET /sse/:regionCode
 sseRouter.get('/:regionCode', async (req: Request, res: Response) => {
   const regionCode = decodeURIComponent(req.params['regionCode'] as string);
@@ -43,14 +29,6 @@ sseRouter.get('/:regionCode', async (req: Request, res: Response) => {
 
   if (!clients.has(regionCode)) clients.set(regionCode, new Set());
   clients.get(regionCode)!.add(res);
-
-  // 초기 접속 시 현재 지역 유저 목록 전송
-  try {
-    const users = await buildRegionUsers(regionCode);
-    res.write(`event: dong:users\ndata: ${JSON.stringify({ regionCode, users })}\n\n`);
-  } catch (err) {
-    console.error('[sse] initial user list error:', err);
-  }
 
   // 핑 (30초 간격, 연결 유지)
   const pingInterval = setInterval(() => res.write(': ping\n\n'), 30_000);

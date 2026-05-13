@@ -1,18 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
-import { redis, RedisKeys, setSession, getSession, addActiveDong, removeActiveDong, getDongActiveCount, addActiveRegion, removeActiveRegion } from '@makeforest/redis';
-import { broadcastToRegion, buildRegionUsers } from './sse';
+import { redis, RedisKeys, setSession, getSession, addActiveDong, removeActiveDong, getDongActiveCount } from '@makeforest/redis';
 import { broadcastHeatmap } from './map';
-import { regionOf } from '@makeforest/types';
 import { getKstDateString } from './water.logic';
 import type { SessionAction } from '@makeforest/types';
 
 export const sessionsRouter = Router();
-
-async function getDongRegionCode(dongCode: string): Promise<string> {
-  const dong = await prisma.dong.findUnique({ where: { code: dongCode }, select: { name: true } });
-  return dong ? regionOf(dongCode, dong.name) : dongCode.substring(0, 5);
-}
 
 // POST /sessions — 세션 시작 또는 재개 (하루 1개 upsert)
 sessionsRouter.post('/', async (req: Request, res: Response) => {
@@ -79,8 +72,6 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
         });
 
         await addActiveDong(dongCode, session.id);
-        const regionCode = await getDongRegionCode(dongCode);
-        await addActiveRegion(regionCode, session.id);
 
         const activeCount = await getDongActiveCount(dongCode);
         await redis.hset(RedisKeys.heatmapDong(), { [dongCode]: activeCount });
@@ -88,9 +79,6 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
         const activity: Record<string, number> = {};
         for (const [code, cnt] of Object.entries(heatmapRaw)) activity[code] = Number(cnt);
         broadcastHeatmap(activity);
-
-        const users = await buildRegionUsers(regionCode);
-        broadcastToRegion(regionCode, { type: 'dong:users', data: { regionCode, users } });
       } catch (err) {
         console.error('[sessions] Redis/SSE sync error:', err);
       }
@@ -131,9 +119,7 @@ sessionsRouter.patch('/:id', async (req: Request, res: Response) => {
     // 활성 세트에서 제거 + 히트맵 + SSE 브로드캐스트
     void (async () => {
       try {
-        const regionCode = await getDongRegionCode(session.dongCode);
         await removeActiveDong(session.dongCode, id);
-        await removeActiveRegion(regionCode, id);
 
         const activeCount = await getDongActiveCount(session.dongCode);
         await redis.hset(RedisKeys.heatmapDong(), { [session.dongCode]: activeCount });
@@ -141,9 +127,6 @@ sessionsRouter.patch('/:id', async (req: Request, res: Response) => {
         const activity: Record<string, number> = {};
         for (const [code, cnt] of Object.entries(heatmapRaw)) activity[code] = Number(cnt);
         broadcastHeatmap(activity);
-
-        const users = await buildRegionUsers(regionCode);
-        broadcastToRegion(regionCode, { type: 'dong:users', data: { regionCode, users } });
       } catch (err) {
         console.error('[sessions] Redis/SSE sync error:', err);
       }

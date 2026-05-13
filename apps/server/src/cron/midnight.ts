@@ -4,7 +4,6 @@ import { redis, RedisKeys, removeActiveDong } from '@makeforest/redis';
 import { broadcastHeatmap } from '../routes/map';
 import { calcPersonalStage, getKstDateString } from '../routes/water.logic';
 import { toPixel, GRID_W, GRID_H } from '../routes/map.logic';
-import { regionOf } from '@makeforest/types';
 
 const CREATURE_TYPES = [
   'SEED', 'SPROUT', 'GRASS', 'FLOWER_A', 'FLOWER_B',
@@ -110,17 +109,6 @@ async function clearRedisActiveSessions(
 
   for (const code of activeDongCodes) {
     await redis.del(RedisKeys.dongActive(code));
-  }
-
-  const dongs = await prisma.dong.findMany({
-    where: { code: { in: activeDongCodes } },
-    select: { code: true, name: true },
-  });
-
-  const regionCodes = new Set<string>();
-  for (const d of dongs) regionCodes.add(regionOf(d.code, d.name));
-  for (const rc of regionCodes) {
-    await redis.del(RedisKeys.regionActive(rc));
   }
 
   await redis.del(RedisKeys.heatmapDong());
