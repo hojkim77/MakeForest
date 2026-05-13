@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import type { MapUser } from '@makeforest/types';
+import { useActivityStore } from '@/store/activityStore';
 
-// dongCode → 활성 유저 수
 export type ActivityMap = Record<string, number>;
 export type { MapUser };
 
@@ -23,8 +23,7 @@ async function loadAlias(): Promise<Record<string, string>> {
 }
 
 export function useActivityStream() {
-  const [activity, setActivity] = useState<ActivityMap>({});
-  const [activeUsers, setActiveUsers] = useState<MapUser[]>([]);
+  const { setActivity, setActiveUsers } = useActivityStore();
 
   useEffect(() => {
     const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
@@ -33,8 +32,24 @@ export function useActivityStream() {
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     let destroyed = false;
 
+    void (async () => {
+      try {
+        const res = await fetch(`${SERVER_URL}/map/snapshot`);
+        const { heatmap: rawHeatmap, users } = await res.json() as { heatmap: ActivityMap; users: MapUser[] };
+        if (destroyed) return;
+        setActiveUsers(users);
+        const alias = await loadAlias();
+        const merged: ActivityMap = {};
+        for (const [code, count] of Object.entries(rawHeatmap)) {
+          const target = alias[code] ?? code;
+          merged[target] = (merged[target] ?? 0) + count;
+        }
+        setActivity(merged);
+      } catch {}
+    })();
+
     const connect = () => {
-      es = new EventSource(`${SERVER_URL}/map/activity-stream`);
+      es = new EventSource(`${SERVER_URL}/sse/activity-stream`);
 
       es.addEventListener('users:overlay', (e: MessageEvent<string>) => {
         const users = JSON.parse(e.data) as MapUser[];
@@ -70,7 +85,5 @@ export function useActivityStream() {
       if (retryTimer) clearTimeout(retryTimer);
       es?.close();
     };
-  }, []);
-
-  return { activity, activeUsers };
+  }, [setActivity, setActiveUsers]);
 }

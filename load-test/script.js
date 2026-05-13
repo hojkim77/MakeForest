@@ -70,7 +70,7 @@ function getVuUser() {
 }
 
 // ── S1: 메인페이지 유저 플로우 ─────────────────────────────────
-// POST /sessions → PATCH pause → PATCH resume → POST /water → GET /creature → PATCH complete
+// POST /sessions → POST /water → GET /creature → PATCH complete
 // 각 단계에서 발생하는 브로드캐스트 비용이 응답 latency에 반영됨
 export function mainUserScenario() {
   const user = getVuUser();
@@ -94,23 +94,7 @@ export function mainUserScenario() {
   const sessionId = sessionRes.json('sessionId');
   sleep(1);
 
-  // 2) 일시정지
-  http.patch(
-    `${TARGET_URL}/sessions/${sessionId}`,
-    JSON.stringify({ action: 'pause' }),
-    { headers, tags: { name: 'PATCH /sessions/:id (pause)' } },
-  );
-  sleep(1);
-
-  // 3) 재개
-  http.patch(
-    `${TARGET_URL}/sessions/${sessionId}`,
-    JSON.stringify({ action: 'resume' }),
-    { headers, tags: { name: 'PATCH /sessions/:id (resume)' } },
-  );
-  sleep(1);
-
-  // 4) 물주기 (12회 미만일 때만)
+  // 2) 물주기 (12회 미만일 때만)
   //    totalElapsedSec = waterCount * 1800 + 60
   //    → 최대 11 * 1800 + 60 = 19860 < 21600(6시간 캡) — 항상 통과
   //    409 = 12회 초과 or 6시간 캡 → 정상 비즈니스 응답 (실패 아님)
@@ -126,13 +110,13 @@ export function mainUserScenario() {
   }
   sleep(1);
 
-  // 5) 숲 모드 — 지역 생명체 집계 조회
+  // 3) 숲 모드 — 지역 생명체 집계 조회
   http.get(
     `${TARGET_URL}/creature/${encodeURIComponent(regionCode)}`,
     { tags: { name: 'GET /creature/:regionCode' } },
   );
 
-  // 6) 세션 종료
+  // 4) 세션 종료
   http.patch(
     `${TARGET_URL}/sessions/${sessionId}`,
     JSON.stringify({ action: 'complete' }),

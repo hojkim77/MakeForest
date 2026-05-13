@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useActivityStream } from '@/hooks/useActivityStream';
+import { useActivityStore } from '@/store';
 import { usePixelMapData } from '@/hooks/usePixelMapData';
 import { useMapStore } from '@/store';
 import { regionDisplayName, regionOf } from '@makeforest/types';
@@ -13,7 +13,7 @@ const LEGEND = [
 ] as const;
 
 export function MapOverlay() {
-  const { activity } = useActivityStream();
+  const activity = useActivityStore((s) => s.activity);
   const globalActiveUsers = Object.values(activity).reduce((sum, n) => sum + n, 0);
   const { mapMode, focusedRegionCode } = useMapStore();
   const { data: pixelMap } = usePixelMapData();

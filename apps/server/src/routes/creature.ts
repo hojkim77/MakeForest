@@ -28,14 +28,14 @@ creatureRouter.get('/:regionCode', async (req: Request, res: Response) => {
     return res.json({ userCount: 0, avgStage: 0, maxStage: 0, totalWaterCount: 0, date: today });
   }
 
-  // 오늘 물을 준 유저만 집계 (DailySession 기준)
-  const dailies = await prisma.dailySession.findMany({
+  // 오늘 물을 준 유저만 집계 (FocusSession 기준)
+  const sessions = await prisma.focusSession.findMany({
     where: { date: today, userId: { in: userIds }, waterCount: { gt: 0 } },
     select: { userId: true, waterCount: true },
   });
 
-  const activeUserIds = dailies.map((d) => d.userId);
-  const totalWaterCount = dailies.reduce((sum, d) => sum + d.waterCount, 0);
+  const activeUserIds = sessions.map((s) => s.userId);
+  const totalWaterCount = sessions.reduce((sum, s) => sum + s.waterCount, 0);
   const userCount = activeUserIds.length;
 
   // 영구 생명체 단계 집계 (date 필터 없음)

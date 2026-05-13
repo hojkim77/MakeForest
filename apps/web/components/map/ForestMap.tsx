@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { usePixelMapData } from '@/hooks/usePixelMapData';
-import { useActivityStream } from '@/hooks/useActivityStream';
+import { useActivityStore } from '@/store';
 import { UserOverlay } from './UserOverlay';
 import { regionOf } from '@makeforest/types';
 
@@ -26,7 +26,8 @@ interface ForestMapProps {
 export function ForestMap({ regionCode, active }: ForestMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { data: pixelMap } = usePixelMapData();
-  const { activity, activeUsers } = useActivityStream();
+  const activity = useActivityStore((s) => s.activity);
+  const activeUsers = useActivityStore((s) => s.activeUsers);
 
   const visibleCells = useMemo(
     () =>

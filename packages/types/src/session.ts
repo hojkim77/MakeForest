@@ -15,33 +15,33 @@ export interface FocusSession {
   id: string;
   userId: string;
   dongCode: string;
+  date: string;
   startedAt: Date;
-  endedAt?: Date;
-  durationSec: number;
-  actualSec?: number;
+  totalElapsedSec: number;
+  waterCount: number;
   todos: Todo[];
   status: SessionStatus;
 }
 
 export interface CreateSessionInput {
-  durationSec: number;
   dongCode: string;
   todos: Todo[];
 }
 
-export type SessionAction = 'pause' | 'resume' | 'abandon' | 'complete';
+// complete: 30분 사이클 완료 / abandon: 자정 배치 등 강제 종료
+export type SessionAction = 'abandon' | 'complete';
 
 export interface ActiveSessionCache {
   userId: string;
   dongCode: string;
   startedAt: string;
-  durationSec: number;
   todos: Todo[];
-  status: SessionStatus;
+  status: SessionStatus | 'IDLE';
   nickname: string;
   pixelX: number;
   pixelY: number;
-  waterCount: number;
+  waterCount: number;       // 생애 누적
+  todayWaterCount: number;  // 오늘 물주기 횟수
   creatureStage: number;
   todosPublic: boolean;
 }

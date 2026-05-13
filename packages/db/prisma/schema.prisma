@@ -22,7 +22,6 @@ model User {
 
   sessions          FocusSession[]
   wateringLogs      WateringLog[]
-  dailySessions     DailySession[]
   pushSubscriptions PushSubscription[]
   userCreatures     UserCreature[]
   fossils           Fossil[]
@@ -33,19 +32,22 @@ model User {
 }
 
 model FocusSession {
-  id          String        @id @default(uuid())
-  userId      String
-  dongCode    String
-  startedAt   DateTime      @default(now())
-  endedAt     DateTime?
-  durationSec Int
-  todos       Json          @default("[]")
-  status      SessionStatus @default(RUNNING)
+  id              String        @id @default(uuid())
+  userId          String
+  dongCode        String
+  date            String        // KST "YYYY-MM-DD"
+  startedAt       DateTime      @default(now())
+  totalElapsedSec Int           @default(0) // 완료된 사이클 누적 집중 시간 (waterCount * 1800)
+  waterCount      Int           @default(0) // 오늘 물주기 횟수 (최대 12)
+  todos           Json          @default("[]")
+  status          SessionStatus @default(RUNNING)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, date])
   @@index([userId])
   @@index([dongCode])
+  @@index([date])
   @@index([status])
 }
 
@@ -104,20 +106,6 @@ model WateringLog {
 
   @@index([userId, date])
   @@index([dongCode, date])
-}
-
-// 유저별 날짜별 집중 시간 + 물주기 횟수 집계
-model DailySession {
-  id         String @id @default(uuid())
-  userId     String
-  date       String // KST "YYYY-MM-DD"
-  elapsedSec Int    @default(0)
-  waterCount Int    @default(0) // 오늘 내가 준 물 (최대 12)
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, date])
-  @@index([userId])
 }
 
 model PushSubscription {

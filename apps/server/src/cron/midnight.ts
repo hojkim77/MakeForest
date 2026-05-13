@@ -1,10 +1,9 @@
 import cron from 'node-cron';
 import { prisma } from '@makeforest/db';
 import { redis, RedisKeys, removeActiveDong } from '@makeforest/redis';
-import { broadcastHeatmap } from '../routes/map';
+import { broadcastHeatmap } from '../routes/sse';
 import { calcPersonalStage, getKstDateString } from '../routes/water.logic';
 import { toPixel, GRID_W, GRID_H } from '../routes/map.logic';
-import { regionOf } from '@makeforest/types';
 
 const CREATURE_TYPES = [
   'SEED', 'SPROUT', 'GRASS', 'FLOWER_A', 'FLOWER_B',
@@ -28,7 +27,6 @@ export function registerCronJobs(): void {
 }
 
 export async function runMidnightBatch(): Promise<void> {
-  // 자정 직전 1초 기준으로 "어제" KST 날짜 계산
   const yesterday = getKstDateString(new Date(Date.now() - 1000));
 
   // ① 물주기 미입력 자동 반영: 2시간 이상 집중 & waterCount=0인 유저
@@ -43,59 +41,58 @@ export async function runMidnightBatch(): Promise<void> {
   if (runningSessions.length > 0) {
     await prisma.focusSession.updateMany({
       where: { status: 'RUNNING' },
-      data: { status: 'ABANDONED', endedAt: new Date() },
+      data: { status: 'ABANDONED' },
     });
   }
 
   // ③ Redis 활성 세션 정리
   await clearRedisActiveSessions(runningSessions.map((s) => ({ id: s.id, dongCode: s.dongCode })));
 
-  // ④ Fossil 생성 (전날 stage >= 1 개인 생명체 박제)
+  // ④ Fossil 생성 (전날 물주기 기록 있는 유저)
   await createUserFossils(yesterday);
 }
 
 async function autoWaterUnwatered(date: string): Promise<void> {
-  // 해당 날짜 KST 00:00 = UTC 전날 15:00
   const kstMidnightUtc = new Date(`${date}T00:00:00+09:00`);
+  const nextMidnightUtc = new Date(kstMidnightUtc.getTime() + 86400000);
+
+  // 해당 날짜 FocusSession 전체 조회
   const sessions = await prisma.focusSession.findMany({
-    where: { startedAt: { gte: kstMidnightUtc }, endedAt: { not: null } },
-    select: { userId: true, dongCode: true, startedAt: true, endedAt: true },
+    where: { date },
+    select: { userId: true, dongCode: true, startedAt: true, totalElapsedSec: true, waterCount: true, status: true },
   });
 
-  const userMap = new Map<string, { totalSec: number; dongCode: string }>();
-  for (const s of sessions) {
-    const sec = Math.floor((s.endedAt!.getTime() - s.startedAt.getTime()) / 1000);
-    const prev = userMap.get(s.userId) ?? { totalSec: 0, dongCode: s.dongCode };
-    userMap.set(s.userId, { totalSec: prev.totalSec + sec, dongCode: s.dongCode });
-  }
+  for (const session of sessions) {
+    // waterCount가 이미 있으면 스킵
+    if (session.waterCount > 0) continue;
 
-  for (const [userId, { totalSec, dongCode }] of userMap.entries()) {
+    // totalElapsedSec + 자정까지 RUNNING 중이었다면 남은 시간 추가
+    let totalSec = session.totalElapsedSec;
+    if (session.status === 'RUNNING') {
+      totalSec += Math.floor((nextMidnightUtc.getTime() - session.startedAt.getTime()) / 1000);
+    }
+
     if (totalSec < 7200) continue;
 
-    const daily = await prisma.dailySession.findUnique({
-      where: { userId_date: { userId, date } },
-    });
-    if ((daily?.waterCount ?? 0) > 0) continue;
-
     await prisma.$transaction(async (tx) => {
-      // 영구 생명체: userId 단독 키
-      const existing = await tx.userCreature.findUnique({ where: { userId } });
+      const existing = await tx.userCreature.findUnique({ where: { userId: session.userId } });
       const newWaterCount = (existing?.waterCount ?? 0) + 1;
       const newStage = calcPersonalStage(newWaterCount);
 
       await tx.userCreature.upsert({
-        where: { userId },
+        where: { userId: session.userId },
         update: { waterCount: newWaterCount, stage: newStage },
-        create: { userId, waterCount: newWaterCount, stage: newStage },
+        create: { userId: session.userId, waterCount: newWaterCount, stage: newStage },
       });
 
-      await tx.dailySession.upsert({
-        where: { userId_date: { userId, date } },
-        update: { waterCount: 1, elapsedSec: totalSec },
-        create: { userId, date, elapsedSec: totalSec, waterCount: 1 },
+      await tx.focusSession.update({
+        where: { userId_date: { userId: session.userId, date } },
+        data: { waterCount: 1, totalElapsedSec: Math.min(totalSec, 21600) },
       });
 
-      await tx.wateringLog.create({ data: { userId, dongCode, date } });
+      await tx.wateringLog.create({
+        data: { userId: session.userId, dongCode: session.dongCode, date },
+      });
     });
   }
 }
@@ -107,7 +104,6 @@ async function clearRedisActiveSessions(
     await removeActiveDong(dongCode, id);
   }
 
-  // 히트맵 해시에서 활성 동 목록 추출 → regionActive 키 삭제
   const heatmapRaw = await redis.hgetall(RedisKeys.heatmapDong()) ?? {};
   const activeDongCodes = Object.keys(heatmapRaw).filter((k) => Number(heatmapRaw[k]) > 0);
 
@@ -115,24 +111,11 @@ async function clearRedisActiveSessions(
     await redis.del(RedisKeys.dongActive(code));
   }
 
-  // regionActive 키는 dong 목록을 통해 역산
-  const dongs = await prisma.dong.findMany({
-    where: { code: { in: activeDongCodes } },
-    select: { code: true, name: true },
-  });
-
-  const regionCodes = new Set<string>();
-  for (const d of dongs) regionCodes.add(regionOf(d.code, d.name));
-  for (const rc of regionCodes) {
-    await redis.del(RedisKeys.regionActive(rc));
-  }
-
   await redis.del(RedisKeys.heatmapDong());
   broadcastHeatmap({});
 }
 
 async function createUserFossils(date: string): Promise<void> {
-  // 해당 날짜에 물을 준 유저 조회 (WateringLog 기준)
   const wateredToday = await prisma.wateringLog.findMany({
     where: { date },
     select: { userId: true, dongCode: true },
@@ -143,7 +126,6 @@ async function createUserFossils(date: string): Promise<void> {
 
   const userIds = wateredToday.map((w) => w.userId);
 
-  // 영구 생명체의 현재 단계 조회 (date 필터 없음)
   const creatures = await prisma.userCreature.findMany({
     where: { userId: { in: userIds } },
     select: { userId: true, stage: true },

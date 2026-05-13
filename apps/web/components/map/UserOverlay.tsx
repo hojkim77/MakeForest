@@ -13,7 +13,7 @@ interface UserOverlayProps {
 
 const STATUS_OPACITY: Record<string, number> = {
   RUNNING: 0.75,
-  PAUSED: 0.5,
+  COMPLETE: 0.5,
   IDLE: 0.25,
 };
 
@@ -107,10 +107,8 @@ export function UserOverlay({ users, mapW, mapH }: UserOverlayProps) {
           </div>
 
           {/* 세션 상태 */}
-          {hovered.user.sessionStatus !== 'IDLE' && (
-            <p className="text-green-400 text-[10px]">
-              {hovered.user.sessionStatus === 'RUNNING' ? '집중 중' : '일시정지'}
-            </p>
+          {hovered.user.sessionStatus === 'RUNNING' && (
+            <p className="text-green-400 text-[10px]">집중 중</p>
           )}
 
           {/* 오늘 물주기 횟수 */}

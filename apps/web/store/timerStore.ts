@@ -1,60 +1,61 @@
 import { create } from 'zustand';
-import type { SessionStatus, Todo } from '@makeforest/types';
+import type { Todo } from '@makeforest/types';
 
 interface TimerState {
   sessionId: string | null;
-  status: SessionStatus | 'IDLE';
-  elapsedSec: number;
-  autoPaused: boolean;
+  startedAt: number | null;    // 현재 사이클 시작 Unix ms (서버 응답값)
+  status: 'idle' | 'running' | 'complete';
+  cycleCount: number;           // 0이면 "시작", >0이면 "재개"
   todos: Todo[];
-  setSession: (id: string) => void;
-  start: () => void;
-  pause: () => void;
-  tick: () => void;
-  resetWaterProgress: () => void;
+  startSession: (sessionId: string, startedAtMs: number) => void;
+  complete: () => void;
+  reset: () => void;
   addTodo: (text: string) => void;
   toggleTodo: (id: string) => void;
   removeTodo: (id: string) => void;
-  reset: () => void;
 }
 
 let _interval: ReturnType<typeof setInterval> | null = null;
 
+export const CYCLE_SEC = Number(process.env.NEXT_PUBLIC_CYCLE_SEC ?? 1800);
+export const CYCLE_MS = CYCLE_SEC * 1000;
+
 export const useTimerStore = create<TimerState>((set, get) => ({
   sessionId: null,
-  status: 'IDLE',
-  elapsedSec: 0,
-  autoPaused: false,
+  startedAt: null,
+  status: 'idle',
+  cycleCount: 0,
   todos: [],
 
-  setSession: (id) => set({ sessionId: id }),
-
-  start: () => {
-    set({ status: 'RUNNING', autoPaused: false });
+  startSession: (sessionId, startedAtMs) => {
     if (_interval) clearInterval(_interval);
-    _interval = setInterval(() => get().tick(), 1000);
+    set({ sessionId, startedAt: startedAtMs, status: 'running' });
+    _interval = setInterval(() => {
+      const { startedAt, status } = get();
+      if (status !== 'running' || !startedAt) return;
+      if (Date.now() - startedAt >= CYCLE_MS) {
+        get().complete();
+      } else {
+        // 리렌더 트리거 (elapsedSec 표시용)
+        set({});
+      }
+    }, 1000);
   },
 
-  pause: () => {
-    set({ status: 'PAUSED' });
+  complete: () => {
     if (_interval) { clearInterval(_interval); _interval = null; }
+    set({ status: 'complete' });
   },
 
-  tick: () => {
-    const newSec = get().elapsedSec + 1;
-    if (newSec % 1800 === 0) {
-      if (_interval) { clearInterval(_interval); _interval = null; }
-      set({ elapsedSec: newSec, status: 'PAUSED', autoPaused: true });
-    } else {
-      set({ elapsedSec: newSec });
-    }
+  reset: () => {
+    if (_interval) { clearInterval(_interval); _interval = null; }
+    set((s) => ({
+      sessionId: s.sessionId,   // sessionId는 유지 (재개 시 같은 세션)
+      startedAt: null,
+      status: 'idle',
+      cycleCount: s.cycleCount + 1,
+    }));
   },
-
-  // 물주기 성공 후 다음 30분 주기 리셋 + 자동정지 해제
-  resetWaterProgress: () => set((s) => ({
-    elapsedSec: Math.max(0, s.elapsedSec - 1800),
-    autoPaused: false,
-  })),
 
   addTodo: (text) =>
     set((s) => ({
@@ -66,9 +67,4 @@ export const useTimerStore = create<TimerState>((set, get) => ({
     })),
   removeTodo: (id) =>
     set((s) => ({ todos: s.todos.filter((t) => t.id !== id) })),
-
-  reset: () => {
-    if (_interval) { clearInterval(_interval); _interval = null; }
-    set({ sessionId: null, status: 'IDLE', elapsedSec: 0, autoPaused: false, todos: [] });
-  },
 }));
