@@ -49,7 +49,7 @@ export function useActivityStream() {
     })();
 
     const connect = () => {
-      es = new EventSource(`${SERVER_URL}/map/activity-stream`);
+      es = new EventSource(`${SERVER_URL}/sse/activity-stream`);
 
       es.addEventListener('users:overlay', (e: MessageEvent<string>) => {
         const users = JSON.parse(e.data) as MapUser[];

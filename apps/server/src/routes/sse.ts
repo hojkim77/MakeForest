@@ -1,10 +1,14 @@
 import { Router, Request, Response } from 'express';
 import type { SSEEvent } from '@makeforest/types';
+import { buildUsersOverlay } from './map';
 
 export const sseRouter = Router();
 
-// SSE 연결 클라이언트 맵: regionCode → Set<Response>
+// regionCode 기반 클라이언트 맵: regionCode → Set<Response>
 const clients = new Map<string, Set<Response>>();
+
+// activity-stream 구독 클라이언트
+const activityClients = new Set<Response>();
 
 export function broadcastToRegion(regionCode: string, event: SSEEvent): void {
   const room = clients.get(regionCode);
@@ -16,6 +20,20 @@ export function broadcastToRegion(regionCode: string, event: SSEEvent): void {
 export function broadcastToAll(event: SSEEvent): void {
   const payload = `event: ${event.type}\ndata: ${JSON.stringify(event.data)}\n\n`;
   clients.forEach((room) => room.forEach((res) => res.write(payload)));
+}
+
+export function broadcastHeatmap(activity: Record<string, number>): void {
+  const payload = `event: heatmap:update\ndata: ${JSON.stringify(activity)}\n\n`;
+  activityClients.forEach((res) => res.write(payload));
+}
+
+export function broadcastUsersOverlay(): void {
+  void buildUsersOverlay()
+    .then((users) => {
+      const payload = `event: users:overlay\ndata: ${JSON.stringify(users)}\n\n`;
+      activityClients.forEach((res) => res.write(payload));
+    })
+    .catch((err) => console.error('[sse] broadcastUsersOverlay error:', err));
 }
 
 // GET /sse/:regionCode
@@ -30,11 +48,26 @@ sseRouter.get('/:regionCode', async (req: Request, res: Response) => {
   if (!clients.has(regionCode)) clients.set(regionCode, new Set());
   clients.get(regionCode)!.add(res);
 
-  // 핑 (30초 간격, 연결 유지)
   const pingInterval = setInterval(() => res.write(': ping\n\n'), 30_000);
 
   req.on('close', () => {
     clearInterval(pingInterval);
     clients.get(regionCode)?.delete(res);
+  });
+});
+
+// GET /sse/activity-stream
+sseRouter.get('/activity-stream', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  activityClients.add(res);
+
+  const ping = setInterval(() => res.write(': ping\n\n'), 30_000);
+
+  req.on('close', () => {
+    clearInterval(ping);
+    activityClients.delete(res);
   });
 });

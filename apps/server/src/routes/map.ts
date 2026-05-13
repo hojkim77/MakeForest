@@ -9,15 +9,6 @@ export { toPixel, GRID_W, GRID_H, LAT_MIN, LAT_MAX, LNG_MIN, LNG_MAX };
 
 export const mapRouter = Router();
 
-// activity-stream 구독 클라이언트
-const activityClients = new Set<Response>();
-
-export function broadcastHeatmap(activity: Record<string, number>): void {
-  const payload = `event: heatmap:update\ndata: ${JSON.stringify(activity)}\n\n`;
-  activityClients.forEach((res) => res.write(payload));
-}
-
-
 export async function buildUsersOverlay(): Promise<MapUser[]> {
   const today = getKstDateString();
 
@@ -63,15 +54,6 @@ export async function buildUsersOverlay(): Promise<MapUser[]> {
   return result;
 }
 
-export function broadcastUsersOverlay(): void {
-  void buildUsersOverlay()
-    .then((users) => {
-      const payload = `event: users:overlay\ndata: ${JSON.stringify(users)}\n\n`;
-      activityClients.forEach((res) => res.write(payload));
-    })
-    .catch((err) => console.error('[map] broadcastUsersOverlay error:', err));
-}
-
 // GET /map/pixel-data — 전체 행정동 픽셀 좌표 (24h 캐시)
 mapRouter.get('/pixel-data', async (_req: Request, res: Response) => {
   const dongs = await prisma.dong.findMany({
@@ -115,18 +97,3 @@ mapRouter.get('/snapshot', async (_req: Request, res: Response) => {
   return res.json({ heatmap, users });
 });
 
-// GET /map/activity-stream — SSE 실시간 이벤트 (heatmap:update, users:overlay, water:toast)
-mapRouter.get('/activity-stream', (req: Request, res: Response) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-  activityClients.add(res);
-
-  const ping = setInterval(() => res.write(': ping\n\n'), 30_000);
-
-  req.on('close', () => {
-    clearInterval(ping);
-    activityClients.delete(res);
-  });
-});

@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
 import { redis, RedisKeys, setSession, getSession, addActiveDong, getDongActiveCount, addDailyOverlaySession } from '@makeforest/redis';
-import { broadcastHeatmap, broadcastUsersOverlay } from './map';
+import { broadcastHeatmap, broadcastUsersOverlay } from './sse';
 import { getKstDateString } from './water.logic';
 import type { SessionAction } from '@makeforest/types';
 

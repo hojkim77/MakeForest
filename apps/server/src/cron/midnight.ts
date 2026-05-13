@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import { prisma } from '@makeforest/db';
 import { redis, RedisKeys, removeActiveDong } from '@makeforest/redis';
-import { broadcastHeatmap } from '../routes/map';
+import { broadcastHeatmap } from '../routes/sse';
 import { calcPersonalStage, getKstDateString } from '../routes/water.logic';
 import { toPixel, GRID_W, GRID_H } from '../routes/map.logic';
 
