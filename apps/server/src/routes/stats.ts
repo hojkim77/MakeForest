@@ -11,13 +11,13 @@ statsRouter.get('/focus', async (req: Request, res: Response) => {
     if (!userId) return res.status(400).json({ error: 'userId required' });
 
     const today = getKstDateString();
-    const dailySessions = await prisma.dailySession.findMany({
+    const sessions = await prisma.focusSession.findMany({
       where: { userId },
-      select: { date: true, elapsedSec: true, waterCount: true },
+      select: { date: true, totalElapsedSec: true, waterCount: true },
     });
 
-    const totalFocusSec = dailySessions.reduce((sum, s) => sum + s.elapsedSec, 0);
-    const waterDates = dailySessions.filter(s => s.waterCount > 0).map(s => s.date);
+    const totalFocusSec = sessions.reduce((sum, s) => sum + s.totalElapsedSec, 0);
+    const waterDates = sessions.filter(s => s.waterCount > 0).map(s => s.date);
     const { current: currentStreak, max: maxStreak } = calcStreak(waterDates, today);
 
     return res.json({ totalFocusSec, currentStreak, maxStreak });
@@ -35,7 +35,7 @@ statsRouter.get('/weekly', async (req: Request, res: Response) => {
 
     const today = getKstDateString();
     const fourWeeksAgo = addDays(today, -28);
-    const recentSessions = await prisma.dailySession.findMany({
+    const sessions = await prisma.focusSession.findMany({
       where: { userId, date: { gte: fourWeeksAgo } },
       select: { date: true, waterCount: true },
     });
@@ -43,7 +43,7 @@ statsRouter.get('/weekly', async (req: Request, res: Response) => {
     const weeklyData = [1, 2, 3, 4].map((weekNum) => {
       const endDate = addDays(today, -(weekNum - 1) * 7);
       const startDate = addDays(today, -weekNum * 7 + 1);
-      const weekWater = recentSessions
+      const weekWater = sessions
         .filter(s => s.date >= startDate && s.date <= endDate)
         .reduce((sum, s) => sum + s.waterCount, 0);
       return { week: 5 - weekNum, waterCount: weekWater };
@@ -73,7 +73,7 @@ statsRouter.get('/rank', async (req: Request, res: Response) => {
 
     if (dongUserIds.length === 0) return res.json({ neighborhoodRank: 0, neighborhoodTotal: 0 });
 
-    const ranked = await prisma.dailySession.groupBy({
+    const ranked = await prisma.focusSession.groupBy({
       by: ['userId'],
       where: { userId: { in: dongUserIds } },
       _sum: { waterCount: true },

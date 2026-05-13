@@ -44,20 +44,20 @@ async function getCachedUsersOverlay(): Promise<MapUser[]> {
 export async function buildUsersOverlay(): Promise<MapUser[]> {
   const today = getKstDateString();
 
-  // RUNNING / PAUSED 세션 조회 (미종료 세션만)
+  // RUNNING 세션 조회
   const activeSessions = await prisma.focusSession.findMany({
-    where: { status: { in: ['RUNNING', 'PAUSED'] } },
+    where: { status: 'RUNNING' },
     select: { userId: true, status: true, todos: true },
   });
 
   const activeUserIds = new Set(activeSessions.map((s) => s.userId));
 
-  // 오늘 활동했지만 현재 활성 세션 없는 유저 (IDLE) — DailySession 기준
-  const idleDailies = await prisma.dailySession.findMany({
-    where: { date: today, userId: { notIn: [...activeUserIds] }, elapsedSec: { gt: 0 } },
+  // 오늘 활동했지만 현재 RUNNING 세션 없는 유저 (IDLE) — FocusSession.totalElapsedSec 기준
+  const idleSessions = await prisma.focusSession.findMany({
+    where: { date: today, userId: { notIn: [...activeUserIds] }, totalElapsedSec: { gt: 0 } },
     select: { userId: true },
   });
-  const idleUserIds = idleDailies.map((d) => d.userId);
+  const idleUserIds = idleSessions.map((s) => s.userId);
 
   const allUserIds = [...activeUserIds, ...idleUserIds];
   if (allUserIds.length === 0) return [];
@@ -86,12 +86,12 @@ export async function buildUsersOverlay(): Promise<MapUser[]> {
     creatures.map((c) => [c.userId, c]),
   );
 
-  // 오늘 일일 물주기 횟수 (표시·순위용)
-  const dailies = await prisma.dailySession.findMany({
+  // 오늘 물주기 횟수 (표시·순위용)
+  const todaySessions = await prisma.focusSession.findMany({
     where: { date: today, userId: { in: allUserIds } },
     select: { userId: true, waterCount: true },
   });
-  const dailyWaterMap = new Map(dailies.map((d) => [d.userId, d.waterCount]));
+  const dailyWaterMap = new Map(todaySessions.map((s) => [s.userId, s.waterCount]));
 
   const unranked: Omit<MapUser, 'neighborhoodRank'>[] = [];
 
@@ -113,7 +113,7 @@ export async function buildUsersOverlay(): Promise<MapUser[]> {
       waterCount: creature.waterCount,
       todayWaterCount: dailyWaterMap.get(session.userId) ?? 0,
       creatureStage: creature.stage,
-      sessionStatus: session.status === 'RUNNING' ? 'RUNNING' : 'PAUSED',
+      sessionStatus: 'RUNNING',
       todos,
     });
   }

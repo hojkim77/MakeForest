@@ -110,7 +110,7 @@ testRouter.delete('/cleanup', requireInternalAuth, async (_req: Request, res: Re
         userId: { in: testUserIds },
         status: 'RUNNING',
       },
-      data: { status: 'COMPLETED', endedAt: new Date() },
+      data: { status: 'COMPLETED' },
     });
 
     return res.json({ cleaned: runningSessions.length });
