@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
-import { redis, RedisKeys, setSession, getSession, addActiveDong, removeActiveDong, getDongActiveCount } from '@makeforest/redis';
-import { broadcastHeatmap } from './map';
+import { redis, RedisKeys, setSession, getSession, addActiveDong, getDongActiveCount, addDailyOverlaySession } from '@makeforest/redis';
+import { broadcastHeatmap, broadcastUsersOverlay } from './map';
 import { getKstDateString } from './water.logic';
 import type { SessionAction } from '@makeforest/types';
 
@@ -41,37 +41,43 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
     // Redis 캐싱 + SSE 브로드캐스트
     void (async () => {
       try {
-        const [user, dong, creature] = await Promise.all([
-          prisma.user.findUnique({
-            where: { id: userId },
-            select: { nickname: true, todosPublic: true },
-          }),
-          prisma.dong.findUnique({ where: { code: dongCode }, select: { lat: true, lng: true } }),
-          prisma.userCreature.findUnique({
-            where: { userId },
-            select: { waterCount: true, stage: true },
-          }),
-        ]);
-
-        const { toPixel } = await import('./map');
-        const { pixelX, pixelY } = dong ? toPixel(dong.lat, dong.lng) : { pixelX: 0, pixelY: 0 };
-
         const cached = await getSession(session.id);
-        await setSession(session.id, {
-          userId,
-          dongCode,
-          startedAt: session.startedAt.toISOString(),
-          todos: todos as never,
-          status: 'RUNNING',
-          nickname: cached?.nickname ?? user?.nickname ?? '누군가',
-          pixelX: cached?.pixelX ?? pixelX,
-          pixelY: cached?.pixelY ?? pixelY,
-          waterCount: cached?.waterCount ?? creature?.waterCount ?? 0,
-          creatureStage: cached?.creatureStage ?? creature?.stage ?? 0,
-          todosPublic: user?.todosPublic ?? true,
-        });
+        if (cached) {
+          // 이미 캐시 있음 — startedAt과 status만 갱신
+          await setSession(session.id, { ...cached, startedAt: session.startedAt.toISOString(), status: 'RUNNING' });
+        } else {
+          // 신규 세션 — 전체 초기화
+          const [user, dong, creature] = await Promise.all([
+            prisma.user.findUnique({
+              where: { id: userId },
+              select: { nickname: true, todosPublic: true },
+            }),
+            prisma.dong.findUnique({ where: { code: dongCode }, select: { lat: true, lng: true } }),
+            prisma.userCreature.findUnique({
+              where: { userId },
+              select: { waterCount: true, stage: true },
+            }),
+          ]);
+          const { toPixel } = await import('./map');
+          const { pixelX, pixelY } = dong ? toPixel(dong.lat, dong.lng) : { pixelX: 0, pixelY: 0 };
+          await setSession(session.id, {
+            userId,
+            dongCode,
+            startedAt: session.startedAt.toISOString(),
+            todos: todos as never,
+            status: 'RUNNING',
+            nickname: user?.nickname ?? '누군가',
+            pixelX,
+            pixelY,
+            waterCount: creature?.waterCount ?? 0,
+            todayWaterCount: session.waterCount ?? 0,
+            creatureStage: creature?.stage ?? 0,
+            todosPublic: user?.todosPublic ?? true,
+          });
+        }
 
         await addActiveDong(dongCode, session.id);
+        await addDailyOverlaySession(today, session.id);
 
         const activeCount = await getDongActiveCount(dongCode);
         await redis.hset(RedisKeys.heatmapDong(), { [dongCode]: activeCount });
@@ -79,6 +85,7 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
         const activity: Record<string, number> = {};
         for (const [code, cnt] of Object.entries(heatmapRaw)) activity[code] = Number(cnt);
         broadcastHeatmap(activity);
+        broadcastUsersOverlay();
       } catch (err) {
         console.error('[sessions] Redis/SSE sync error:', err);
       }
@@ -116,17 +123,18 @@ sessionsRouter.patch('/:id', async (req: Request, res: Response) => {
       data: { status: newStatus },
     });
 
-    // 활성 세트에서 제거 + 히트맵 + SSE 브로드캐스트
+    // Redis cache status 업데이트 + SSE 브로드캐스트
     void (async () => {
       try {
-        await removeActiveDong(session.dongCode, id);
-
-        const activeCount = await getDongActiveCount(session.dongCode);
-        await redis.hset(RedisKeys.heatmapDong(), { [session.dongCode]: activeCount });
-        const heatmapRaw = await redis.hgetall(RedisKeys.heatmapDong()) ?? {};
-        const activity: Record<string, number> = {};
-        for (const [code, cnt] of Object.entries(heatmapRaw)) activity[code] = Number(cnt);
-        broadcastHeatmap(activity);
+        const cached = await getSession(id);
+        if (cached) {
+          if (action === 'complete') {
+            await setSession(id, { ...cached, status: 'COMPLETED' }, 25 * 3600);
+          } else {
+            await setSession(id, { ...cached, status: 'ABANDONED' });
+          }
+        }
+        broadcastUsersOverlay();
       } catch (err) {
         console.error('[sessions] Redis/SSE sync error:', err);
       }

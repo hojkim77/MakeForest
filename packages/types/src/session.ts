@@ -36,11 +36,12 @@ export interface ActiveSessionCache {
   dongCode: string;
   startedAt: string;
   todos: Todo[];
-  status: SessionStatus;
+  status: SessionStatus | 'IDLE';
   nickname: string;
   pixelX: number;
   pixelY: number;
-  waterCount: number;
+  waterCount: number;       // 생애 누적
+  todayWaterCount: number;  // 오늘 물주기 횟수
   creatureStage: number;
   todosPublic: boolean;
 }

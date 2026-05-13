@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
 import { broadcastToRegion } from './sse';
-import { scheduleUsersOverlayBroadcast } from './map';
+import { broadcastUsersOverlay } from './map';
 import { calcPersonalStage, getKstDateString } from './water.logic';
 import { regionOf } from '@makeforest/types';
 import { getSession, setSession, getActiveDongSessions } from '@makeforest/redis';
@@ -84,12 +84,14 @@ waterRouter.post('/', async (req: Request, res: Response) => {
             await setSession(sid, {
               ...cached,
               waterCount: userCreature.waterCount,
+              todayWaterCount: newWaterCount,
               creatureStage: userCreature.stage,
-            });
+              status: 'IDLE',
+            }, 25 * 3600);
             break;
           }
         }
-        scheduleUsersOverlayBroadcast();
+        broadcastUsersOverlay();
       } catch (err) {
         console.error('[water] Redis/SSE sync error:', err);
       }
