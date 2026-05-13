@@ -38,11 +38,23 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 function setupEmptyAlias() {
-  mockFetch.mockResolvedValue({ json: () => Promise.resolve({}) });
+  mockFetch.mockImplementation((url: string) =>
+    Promise.resolve({
+      json: () => Promise.resolve(
+        url.includes('/map/snapshot') ? { heatmap: {}, users: [] } : {}
+      ),
+    })
+  );
 }
 
 function setupAlias(alias: Record<string, string>) {
-  mockFetch.mockResolvedValue({ json: () => Promise.resolve(alias) });
+  mockFetch.mockImplementation((url: string) =>
+    Promise.resolve({
+      json: () => Promise.resolve(
+        url.includes('/map/snapshot') ? { heatmap: {}, users: [] } : alias
+      ),
+    })
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

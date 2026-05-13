@@ -1,9 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
-import { redis, RedisKeys } from '@makeforest/redis';
+import { redis, RedisKeys, getSession, getDailyOverlaySessions } from '@makeforest/redis';
 import { toPixel, GRID_W, GRID_H, LAT_MIN, LAT_MAX, LNG_MIN, LNG_MAX } from './map.logic';
 import { getKstDateString } from './water.logic';
-import type { MapUser, Todo } from '@makeforest/types';
+import type { MapUser } from '@makeforest/types';
 
 export { toPixel, GRID_W, GRID_H, LAT_MIN, LAT_MAX, LNG_MIN, LNG_MAX };
 
@@ -17,128 +17,30 @@ export function broadcastHeatmap(activity: Record<string, number>): void {
   activityClients.forEach((res) => res.write(payload));
 }
 
-// In-flight coalescing + 5s cache: 동시에 여러 SSE 연결이 재접속해도 DB 쿼리 1회만 실행
-let pendingOverlayBuild: Promise<MapUser[]> | null = null;
-let overlayCache: MapUser[] = [];
-let overlayCachedAt = 0;
-
-async function getCachedUsersOverlay(): Promise<MapUser[]> {
-  const now = Date.now();
-  if (now - overlayCachedAt < 5_000) return overlayCache;
-  if (!pendingOverlayBuild) {
-    pendingOverlayBuild = buildUsersOverlay()
-      .then((users) => {
-        overlayCache = users;
-        overlayCachedAt = Date.now();
-        pendingOverlayBuild = null;
-        return users;
-      })
-      .catch((err) => {
-        pendingOverlayBuild = null;
-        throw err;
-      });
-  }
-  return pendingOverlayBuild;
-}
 
 export async function buildUsersOverlay(): Promise<MapUser[]> {
   const today = getKstDateString();
 
-  // RUNNING 세션 조회
-  const activeSessions = await prisma.focusSession.findMany({
-    where: { status: 'RUNNING' },
-    select: { userId: true, status: true, todos: true },
-  });
+  const sessionIds = await getDailyOverlaySessions(today);
+  if (sessionIds.length === 0) return [];
 
-  const activeUserIds = new Set(activeSessions.map((s) => s.userId));
-
-  // 오늘 활동했지만 현재 RUNNING 세션 없는 유저 (IDLE) — FocusSession.totalElapsedSec 기준
-  const idleSessions = await prisma.focusSession.findMany({
-    where: { date: today, userId: { notIn: [...activeUserIds] }, totalElapsedSec: { gt: 0 } },
-    select: { userId: true },
-  });
-  const idleUserIds = idleSessions.map((s) => s.userId);
-
-  const allUserIds = [...activeUserIds, ...idleUserIds];
-  if (allUserIds.length === 0) return [];
-
-  // 유저 정보와 dongCode 조회
-  const users = await prisma.user.findMany({
-    where: { id: { in: allUserIds } },
-    select: { id: true, nickname: true, dongCode: true, todosPublic: true },
-  });
-
-  const dongCodes = users.map((u) => u.dongCode).filter(Boolean) as string[];
-  const dongs = await prisma.dong.findMany({
-    where: { code: { in: dongCodes } },
-    select: { code: true, lat: true, lng: true },
-  });
-
-  const userMap = new Map(users.map((u) => [u.id, u]));
-  const dongMap = new Map(dongs.map((d) => [d.code, d]));
-
-  // 영구 생명체 조회 (누적 waterCount, stage)
-  const creatures = await prisma.userCreature.findMany({
-    where: { userId: { in: allUserIds } },
-    select: { userId: true, waterCount: true, stage: true },
-  });
-  const creatureMap = new Map<string, { waterCount: number; stage: number }>(
-    creatures.map((c) => [c.userId, c]),
+  const caches = (await Promise.all(sessionIds.map((sid) => getSession(sid)))).filter(
+    (s): s is NonNullable<typeof s> => s !== null && (s.status === 'RUNNING' || s.status === 'COMPLETED' || s.status === 'IDLE'),
   );
+  if (caches.length === 0) return [];
 
-  // 오늘 물주기 횟수 (표시·순위용)
-  const todaySessions = await prisma.focusSession.findMany({
-    where: { date: today, userId: { in: allUserIds } },
-    select: { userId: true, waterCount: true },
-  });
-  const dailyWaterMap = new Map(todaySessions.map((s) => [s.userId, s.waterCount]));
-
-  const unranked: Omit<MapUser, 'neighborhoodRank'>[] = [];
-
-  for (const session of activeSessions) {
-    const user = userMap.get(session.userId);
-    if (!user?.dongCode) continue;
-    const dong = dongMap.get(user.dongCode);
-    if (!dong) continue;
-    const { pixelX, pixelY } = toPixel(dong.lat, dong.lng);
-    const creature = creatureMap.get(session.userId) ?? { waterCount: 0, stage: 0 };
-    const todos = user.todosPublic ? (session.todos as unknown as Todo[]) : [];
-
-    unranked.push({
-      userId: session.userId,
-      nickname: user.nickname,
-      dongCode: user.dongCode,
-      pixelX,
-      pixelY,
-      waterCount: creature.waterCount,
-      todayWaterCount: dailyWaterMap.get(session.userId) ?? 0,
-      creatureStage: creature.stage,
-      sessionStatus: 'RUNNING',
-      todos,
-    });
-  }
-
-  for (const userId of idleUserIds) {
-    const user = userMap.get(userId);
-    if (!user?.dongCode) continue;
-    const dong = dongMap.get(user.dongCode);
-    if (!dong) continue;
-    const { pixelX, pixelY } = toPixel(dong.lat, dong.lng);
-    const creature = creatureMap.get(userId) ?? { waterCount: 0, stage: 0 };
-
-    unranked.push({
-      userId,
-      nickname: user.nickname,
-      dongCode: user.dongCode,
-      pixelX,
-      pixelY,
-      waterCount: creature.waterCount,
-      todayWaterCount: dailyWaterMap.get(userId) ?? 0,
-      creatureStage: creature.stage,
-      sessionStatus: 'IDLE',
-      todos: [],
-    });
-  }
+  const unranked: Omit<MapUser, 'neighborhoodRank'>[] = caches.map((s) => ({
+    userId: s.userId,
+    nickname: s.nickname,
+    dongCode: s.dongCode,
+    pixelX: s.pixelX,
+    pixelY: s.pixelY,
+    waterCount: s.waterCount,
+    todayWaterCount: s.todayWaterCount,
+    creatureStage: s.creatureStage,
+    sessionStatus: s.status === 'RUNNING' ? 'RUNNING' : s.status === 'IDLE' ? 'IDLE' : 'COMPLETE',
+    todos: s.todosPublic ? s.todos : [],
+  }));
 
   // 같은 dongCode 내 오늘 물주기 기준 순위 (1-based, 동률 처리 포함)
   const dongRankMap = new Map<string, number[]>();
@@ -161,21 +63,13 @@ export async function buildUsersOverlay(): Promise<MapUser[]> {
   return result;
 }
 
-// 디바운스: 물주기/세션 이벤트가 집중될 때 DB 쿼리 중복 방지 (1초 내 중복 호출 무시)
-let overlayBroadcastTimer: ReturnType<typeof setTimeout> | null = null;
-
-export function scheduleUsersOverlayBroadcast(): void {
-  if (overlayBroadcastTimer) return;
-  overlayBroadcastTimer = setTimeout(async () => {
-    overlayBroadcastTimer = null;
-    try {
-      const users = await getCachedUsersOverlay();
+export function broadcastUsersOverlay(): void {
+  void buildUsersOverlay()
+    .then((users) => {
       const payload = `event: users:overlay\ndata: ${JSON.stringify(users)}\n\n`;
       activityClients.forEach((res) => res.write(payload));
-    } catch (err) {
-      console.error('[map] broadcastUsersOverlay error:', err);
-    }
-  }, 1000);
+    })
+    .catch((err) => console.error('[map] broadcastUsersOverlay error:', err));
 }
 
 // GET /map/pixel-data — 전체 행정동 픽셀 좌표 (24h 캐시)
@@ -206,7 +100,22 @@ mapRouter.get('/activity', async (_req: Request, res: Response) => {
   res.json(activity);
 });
 
-// GET /map/activity-stream — SSE로 동별 활성도 + 유저 오버레이 실시간 전송 (10초 간격)
+// GET /map/snapshot — 초기 로드용 스냅샷 (heatmap + users overlay)
+mapRouter.get('/snapshot', async (_req: Request, res: Response) => {
+  const [heatmapRaw, users] = await Promise.all([
+    redis.hgetall(RedisKeys.heatmapDong()),
+    buildUsersOverlay(),
+  ]);
+  const heatmap: Record<string, number> = {};
+  if (heatmapRaw) {
+    for (const [code, count] of Object.entries(heatmapRaw)) {
+      heatmap[code] = Number(count);
+    }
+  }
+  return res.json({ heatmap, users });
+});
+
+// GET /map/activity-stream — SSE 실시간 이벤트 (heatmap:update, users:overlay, water:toast)
 mapRouter.get('/activity-stream', (req: Request, res: Response) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -214,32 +123,9 @@ mapRouter.get('/activity-stream', (req: Request, res: Response) => {
   res.flushHeaders();
   activityClients.add(res);
 
-  const sendSnapshot = async () => {
-    try {
-      const heatmapRaw = await redis.hgetall(RedisKeys.heatmapDong());
-      const activity: Record<string, number> = {};
-      if (heatmapRaw) {
-        for (const [dongCode, count] of Object.entries(heatmapRaw)) {
-          activity[dongCode] = Number(count);
-        }
-      }
-      res.write(`event: heatmap:update\ndata: ${JSON.stringify(activity)}\n\n`);
-
-      const users = await getCachedUsersOverlay();
-      res.write(`event: users:overlay\ndata: ${JSON.stringify(users)}\n\n`);
-    } catch (err) {
-      console.error('[map] sendSnapshot error:', err);
-    }
-  };
-
-  // 초기 스냅샷 (연결 직후)
-  void sendSnapshot();
-
-  const interval = setInterval(() => void sendSnapshot(), 10_000);
   const ping = setInterval(() => res.write(': ping\n\n'), 30_000);
 
   req.on('close', () => {
-    clearInterval(interval);
     clearInterval(ping);
     activityClients.delete(res);
   });
