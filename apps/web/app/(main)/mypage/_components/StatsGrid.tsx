@@ -1,3 +1,5 @@
+import { formatDuration } from '@/shared/utils/format';
+
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
 
 interface FocusStats {
@@ -11,13 +13,6 @@ interface RankStats {
   neighborhoodTotal: number;
 }
 
-function formatFocusTime(sec: number): string {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  if (h === 0) return `${m}m`;
-  if (m === 0) return `${h}h`;
-  return `${h}h ${m}m`;
-}
 
 export async function StatsGrid({ userId, dongCode }: { userId: string; dongCode?: string | undefined }) {
   const rankParams = new URLSearchParams({ userId });
@@ -31,7 +26,7 @@ export async function StatsGrid({ userId, dongCode }: { userId: string; dongCode
   const cards = [
     {
       label: 'Focus Time',
-      value: formatFocusTime(focus.totalFocusSec),
+      value: formatDuration(focus.totalFocusSec),
       sub: '누적 집중 시간',
     },
     {

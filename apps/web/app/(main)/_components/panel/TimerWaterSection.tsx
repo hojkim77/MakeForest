@@ -5,17 +5,10 @@ import { useSession } from 'next-auth/react';
 import { useMapStore, useTimerStore, useWaterStore } from '@/shared/store';
 import { CYCLE_MS, CYCLE_SEC } from '@/shared/store/timerStore';
 import { Icon } from '@/shared/components/ui/Icon';
+import { formatDuration } from '@/shared/utils/format';
 
 const TOTAL_SEGMENTS = 12;
 const DAILY_MAX_SEC = TOTAL_SEGMENTS * CYCLE_SEC;
-
-function formatDuration(sec: number) {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  if (h > 0 && m > 0) return `${h}h ${m}m`;
-  if (h > 0) return `${h}h`;
-  return `${m}m`;
-}
 
 function formatTimer(sec: number) {
   const m = Math.floor(sec / 60);

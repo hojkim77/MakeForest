@@ -9,15 +9,7 @@ import { TaskList } from './TaskList';
 import { NeighborhoodStats } from './NeighborhoodStats';
 import { WaterToast } from './WaterToast';
 import { LoginPrompt } from './LoginPrompt';
-
-function getKstDateString(): string {
-  return new Date().toLocaleDateString('ko-KR', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).replace(/\. /g, '-').replace(/\.$/, '');
-}
+import { getKstDateString } from '@/shared/utils/date';
 
 export async function Panel() {
   const session = await auth();
