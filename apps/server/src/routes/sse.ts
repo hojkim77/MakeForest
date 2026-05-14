@@ -36,8 +36,24 @@ export function broadcastUsersOverlay(): void {
     .catch((err) => console.error('[sse] broadcastUsersOverlay error:', err));
 }
 
+// GET /sse/activity-stream
+sseRouter.get('/activity-stream', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  activityClients.add(res);
+
+  const ping = setInterval(() => res.write(': ping\n\n'), 30_000);
+
+  req.on('close', () => {
+    clearInterval(ping);
+    activityClients.delete(res);
+  });
+});
+
 // GET /sse/:regionCode
-sseRouter.get('/:regionCode', async (req: Request, res: Response) => {
+sseRouter.get('/:regionCode(\\d+)', async (req: Request, res: Response) => {
   const regionCode = decodeURIComponent(req.params['regionCode'] as string);
 
   res.setHeader('Content-Type', 'text/event-stream');
@@ -56,18 +72,3 @@ sseRouter.get('/:regionCode', async (req: Request, res: Response) => {
   });
 });
 
-// GET /sse/activity-stream
-sseRouter.get('/activity-stream', (req: Request, res: Response) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-  activityClients.add(res);
-
-  const ping = setInterval(() => res.write(': ping\n\n'), 30_000);
-
-  req.on('close', () => {
-    clearInterval(ping);
-    activityClients.delete(res);
-  });
-});
