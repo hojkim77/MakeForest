@@ -52,8 +52,8 @@ sseRouter.get('/activity-stream', (req: Request, res: Response) => {
   });
 });
 
-// GET /sse/:regionCode
-sseRouter.get('/:regionCode(\\d+)', async (req: Request, res: Response) => {
+// GET /sse/:regionCode — '11' 또는 '41:부천시' 형식만 허용
+sseRouter.get('/:regionCode(\\d{2}(:[^/]+)?)', async (req: Request, res: Response) => {
   const regionCode = decodeURIComponent(req.params['regionCode'] as string);
 
   res.setHeader('Content-Type', 'text/event-stream');
