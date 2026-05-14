@@ -1,9 +1,16 @@
+const EXPRESS_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
+const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET ?? '';
+
 async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
+  let mergedInit = init;
+  const isServerRequest = typeof window === 'undefined' && url.startsWith(EXPRESS_URL) && INTERNAL_SECRET
+  if (isServerRequest) {
+    mergedInit = { ...init, headers: { 'x-internal-secret': INTERNAL_SECRET, ...init?.headers } };
+  }
+  const res = await fetch(url, mergedInit);
   if (!res.ok) throw new Error(`${res.status}`);
   return res.json() as Promise<T>;
 }
-
 export const api = {
   get: <T>(url: string, init?: RequestInit) =>
     apiFetch<T>(url, init),
