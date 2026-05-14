@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, type KeyboardEvent } from 'react';
-import { useMapStore, useTimerStore } from '@/store';
-import { Icon } from '@/components/ui/Icon';
+import { useMapStore, useTimerStore } from '@/shared/store';
+import { Icon } from '@/shared/components/ui/Icon';
 
 export function TaskList({ myRegionCode }: { myRegionCode: string | null }) {
   const [input, setInput] = useState('');

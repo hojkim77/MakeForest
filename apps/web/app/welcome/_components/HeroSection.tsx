@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { CreatureSprite } from '@/components/panel/CreatureSprite';
+import { CreatureSprite } from '@/shared/components/ui/CreatureSprite';
 import { SeoulMap } from './SeoulMap';
 
 export function HeroSection() {

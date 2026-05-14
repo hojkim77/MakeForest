@@ -1,7 +1,7 @@
 'use client';
 
-import { useWaterStore } from '@/store';
-import { CreatureSprite, STAGE_LABELS } from './CreatureSprite';
+import { useWaterStore } from '@/shared/store';
+import { CreatureSprite, STAGE_LABELS } from '@/shared/components/ui/CreatureSprite';
 
 export function CreatureSection() {
   const stage = useWaterStore((s) => s.creatureStage);

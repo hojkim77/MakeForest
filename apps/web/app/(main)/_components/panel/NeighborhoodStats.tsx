@@ -1,6 +1,6 @@
 'use client';
 
-import { useMapStore, useWaterStore } from '@/store';
+import { useMapStore, useWaterStore } from '@/shared/store';
 import { regionDisplayName } from '@makeforest/types';
 
 export function NeighborhoodStats({ myRegionCode }: { myRegionCode: string | null }) {

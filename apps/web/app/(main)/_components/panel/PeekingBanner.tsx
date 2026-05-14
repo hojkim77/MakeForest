@@ -1,7 +1,7 @@
 'use client';
 
-import { useMapStore } from '@/store';
-import { Icon } from '@/components/ui/Icon';
+import { useMapStore } from '@/shared/store';
+import { Icon } from '@/shared/components/ui/Icon';
 
 export function PeekingBanner({ myRegionCode }: { myRegionCode: string | null }) {
   const focusedRegionCode = useMapStore((s) => s.focusedRegionCode);

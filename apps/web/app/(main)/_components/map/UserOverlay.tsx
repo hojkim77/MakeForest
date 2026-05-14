@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import type { MapUser } from '@makeforest/types';
-import { CreatureSprite } from '@/components/panel/CreatureSprite';
+import { CreatureSprite } from '@/shared/components/ui/CreatureSprite';
 
 interface UserOverlayProps {
   users: MapUser[];

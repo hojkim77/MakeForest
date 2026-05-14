@@ -1,4 +1,4 @@
-import { CreatureSprite } from '@/components/panel/CreatureSprite';
+import { CreatureSprite } from '@/shared/components/ui/CreatureSprite';
 
 const STAGE_LABELS = ['씨앗', '새싹', '나무1', '나무2', '나무3', '고목', '노거수', '정령수', '신수', '세계수'] as const;
 

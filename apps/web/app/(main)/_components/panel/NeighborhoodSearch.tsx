@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Icon } from '@/components/ui/Icon';
+import { Icon } from '@/shared/components/ui/Icon';
 
 // interface NeighborhoodSearchProps {
 //   onSelect: (dongCode: string, dongName: string) => void;

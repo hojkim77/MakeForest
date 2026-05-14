@@ -1,11 +1,11 @@
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
-import { TopAppBar } from '@/components/ui/TopAppBar';
-import { ProfileHeader, ProfileHeaderSkeleton } from './components/ProfileHeader';
-import { StatsGrid, StatsGridSkeleton } from './components/StatsGrid';
-import { WeeklyChartSection, WeeklyChartSkeleton } from './components/WeeklyChartSection';
-import { MyCreature, MyCreatureSkeleton } from './components/MyCreature';
+import { TopAppBar } from '@/shared/components/ui/TopAppBar';
+import { ProfileHeader, ProfileHeaderSkeleton } from './_components/ProfileHeader';
+import { StatsGrid, StatsGridSkeleton } from './_components/StatsGrid';
+import { WeeklyChartSection, WeeklyChartSkeleton } from './_components/WeeklyChartSection';
+import { MyCreature, MyCreatureSkeleton } from './_components/MyCreature';
 
 export default async function MypagePage() {
   const session = await auth();

@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { usePixelMapData } from '@/hooks/usePixelMapData';
-import { useActivityStore } from '@/store';
+import { usePixelMapData } from '@/shared/hooks/usePixelMapData';
+import { useActivityStore } from '@/shared/store';
 import { UserOverlay } from './UserOverlay';
 import { regionOf } from '@makeforest/types';
 

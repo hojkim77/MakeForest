@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import type { MapUser } from '@makeforest/types';
-import { useActivityStore } from '@/store/activityStore';
+import { useActivityStore } from '@/shared/store/activityStore';
 
 export type ActivityMap = Record<string, number>;
 export type { MapUser };

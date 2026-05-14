@@ -15,8 +15,8 @@ packages/types — Shared type definitions
 | Area | File |
 |---|---|
 | Layout, auth UI, onboarding | `apps/web/CLAUDE.md` |
-| Left panel (my neighborhood / peeking) | `apps/web/components/panel/CLAUDE.md` |
-| Map (pixel mode / forest mode) | `apps/web/components/map/CLAUDE.md` |
+| Left panel (my neighborhood / peeking) | `apps/web/app/(main)/_components/panel/CLAUDE.md` |
+| Map (pixel mode / forest mode) | `apps/web/app/(main)/_components/map/CLAUDE.md` |
 | Timer / watering API | `apps/server/CLAUDE.md` |
 | Midnight batch / fossil / forest accumulation | `apps/server/src/cron/CLAUDE.md` |
 | DB schema / data model | `packages/db/CLAUDE.md` |

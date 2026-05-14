@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useMapStore } from '@/store';
+import { useMapStore } from '@/shared/store';
 
 interface ToastMessage {
   id: number;
