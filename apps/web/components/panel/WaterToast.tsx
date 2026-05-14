@@ -22,7 +22,7 @@ export function WaterToast({ myRegionCode }: { myRegionCode: string | null }) {
   useEffect(() => {
     if (!regionCode) return;
 
-    const es = new EventSource(`${SERVER_URL}/sse/${encodeURIComponent(regionCode)}`);
+    const es = new EventSource(`${SERVER_URL}/sse/activity-stream/regionCode/${encodeURIComponent(regionCode)}`);
 
     es.addEventListener('water:toast', (e) => {
       const data = JSON.parse((e as MessageEvent).data) as { nickname: string };
