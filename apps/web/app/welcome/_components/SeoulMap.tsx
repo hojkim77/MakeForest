@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { CreatureSprite } from '@/components/panel/CreatureSprite';
+import { CreatureSprite } from '@/shared/components/ui/CreatureSprite';
 
 export function SeoulMap() {
   const canvasRef = useRef<HTMLCanvasElement>(null);

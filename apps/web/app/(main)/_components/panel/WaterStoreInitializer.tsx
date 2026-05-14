@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { useWaterStore } from '@/store';
+import { useWaterStore } from '@/shared/store';
 
 interface Props {
   waterCount: number;

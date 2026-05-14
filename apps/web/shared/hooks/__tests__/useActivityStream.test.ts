@@ -1,6 +1,6 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useActivityStream, _resetAliasCache } from '@/hooks/useActivityStream';
-import { useActivityStore } from '@/store/activityStore';
+import { useActivityStream, _resetAliasCache } from '@/shared/hooks/useActivityStream';
+import { useActivityStore } from '@/shared/store/activityStore';
 
 // ── MockEventSource ──────────────────────────────────────────────────────────
 class MockEventSource {

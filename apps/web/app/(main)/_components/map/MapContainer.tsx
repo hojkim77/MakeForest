@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { useMapStore } from '@/store';
-import { useActivityStream } from '@/hooks/useActivityStream';
-import { usePixelPanZoom } from '@/hooks/usePixelPanZoom';
+import { useMapStore } from '@/shared/store';
+import { useActivityStream } from '@/shared/hooks/useActivityStream';
+import { usePixelPanZoom } from '@/shared/hooks/usePixelPanZoom';
 import { PixelMap, type RegionBounds } from './PixelMap';
 import { ForestMap } from './ForestMap';
 

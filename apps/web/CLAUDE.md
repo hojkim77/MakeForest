@@ -1,5 +1,37 @@
 # Web — Layout & Auth UI
 
+## Folder Layout
+
+### Rules
+
+- **Page-local code**: components and hooks used only by a single route live under `app/<route>/_components/` and `app/<route>/_hooks/` (Next.js underscore-prefix opts them out of routing)
+- **Shared code**: anything used across multiple routes lives under `shared/`
+
+### Structure
+
+```
+app/
+  (auth)/onboarding/_components/   ← onboarding-only UI
+  (main)/_components/
+    panel/                         ← panel components (main route only)
+    map/                           ← map components (main route only)
+  (main)/mypage/_components/       ← mypage-only UI
+  welcome/_components/             ← welcome page-only UI
+
+shared/
+  components/
+    ui/                            ← cross-route UI primitives (Icon, TopAppBar, WaterToast, CreatureSprite)
+    PushSubscriber.tsx
+  hooks/                           ← cross-route custom hooks
+  store/                           ← Zustand stores (used across multiple routes)
+  lib/                             ← utilities, KST helpers (populate when first needed)
+```
+
+### Reserved (create only when first populated)
+
+- `shared/types/` — cross-route TypeScript types
+- `shared/constants/` — cross-route constants
+
 ## B. Main Layout
 
 - Fixed split: left panel + right map (ratio is fixed, not adjustable)

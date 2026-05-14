@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useActivityStore } from '@/store';
-import { usePixelMapData } from '@/hooks/usePixelMapData';
-import { useMapStore } from '@/store';
+import { useActivityStore } from '@/shared/store';
+import { usePixelMapData } from '@/shared/hooks/usePixelMapData';
+import { useMapStore } from '@/shared/store';
 import { regionDisplayName, regionOf } from '@makeforest/types';
 
 const LEGEND = [

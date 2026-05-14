@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { CreatureSprite } from '@/components/panel/CreatureSprite';
+import { CreatureSprite } from '@/shared/components/ui/CreatureSprite';
 
 const TOTAL_STEPS = 6;
 const CREATURE_STAGES = [0, 2, 6, 9] as const;

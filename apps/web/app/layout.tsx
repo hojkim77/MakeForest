@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { IBM_Plex_Mono, Inter } from 'next/font/google';
 import { SessionProvider } from 'next-auth/react';
-import { PushSubscriber } from '@/components/PushSubscriber';
+import { PushSubscriber } from '@/shared/components/PushSubscriber';
 import './globals.css';
 
 const monoFont = IBM_Plex_Mono({

@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { TimerWaterSection } from '../TimerWaterSection';
-import { useTimerStore, useWaterStore } from '@/store';
+import { useTimerStore, useWaterStore } from '@/shared/store';
 
 // ── Mock: next-auth ──────────────────────────────────────────────────────────
 jest.mock('next-auth/react', () => ({ useSession: jest.fn() }));
@@ -10,12 +10,12 @@ const mockUseSession = useSession as jest.MockedFunction<typeof useSession>;
 
 // ── Mock: mapStore ───────────────────────────────────────────────────────────
 let mockMapState = { focusedRegionCode: null as string | null, focusRegion: jest.fn() };
-jest.mock('@/store/mapStore', () => ({
+jest.mock('@/shared/store/mapStore', () => ({
   useMapStore: (sel: (s: typeof mockMapState) => unknown) => sel(mockMapState),
 }));
 
 // ── Mock: Icon ───────────────────────────────────────────────────────────────
-jest.mock('@/components/ui/Icon', () => ({
+jest.mock('@/shared/components/ui/Icon', () => ({
   Icon: ({ name }: { name: string }) => <span data-testid={`icon-${name}`} />,
 }));
 

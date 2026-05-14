@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { useMapStore, useTimerStore, useWaterStore } from '@/store';
-import { CYCLE_MS, CYCLE_SEC } from '@/store/timerStore';
-import { Icon } from '@/components/ui/Icon';
+import { useMapStore, useTimerStore, useWaterStore } from '@/shared/store';
+import { CYCLE_MS, CYCLE_SEC } from '@/shared/store/timerStore';
+import { Icon } from '@/shared/components/ui/Icon';
 
 const TOTAL_SEGMENTS = 12;
 const DAILY_MAX_SEC = TOTAL_SEGMENTS * CYCLE_SEC;

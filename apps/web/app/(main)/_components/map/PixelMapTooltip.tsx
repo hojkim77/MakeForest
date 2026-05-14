@@ -1,7 +1,7 @@
 'use client';
 
 import { createPortal } from 'react-dom';
-import type { HoverLabel, TooltipStats } from '@/hooks/useRegionHover';
+import type { HoverLabel, TooltipStats } from '@/shared/hooks/useRegionHover';
 
 interface PixelMapTooltipProps {
   hoverLabel: HoverLabel | null;

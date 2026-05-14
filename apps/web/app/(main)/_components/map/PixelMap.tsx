@@ -1,10 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { usePixelMapData } from '@/hooks/usePixelMapData';
-import { useActivityStore } from '@/store';
-import { useCanvasHighlight } from '@/hooks/useCanvasHighlight';
-import { useRegionHover } from '@/hooks/useRegionHover';
+import { usePixelMapData } from '@/shared/hooks/usePixelMapData';
+import { useActivityStore } from '@/shared/store';
+import { useCanvasHighlight } from '@/shared/hooks/useCanvasHighlight';
+import { useRegionHover } from '@/shared/hooks/useRegionHover';
 import { PixelMapTooltip } from './PixelMapTooltip';
 import { regionOf } from '@makeforest/types';
 import type { RegionBounds } from '@makeforest/types';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMapStore } from '@/store';
+import { useMapStore } from '@/shared/store';
 import { regionDisplayName } from '@makeforest/types';
 
 export function SloganSection({ myRegionCode }: { myRegionCode: string | null }) {

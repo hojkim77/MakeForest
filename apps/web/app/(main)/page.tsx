@@ -1,7 +1,7 @@
-import { TopAppBar } from '@/components/ui/TopAppBar';
-import { Panel } from '@/components/panel/Panel';
-import { MapContainer } from '@/components/map/MapContainer';
-import { MapOverlay } from '@/components/map/MapOverlay';
+import { TopAppBar } from '@/shared/components/ui/TopAppBar';
+import { Panel } from '@/app/(main)/_components/panel/Panel';
+import { MapContainer } from '@/app/(main)/_components/map/MapContainer';
+import { MapOverlay } from '@/app/(main)/_components/map/MapOverlay';
 
 export default function MainPage() {
   return (

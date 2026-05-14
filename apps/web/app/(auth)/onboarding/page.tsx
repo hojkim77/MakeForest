@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { LocationDetectStep, type DetectStatus } from '@/components/onboarding/LocationDetectStep';
-import { LocationSearchStep } from '@/components/onboarding/LocationSearchStep';
+import { LocationDetectStep, type DetectStatus } from './_components/LocationDetectStep';
+import { LocationSearchStep } from './_components/LocationSearchStep';
 import { regionOf } from '@makeforest/types';
 
 type Step = 'detect' | 'search';

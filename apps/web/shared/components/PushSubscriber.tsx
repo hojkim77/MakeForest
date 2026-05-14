@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { usePushNotification } from '@/hooks/usePushNotification';
+import { usePushNotification } from '@/shared/hooks/usePushNotification';
 
 export function PushSubscriber() {
   const { status, data: session } = useSession();
