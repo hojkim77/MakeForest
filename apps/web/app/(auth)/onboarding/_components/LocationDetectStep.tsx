@@ -1,5 +1,3 @@
-'use client';
-
 export type DetectStatus = 'detecting' | 'found' | 'failed' | 'denied';
 
 interface LocationDetectStepProps {

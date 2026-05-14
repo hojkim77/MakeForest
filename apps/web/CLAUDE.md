@@ -42,12 +42,16 @@ shared/
 **Login**
 - Social login only: Kakao / Google
 - Unauthenticated user attempting timer/watering → show `LoginPrompt` inside the panel (no popup)
+- `login/page.tsx` is RSC; interactive buttons are isolated in `login/_components/LoginButtons.tsx` (`'use client'`). Do not add `'use client'` back to the page itself.
+- `(auth)/layout.tsx` injects `<link rel="preconnect">` for Kakao and Google OAuth origins. Keep preconnect here, not in root layout.
 
 **Neighborhood setup (once)**
 - Dedicated screen immediately after first login (Karrot-style flow)
 - Request GPS permission → auto-detect → "Is this OO-dong?" confirmation UI
 - GPS denied or detection failed → guidance text + auto-switch to text search mode
 - One neighborhood only; change flow is not yet implemented
+- `LocationSearchStep` is lazy-loaded via `dynamic()` — only fetched when user enters search step.
+- `LocationSearchStep` has a module-level `searchCache` (Map) for deduplication and an `AbortController` ref to cancel in-flight requests on query change.
 
 ## H. Mypage UI
 

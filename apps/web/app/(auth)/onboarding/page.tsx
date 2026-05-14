@@ -1,19 +1,38 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { LocationDetectStep, type DetectStatus } from './_components/LocationDetectStep';
-import { LocationSearchStep } from './_components/LocationSearchStep';
 import { regionOf } from '@makeforest/types';
 import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 
+const LocationSearchStep = dynamic(
+  () => import('./_components/LocationSearchStep').then((m) => ({ default: m.LocationSearchStep })),
+  { ssr: false },
+);
+
 type Step = 'detect' | 'search';
 
 export default function OnboardingPage() {
+  const router = useRouter();
   const [step, setStep] = useState<Step>('detect');
   const [detectStatus, setDetectStatus] = useState<DetectStatus>('detecting');
   const [detectedDong, setDetectedDong] = useState<{ code: string; name: string } | undefined>();
   const [saving, setSaving] = useState(false);
+
+  // Prefetch main page resources during onboarding wait time
+  useEffect(() => {
+    router.prefetch('/');
+    const link = document.createElement('link');
+    link.rel = 'prefetch';
+    link.href = '/pixel-map.json';
+    link.setAttribute('as', 'fetch');
+    link.setAttribute('crossOrigin', 'anonymous');
+    document.head.appendChild(link);
+    return () => { document.head.removeChild(link); };
+  }, [router]);
 
   // Request GPS on mount, auto-fall-back to search on failure
   useEffect(() => {
