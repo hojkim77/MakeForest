@@ -19,8 +19,8 @@ export async function StatsGrid({ userId, dongCode }: { userId: string; dongCode
   if (dongCode) rankParams.set('dongCode', dongCode);
 
   const [focus, rank] = await Promise.all([
-    api.get<FocusStats>(API_PATHS.SERVER_STATS_FOCUS(userId), { cache: 'no-store' }),
-    api.get<RankStats>(API_PATHS.SERVER_STATS_RANK(rankParams.toString()), { cache: 'no-store' }),
+    api.get<FocusStats>(API_PATHS.SERVER_STATS_FOCUS(userId), { next: { revalidate: 3600 } }),
+    api.get<RankStats>(API_PATHS.SERVER_STATS_RANK(rankParams.toString()), { next: { revalidate: 3600 } }),
   ]);
 
   const cards = [

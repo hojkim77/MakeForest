@@ -8,7 +8,7 @@ interface WeeklyStats {
 }
 
 export async function WeeklyChartSection({ userId }: { userId: string }) {
-  const data = await api.get<WeeklyStats>(API_PATHS.SERVER_STATS_WEEKLY(userId), { cache: 'no-store' });
+  const data = await api.get<WeeklyStats>(API_PATHS.SERVER_STATS_WEEKLY(userId), { next: { revalidate: 3600 } });
   return <WeeklyChartLazy weeklyData={data.weeklyData} weeklyAvg={data.weeklyAvg} />;
 }
 

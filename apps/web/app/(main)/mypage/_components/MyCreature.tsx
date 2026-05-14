@@ -9,7 +9,7 @@ interface UserMe {
 }
 
 export async function MyCreature({ userId }: { userId: string }) {
-  const { userCreature } = await api.get<UserMe>(API_PATHS.SERVER_USER_ME(userId), { cache: 'no-store' });
+  const { userCreature } = await api.get<UserMe>(API_PATHS.SERVER_USER_ME(userId), { next: { revalidate: 3600 } });
 
   const stage = (userCreature?.stage ?? 0) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
   const waterCount = userCreature?.waterCount ?? 0;

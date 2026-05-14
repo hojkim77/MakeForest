@@ -20,7 +20,7 @@ function formatJoinDate(iso: string): string {
 }
 
 export async function ProfileHeader({ userId }: { userId: string }) {
-  const user = await api.get<UserMe>(API_PATHS.SERVER_USER_ME(userId), { cache: 'no-store' });
+  const user = await api.get<UserMe>(API_PATHS.SERVER_USER_ME(userId), { next: { revalidate: 3600 } });
 
   return (
     <section className="bg-surface-container p-6 border border-outline-variant">
