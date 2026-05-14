@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { LocationDetectStep, type DetectStatus } from './_components/LocationDetectStep';
 import { LocationSearchStep } from './_components/LocationSearchStep';
 import { regionOf } from '@makeforest/types';
+import { api } from '@/shared/lib/api';
+import { API_PATHS } from '@/shared/lib/apiPaths';
 
 type Step = 'detect' | 'search';
 
@@ -24,11 +26,9 @@ export default function OnboardingPage() {
       navigator.geolocation.getCurrentPosition(
         async ({ coords }) => {
           try {
-            const res = await fetch(
-              `/api/location/detect?lat=${coords.latitude}&lng=${coords.longitude}`,
+            const dong = await api.get<{ code: string; name: string }>(
+              API_PATHS.LOCATION_DETECT(coords.latitude, coords.longitude),
             );
-            if (!res.ok) throw new Error('no dong');
-            const dong = await res.json() as { code: string; name: string };
             setDetectedDong(dong);
             setDetectStatus('found');
           } catch {
@@ -66,12 +66,7 @@ export default function OnboardingPage() {
   async function saveDong(code: string, name: string) {
     setSaving(true);
     try {
-      const res = await fetch('/api/user/me', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dongCode: code, regionCode: regionOf(code, name) }),
-      });
-      if (!res.ok) throw new Error('save failed');
+      await api.patch(API_PATHS.USER_ME(), { dongCode: code, regionCode: regionOf(code, name) });
       // JWT 쿠키에 dongCode/regionCode 반영 후 하드 내비게이션 — 미들웨어가 새 쿠키를 읽어야 함
       window.location.href = '/';
     } catch {

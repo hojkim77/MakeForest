@@ -1,16 +1,15 @@
 import { CreatureSprite } from '@/shared/components/ui/CreatureSprite';
+import { api } from '@/shared/lib/api';
+import { API_PATHS } from '@/shared/lib/apiPaths';
 
 const STAGE_LABELS = ['씨앗', '새싹', '나무1', '나무2', '나무3', '고목', '노거수', '정령수', '신수', '세계수'] as const;
-
-const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
 
 interface UserMe {
   userCreature: { stage: number; waterCount: number } | null;
 }
 
 export async function MyCreature({ userId }: { userId: string }) {
-  const res = await fetch(`${SERVER_URL}/user/me?userId=${userId}`, { cache: 'no-store' });
-  const { userCreature } = await res.json() as UserMe;
+  const { userCreature } = await api.get<UserMe>(API_PATHS.SERVER_USER_ME(userId), { cache: 'no-store' });
 
   const stage = (userCreature?.stage ?? 0) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
   const waterCount = userCreature?.waterCount ?? 0;

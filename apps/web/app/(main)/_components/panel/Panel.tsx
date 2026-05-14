@@ -1,5 +1,6 @@
 import { auth } from '@/auth';
-import { prisma } from '@makeforest/db';
+import { api } from '@/shared/lib/api';
+import { API_PATHS } from '@/shared/lib/apiPaths';
 import { WaterStoreInitializer } from './WaterStoreInitializer';
 import { PeekingBanner } from './PeekingBanner';
 import { SloganSection } from './SloganSection';
@@ -19,20 +20,14 @@ export async function Panel() {
   let initialWater = { waterCount: 0, creatureStage: 0, growthPercent: 0 };
   if (isLoggedIn && session?.user?.id) {
     const today = getKstDateString();
-    const [focusSession, creature] = await Promise.all([
-      prisma.focusSession.findUnique({
-        where: { userId_date: { userId: session.user.id, date: today } },
-        select: { waterCount: true },
-      }),
-      prisma.userCreature.findUnique({
-        where: { userId: session.user.id },
-        select: { stage: true, waterCount: true },
-      }),
+    const [waterData, userData] = await Promise.all([
+      api.get<{ waterCount: number }>(API_PATHS.SERVER_WATER_ME(session.user.id, today)),
+      api.get<{ userCreature: { stage: number } | null }>(API_PATHS.SERVER_USER_ME(session.user.id)),
     ]);
-    const wc = focusSession?.waterCount ?? 0;
+    const wc = waterData.waterCount ?? 0;
     initialWater = {
       waterCount: wc,
-      creatureStage: creature?.stage ?? 0,
+      creatureStage: userData.userCreature?.stage ?? 0,
       growthPercent: Math.min(Math.round((wc / 12) * 100), 100),
     };
   }

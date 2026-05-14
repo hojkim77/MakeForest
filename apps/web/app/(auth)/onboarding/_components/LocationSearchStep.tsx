@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { api } from '@/shared/lib/api';
+import { API_PATHS } from '@/shared/lib/apiPaths';
 
 interface DongResult {
   code: string;
@@ -27,9 +29,10 @@ export function LocationSearchStep({ onSelect }: LocationSearchStepProps) {
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/location/search?q=${encodeURIComponent(query)}`);
-        const data: DongResult[] = await res.json();
+        const data = await api.get<DongResult[]>(API_PATHS.LOCATION_SEARCH(query));
         setResults(data);
+      } catch {
+        setResults([]);
       } finally {
         setLoading(false);
       }

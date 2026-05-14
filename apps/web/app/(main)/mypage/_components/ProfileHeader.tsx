@@ -1,6 +1,6 @@
 import { Icon } from '@/shared/components/ui/Icon';
-
-const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
+import { api } from '@/shared/lib/api';
+import { API_PATHS } from '@/shared/lib/apiPaths';
 
 interface UserMe {
   nickname: string;
@@ -20,8 +20,7 @@ function formatJoinDate(iso: string): string {
 }
 
 export async function ProfileHeader({ userId }: { userId: string }) {
-  const res = await fetch(`${SERVER_URL}/user/me?userId=${userId}`, { cache: 'no-store' });
-  const user = await res.json() as UserMe;
+  const user = await api.get<UserMe>(API_PATHS.SERVER_USER_ME(userId), { cache: 'no-store' });
 
   return (
     <section className="bg-surface-container p-6 border border-outline-variant">

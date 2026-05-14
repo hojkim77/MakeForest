@@ -6,6 +6,8 @@ import { useMapStore, useTimerStore, useWaterStore } from '@/shared/store';
 import { CYCLE_MS, CYCLE_SEC } from '@/shared/store/timerStore';
 import { Icon } from '@/shared/components/ui/Icon';
 import { formatDuration } from '@/shared/utils/format';
+import { api } from '@/shared/lib/api';
+import { API_PATHS } from '@/shared/lib/apiPaths';
 
 const TOTAL_SEGMENTS = 12;
 const DAILY_MAX_SEC = TOTAL_SEGMENTS * CYCLE_SEC;
@@ -37,12 +39,8 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
     if (completeCalledRef.current) return;
     completeCalledRef.current = true;
 
-    fetch(`/api/sessions/${sessionId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'complete' }),
-    }).catch(() => {});
-    fetch('/api/push/notify', { method: 'POST' }).catch(() => {});
+    api.patch(API_PATHS.SESSION(sessionId), { action: 'complete' }).catch(() => {});
+    api.post(API_PATHS.PUSH_NOTIFY()).catch(() => {});
   }, [timerStatus, sessionId, isLoggedIn]);
 
   // 탭 복귀 시 경과 시간 재계산
@@ -65,15 +63,8 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
   async function handleStart() {
     if (!isLoggedIn) return;
     try {
-      const res = await fetch('/api/sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ todos }),
-      });
-      if (res.ok) {
-        const data = await res.json() as { sessionId: string; startedAt: string };
-        startSession(data.sessionId, Date.parse(data.startedAt));
-      }
+      const data = await api.post<{ sessionId: string; startedAt: string }>(API_PATHS.SESSIONS(), { todos });
+      startSession(data.sessionId, Date.parse(data.startedAt));
     } catch { /* 세션 생성 실패 시에도 로컬 타이머 동작 */ }
   }
 
@@ -81,13 +72,7 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
     if (isWatering) return;
     setIsWatering(true);
     try {
-      const res = await fetch('/api/water', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-      if (!res.ok) return;
-      const data = await res.json() as { myWaterCount: number; userCreature: { stage: number; waterCount: number } };
+      const data = await api.post<{ myWaterCount: number; userCreature: { stage: number; waterCount: number } }>(API_PATHS.WATER());
       applyWaterResponse(data);
       if (data.myWaterCount >= TOTAL_SEGMENTS) {
         setShowDoneToast(true);

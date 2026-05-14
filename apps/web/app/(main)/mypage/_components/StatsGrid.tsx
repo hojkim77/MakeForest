@@ -1,6 +1,6 @@
 import { formatDuration } from '@/shared/utils/format';
-
-const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
+import { api } from '@/shared/lib/api';
+import { API_PATHS } from '@/shared/lib/apiPaths';
 
 interface FocusStats {
   totalFocusSec: number;
@@ -19,8 +19,8 @@ export async function StatsGrid({ userId, dongCode }: { userId: string; dongCode
   if (dongCode) rankParams.set('dongCode', dongCode);
 
   const [focus, rank] = await Promise.all([
-    fetch(`${SERVER_URL}/stats/focus?userId=${userId}`, { cache: 'no-store' }).then(r => r.json()) as Promise<FocusStats>,
-    fetch(`${SERVER_URL}/stats/rank?${rankParams}`, { cache: 'no-store' }).then(r => r.json()) as Promise<RankStats>,
+    api.get<FocusStats>(API_PATHS.SERVER_STATS_FOCUS(userId), { cache: 'no-store' }),
+    api.get<RankStats>(API_PATHS.SERVER_STATS_RANK(rankParams.toString()), { cache: 'no-store' }),
   ]);
 
   const cards = [

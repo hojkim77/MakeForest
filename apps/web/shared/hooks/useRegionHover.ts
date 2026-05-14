@@ -1,5 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { regionOf, regionDisplayName } from '@makeforest/types';
+import { api } from '@/shared/lib/api';
+import { API_PATHS } from '@/shared/lib/apiPaths';
 
 const HOVER_DELAY_MS = 500;
 
@@ -98,9 +100,8 @@ export function useRegionHover({
             return;
           }
 
-          fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/creature/${encodeURIComponent(rc)}`)
-            .then((res) => res.json())
-            .then((data: RegionAggregate) => {
+          api.get<RegionAggregate>(API_PATHS.SERVER_CREATURE(rc))
+            .then((data) => {
               creatureCache.set(rc, data);
               if (activeRegionRef.current !== rc) return;
               setTooltipStats({ userCount: regionStats.get(rc)?.totalUsers ?? 0, totalWaterCount: data.totalWaterCount });
