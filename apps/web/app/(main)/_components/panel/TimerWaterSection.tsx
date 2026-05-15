@@ -9,6 +9,7 @@ import { formatDuration } from '@/shared/utils/format';
 import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 import { toast } from '@/shared/lib/toast';
+import { handleApiError } from '@/shared/lib/handleApiError';
 
 const TOTAL_SEGMENTS = 12;
 const DAILY_MAX_SEC = TOTAL_SEGMENTS * CYCLE_SEC;
@@ -66,7 +67,7 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
     try {
       const data = await api.post<{ sessionId: string; startedAt: string }>(API_PATHS.SESSIONS(), { todos });
       startSession(data.sessionId, Date.parse(data.startedAt));
-    } catch { toast.error('타이머 구동에 실패했어요. 잠시 후 다시 시도해주세요.'); }
+    } catch (err) { handleApiError(err, { fallback: '타이머 구동에 실패했어요. 잠시 후 다시 시도해주세요.' }); }
   }
 
   async function handleWater() {
@@ -80,7 +81,7 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
       }
       reset();
 
-    } catch { toast.error('물주기에 실패했어요. 잠시 후 다시 시도해주세요.'); }
+    } catch (err) { handleApiError(err, { conflict: '오늘 물주기를 이미 완료했어요.', fallback: '물주기에 실패했어요. 잠시 후 다시 시도해주세요.' }); }
     finally { setIsWatering(false); }
   }
 

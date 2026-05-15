@@ -1,6 +1,13 @@
 const EXPRESS_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
 const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET ?? '';
 
+export class ApiError extends Error {
+  constructor(public status: number, public body?: unknown) {
+    super(`${status}`);
+    this.name = 'ApiError';
+  }
+}
+
 async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
   let mergedInit = init;
   const isServerRequest = typeof window === 'undefined' && url.startsWith(EXPRESS_URL) && INTERNAL_SECRET
@@ -8,7 +15,11 @@ async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
     mergedInit = { ...init, headers: { 'x-internal-secret': INTERNAL_SECRET, ...init?.headers } };
   }
   const res = await fetch(url, mergedInit);
-  if (!res.ok) throw new Error(`${res.status}`);
+  if (!res.ok) {
+    let body: unknown;
+    try { body = await res.json(); } catch {}
+    throw new ApiError(res.status, body);
+  }
   return res.json() as Promise<T>;
 }
 export const api = {
