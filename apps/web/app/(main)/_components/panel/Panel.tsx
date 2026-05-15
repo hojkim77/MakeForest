@@ -8,7 +8,7 @@ import { CreatureSection } from './CreatureSection';
 import { TimerWaterSection } from './TimerWaterSection';
 import { TaskList } from './TaskList';
 import { NeighborhoodStats } from './NeighborhoodStats';
-import { WaterToast } from './WaterToast';
+import { NeighborhoodWaterFeed } from './NeighborhoodWaterFeed';
 import { LoginPrompt } from './LoginPrompt';
 import { getKstDateString } from '@/shared/utils/date';
 
@@ -38,7 +38,7 @@ export async function Panel() {
         <WaterStoreInitializer {...initialWater} />
         <PeekingBanner myRegionCode={myRegionCode} />
         <SloganSection myRegionCode={myRegionCode} />
-        <WaterToast myRegionCode={myRegionCode} />
+        <NeighborhoodWaterFeed myRegionCode={myRegionCode} />
 
         {isLoggedIn && <CreatureSection />}
         {isLoggedIn && <NeighborhoodStats myRegionCode={myRegionCode} />}

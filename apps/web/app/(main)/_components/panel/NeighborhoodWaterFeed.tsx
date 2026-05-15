@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useMapStore } from '@/shared/store';
+import { ToastShell } from '@/shared/components/ui/ToastContainer';
 
 interface ToastMessage {
   id: number;
@@ -13,7 +14,7 @@ const SERVER_URL =
     ? (process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000')
     : 'http://localhost:4000';
 
-export function WaterToast({ myRegionCode }: { myRegionCode: string | null }) {
+export function NeighborhoodWaterFeed({ myRegionCode }: { myRegionCode: string | null }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const counterRef = useRef(0);
   const focusedRegionCode = useMapStore((s) => s.focusedRegionCode);
@@ -41,13 +42,13 @@ export function WaterToast({ myRegionCode }: { myRegionCode: string | null }) {
   return (
     <div className="flex flex-col gap-xs pointer-events-none">
       {toasts.map((t) => (
-        <div
+        <ToastShell
           key={t.id}
-          className="flex items-center gap-xs px-md py-xs bg-primary-container border border-primary font-mono text-label text-on-primary-container animate-fade-in-up"
+          className="gap-xs py-xs border border-primary bg-primary-container text-on-primary-container animate-fade-in-up"
         >
           <span className="text-primary">💧</span>
           <span>{t.nickname}님이 물을 줬어요!</span>
-        </div>
+        </ToastShell>
       ))}
     </div>
   );
