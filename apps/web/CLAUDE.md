@@ -20,7 +20,7 @@ app/
 
 shared/
   components/
-    ui/                            ← cross-route UI primitives (Icon, TopAppBar, WaterToast, CreatureSprite)
+    ui/                            ← cross-route UI primitives (Icon, TopAppBar, WaterToast, CreatureSprite, ToastContainer)
     PushSubscriber.tsx
   hooks/                           ← cross-route custom hooks
   store/                           ← Zustand stores (used across multiple routes)
@@ -31,6 +31,16 @@ shared/
 
 - `shared/types/` — cross-route TypeScript types
 - `shared/constants/` — cross-route constants
+
+## G. Toast & Error Handling
+
+**범용 Toast** (`shared/lib/toast.ts`): `toast.error(msg)` / `toast.success(msg)` / `toast.info(msg)` 한 줄로 어디서든 사용. 내부적으로 `toastStore` (Zustand)에 push하고 `ToastContainer`가 우상단(`top-4 right-4 z-[70]`)에 렌더링.
+
+**WaterToast** (`shared/components/ui/WaterToast.tsx`): SSE `water:toast` 이벤트 전용 도메인 컴포넌트. 범용 toast와 별개로 유지할 것.
+
+**의도적 silent catch 패턴**: 서버 통신 실패해도 로컬 UX가 끊기지 않아야 하는 곳은 `catch {}` 유지 (예: 세션 생성 실패 후 로컬 타이머 계속 동작, `api.patch(complete).catch(() => {})`). 사용자 액션이 실패한 경우에는 `toast.error()`로 피드백.
+
+**error.tsx 위치**: `app/error.tsx` (root), `app/(auth)/error.tsx`, `app/(main)/error.tsx` — 예상치 못한 에러를 각 라우트 영역에서 격리. "다시 시도" 버튼은 Next.js `reset()` 호출.
 
 ## B. Main Layout
 

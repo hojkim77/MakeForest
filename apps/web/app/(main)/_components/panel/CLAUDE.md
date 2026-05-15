@@ -50,6 +50,11 @@ Render order:
 - Click a neighborhood pixel on the map → panel + map switch together
 - Both triggers use the same state transition path
 
+## Toast 책임 구분
+
+- `WaterToast`: SSE `water:toast` 이벤트 전용 (다른 사용자의 물주기 알림). 중앙 상단(`top-20 left-1/2 z-[60]`)에 렌더링.
+- 범용 `ToastContainer` (`shared/components/ui/ToastContainer.tsx`): 에러/성공/정보 피드백. 우상단(`top-4 right-4 z-[70]`). `toast.error()` 등으로 호출.
+
 ## Real-time Subscriptions
 
 - Water toast (SSE `water:toast`)

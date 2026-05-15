@@ -7,6 +7,7 @@ import { LocationDetectStep, type DetectStatus } from './_components/LocationDet
 import { regionOf } from '@makeforest/types';
 import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
+import { toast } from '@/shared/lib/toast';
 
 const LocationSearchStep = dynamic(
   () => import('./_components/LocationSearchStep').then((m) => ({ default: m.LocationSearchStep })),
@@ -89,6 +90,7 @@ export default function OnboardingPage() {
       // JWT 쿠키에 dongCode/regionCode 반영 후 하드 내비게이션 — 미들웨어가 새 쿠키를 읽어야 함
       window.location.href = '/';
     } catch {
+      toast.error('동네 저장에 실패했어요. 다시 시도해주세요.');
       setSaving(false);
     }
   }

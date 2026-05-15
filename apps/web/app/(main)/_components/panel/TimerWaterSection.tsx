@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useMapStore, useTimerStore, useWaterStore } from '@/shared/store';
 import { CYCLE_MS, CYCLE_SEC } from '@/shared/store/timerStore';
@@ -8,6 +8,7 @@ import { Icon } from '@/shared/components/ui/Icon';
 import { formatDuration } from '@/shared/utils/format';
 import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
+import { toast } from '@/shared/lib/toast';
 
 const TOTAL_SEGMENTS = 12;
 const DAILY_MAX_SEC = TOTAL_SEGMENTS * CYCLE_SEC;
@@ -27,7 +28,6 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
 
   const { sessionId, startedAt, status: timerStatus, cycleCount, todos, startSession, complete, reset } = useTimerStore();
   const { waterCount, isWatering, setIsWatering, applyWaterResponse } = useWaterStore();
-  const [showDoneToast, setShowDoneToast] = useState(false);
 
   // 30분 완료 시 서버 세션 complete + 푸시 알림
   const completeCalledRef = useRef(false);
@@ -75,11 +75,10 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
       const data = await api.post<{ myWaterCount: number; userCreature: { stage: number; waterCount: number } }>(API_PATHS.WATER());
       applyWaterResponse(data);
       if (data.myWaterCount >= TOTAL_SEGMENTS) {
-        setShowDoneToast(true);
-        setTimeout(() => setShowDoneToast(false), 4000);
+        toast.success('오늘 집중 고생하셨어요! 🌱');
       }
       reset();
-    } catch { /* 실패 시 조용히 무시 */ }
+    } catch { toast.error('물주기에 실패했어요. 잠시 후 다시 시도해주세요.'); }
     finally { setIsWatering(false); }
   }
 
@@ -150,13 +149,6 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
           <span className="text-primary">{formatDuration(totalSec)} / 6h</span>
         </span>
       </div>
-
-      {/* 오늘 집중 완료 토스트 */}
-      {showDoneToast && (
-        <div className="font-mono text-label text-primary text-center py-xs">
-          오늘 집중 고생하셨어요! 🌱
-        </div>
-      )}
 
       {/* 단일 버튼 */}
       <button
