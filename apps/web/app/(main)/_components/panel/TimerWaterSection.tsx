@@ -39,8 +39,8 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
     if (completeCalledRef.current) return;
     completeCalledRef.current = true;
 
-    api.patch(API_PATHS.SESSION(sessionId), { action: 'complete' }).catch(() => {});
-    api.post(API_PATHS.PUSH_NOTIFY()).catch(() => {});
+    api.patch(API_PATHS.SESSION(sessionId), { action: 'complete' }).catch(() => { });
+    api.post(API_PATHS.PUSH_NOTIFY()).catch(() => { });
   }, [timerStatus, sessionId, isLoggedIn]);
 
   // 탭 복귀 시 경과 시간 재계산
@@ -61,11 +61,12 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
   const totalSec = Math.min(waterCount * CYCLE_SEC + elapsedSec, DAILY_MAX_SEC);
 
   async function handleStart() {
+
     if (!isLoggedIn) return;
     try {
       const data = await api.post<{ sessionId: string; startedAt: string }>(API_PATHS.SESSIONS(), { todos });
       startSession(data.sessionId, Date.parse(data.startedAt));
-    } catch { /* 세션 생성 실패 시에도 로컬 타이머 동작 */ }
+    } catch { toast.error('타이머 구동에 실패했어요. 잠시 후 다시 시도해주세요.'); }
   }
 
   async function handleWater() {
@@ -78,6 +79,7 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
         toast.success('오늘 집중 고생하셨어요! 🌱');
       }
       reset();
+
     } catch { toast.error('물주기에 실패했어요. 잠시 후 다시 시도해주세요.'); }
     finally { setIsWatering(false); }
   }
