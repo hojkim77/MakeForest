@@ -1,5 +1,5 @@
-import aliasMap from '../../../public/dong-alias.json';
-import pixelMap from '../../../public/pixel-map.json';
+import aliasMap from '../../public/dong-alias.json';
+import pixelMap from '../../public/pixel-map.json';
 
 const alias = aliasMap as Record<string, string>;
 
