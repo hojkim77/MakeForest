@@ -20,8 +20,17 @@ const sansFont = Inter({
 });
 
 export const metadata: Metadata = {
-  title: '우리 동네 픽셀 숲',
-  description: '집중하고, 우리 동네 숲을 키워요',
+  title: 'PixelForest',
+  description: 'Focus together, grow our neighborhood forest.',
+  icons: {
+    icon: '/icons/icon.svg',
+    apple: '/icons/apple-icon.png',
+  },
+  openGraph: {
+    title: 'PixelForest',
+    description: 'Focus together, grow our neighborhood forest.',
+    images: ['/images/og-image.png'],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

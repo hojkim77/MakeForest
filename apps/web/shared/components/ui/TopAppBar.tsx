@@ -35,7 +35,7 @@ export function TopAppBar() {
           href="/"
           className="font-mono text-headline text-primary-container tracking-tighter uppercase"
         >
-          Neighborhood Pixel Forest
+          PixelForest
         </Link>
 
         {/* Nav */}
