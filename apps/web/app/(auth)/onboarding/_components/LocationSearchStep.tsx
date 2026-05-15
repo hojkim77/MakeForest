@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { api } from '@/shared/lib/api';
+import { API_PATHS } from '@/shared/lib/apiPaths';
 
 interface DongResult {
   code: string;
@@ -13,23 +15,34 @@ interface LocationSearchStepProps {
   onSelect: (dong: { code: string; name: string }) => void;
 }
 
+const searchCache = new Map<string, DongResult[]>();
+
 export function LocationSearchStep({ onSelect }: LocationSearchStepProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<DongResult[]>([]);
   const [selected, setSelected] = useState<DongResult | null>(null);
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!query.trim()) { setResults([]); return; }
 
+    const cached = searchCache.get(query);
+    if (cached) { setResults(cached); return; }
+
     debounceRef.current = setTimeout(async () => {
+      abortRef.current?.abort();
+      abortRef.current = new AbortController();
       setLoading(true);
       try {
-        const res = await fetch(`/api/location/search?q=${encodeURIComponent(query)}`);
-        const data: DongResult[] = await res.json();
+        const data = await api.get<DongResult[]>(API_PATHS.LOCATION_SEARCH(query), { signal: abortRef.current.signal });
+        searchCache.set(query, data);
         setResults(data);
+      } catch (e) {
+        if (e instanceof Error && e.name === 'AbortError') return;
+        setResults([]);
       } finally {
         setLoading(false);
       }

@@ -1,21 +1,18 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useMapStore, useTimerStore, useWaterStore } from '@/shared/store';
 import { CYCLE_MS, CYCLE_SEC } from '@/shared/store/timerStore';
 import { Icon } from '@/shared/components/ui/Icon';
+import { formatDuration } from '@/shared/utils/format';
+import { api } from '@/shared/lib/api';
+import { API_PATHS } from '@/shared/lib/apiPaths';
+import { toast } from '@/shared/lib/toast';
+import { handleApiError } from '@/shared/lib/handleApiError';
 
 const TOTAL_SEGMENTS = 12;
 const DAILY_MAX_SEC = TOTAL_SEGMENTS * CYCLE_SEC;
-
-function formatDuration(sec: number) {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  if (h > 0 && m > 0) return `${h}h ${m}m`;
-  if (h > 0) return `${h}h`;
-  return `${m}m`;
-}
 
 function formatTimer(sec: number) {
   const m = Math.floor(sec / 60);
@@ -32,7 +29,6 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
 
   const { sessionId, startedAt, status: timerStatus, cycleCount, todos, startSession, complete, reset } = useTimerStore();
   const { waterCount, isWatering, setIsWatering, applyWaterResponse } = useWaterStore();
-  const [showDoneToast, setShowDoneToast] = useState(false);
 
   // 30분 완료 시 서버 세션 complete + 푸시 알림
   const completeCalledRef = useRef(false);
@@ -44,12 +40,8 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
     if (completeCalledRef.current) return;
     completeCalledRef.current = true;
 
-    fetch(`/api/sessions/${sessionId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'complete' }),
-    }).catch(() => {});
-    fetch('/api/push/notify', { method: 'POST' }).catch(() => {});
+    api.patch(API_PATHS.SESSION(sessionId), { action: 'complete' }).catch(() => { });
+    api.post(API_PATHS.PUSH_NOTIFY()).catch(() => { });
   }, [timerStatus, sessionId, isLoggedIn]);
 
   // 탭 복귀 시 경과 시간 재계산
@@ -70,38 +62,26 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
   const totalSec = Math.min(waterCount * CYCLE_SEC + elapsedSec, DAILY_MAX_SEC);
 
   async function handleStart() {
+
     if (!isLoggedIn) return;
     try {
-      const res = await fetch('/api/sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ todos }),
-      });
-      if (res.ok) {
-        const data = await res.json() as { sessionId: string; startedAt: string };
-        startSession(data.sessionId, Date.parse(data.startedAt));
-      }
-    } catch { /* 세션 생성 실패 시에도 로컬 타이머 동작 */ }
+      const data = await api.post<{ sessionId: string; startedAt: string }>(API_PATHS.SESSIONS(), { todos });
+      startSession(data.sessionId, Date.parse(data.startedAt));
+    } catch (err) { handleApiError(err, { fallback: '타이머 구동에 실패했어요. 잠시 후 다시 시도해주세요.' }); }
   }
 
   async function handleWater() {
     if (isWatering) return;
     setIsWatering(true);
     try {
-      const res = await fetch('/api/water', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-      if (!res.ok) return;
-      const data = await res.json() as { myWaterCount: number; userCreature: { stage: number; waterCount: number } };
+      const data = await api.post<{ myWaterCount: number; userCreature: { stage: number; waterCount: number } }>(API_PATHS.WATER());
       applyWaterResponse(data);
       if (data.myWaterCount >= TOTAL_SEGMENTS) {
-        setShowDoneToast(true);
-        setTimeout(() => setShowDoneToast(false), 4000);
+        toast.success('오늘 집중 고생하셨어요! 🌱');
       }
       reset();
-    } catch { /* 실패 시 조용히 무시 */ }
+
+    } catch (err) { handleApiError(err, { conflict: '오늘 물주기를 이미 완료했어요.', fallback: '물주기에 실패했어요. 잠시 후 다시 시도해주세요.' }); }
     finally { setIsWatering(false); }
   }
 
@@ -172,13 +152,6 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
           <span className="text-primary">{formatDuration(totalSec)} / 6h</span>
         </span>
       </div>
-
-      {/* 오늘 집중 완료 토스트 */}
-      {showDoneToast && (
-        <div className="font-mono text-label text-primary text-center py-xs">
-          오늘 집중 고생하셨어요! 🌱
-        </div>
-      )}
 
       {/* 단일 버튼 */}
       <button

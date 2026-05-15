@@ -1,6 +1,6 @@
 import { WeeklyChartLazy } from './WeeklyChartLazy';
-
-const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
+import { api } from '@/shared/lib/api';
+import { API_PATHS } from '@/shared/lib/apiPaths';
 
 interface WeeklyStats {
   weeklyData: { week: number; waterCount: number }[];
@@ -8,7 +8,7 @@ interface WeeklyStats {
 }
 
 export async function WeeklyChartSection({ userId }: { userId: string }) {
-  const data = await fetch(`${SERVER_URL}/stats/weekly?userId=${userId}`, { cache: 'no-store' }).then(r => r.json()) as WeeklyStats;
+  const data = await api.get<WeeklyStats>(API_PATHS.SERVER_STATS_WEEKLY(userId), { next: { revalidate: 3600 } });
   return <WeeklyChartLazy weeklyData={data.weeklyData} weeklyAvg={data.weeklyAvg} />;
 }
 

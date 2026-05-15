@@ -1,17 +1,39 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { LocationDetectStep, type DetectStatus } from './_components/LocationDetectStep';
-import { LocationSearchStep } from './_components/LocationSearchStep';
 import { regionOf } from '@makeforest/types';
+import { api } from '@/shared/lib/api';
+import { API_PATHS } from '@/shared/lib/apiPaths';
+import { handleApiError } from '@/shared/lib/handleApiError';
+
+const LocationSearchStep = dynamic(
+  () => import('./_components/LocationSearchStep').then((m) => ({ default: m.LocationSearchStep })),
+  { ssr: false },
+);
 
 type Step = 'detect' | 'search';
 
 export default function OnboardingPage() {
+  const router = useRouter();
   const [step, setStep] = useState<Step>('detect');
   const [detectStatus, setDetectStatus] = useState<DetectStatus>('detecting');
   const [detectedDong, setDetectedDong] = useState<{ code: string; name: string } | undefined>();
   const [saving, setSaving] = useState(false);
+
+  // Prefetch main page resources during onboarding wait time
+  useEffect(() => {
+    router.prefetch('/');
+    const link = document.createElement('link');
+    link.rel = 'prefetch';
+    link.href = '/pixel-map.json';
+    link.setAttribute('as', 'fetch');
+    link.setAttribute('crossOrigin', 'anonymous');
+    document.head.appendChild(link);
+    return () => { document.head.removeChild(link); };
+  }, [router]);
 
   // Request GPS on mount, auto-fall-back to search on failure
   useEffect(() => {
@@ -24,11 +46,9 @@ export default function OnboardingPage() {
       navigator.geolocation.getCurrentPosition(
         async ({ coords }) => {
           try {
-            const res = await fetch(
-              `/api/location/detect?lat=${coords.latitude}&lng=${coords.longitude}`,
+            const dong = await api.get<{ code: string; name: string }>(
+              API_PATHS.LOCATION_DETECT(coords.latitude, coords.longitude),
             );
-            if (!res.ok) throw new Error('no dong');
-            const dong = await res.json() as { code: string; name: string };
             setDetectedDong(dong);
             setDetectStatus('found');
           } catch {
@@ -66,15 +86,11 @@ export default function OnboardingPage() {
   async function saveDong(code: string, name: string) {
     setSaving(true);
     try {
-      const res = await fetch('/api/user/me', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dongCode: code, regionCode: regionOf(code, name) }),
-      });
-      if (!res.ok) throw new Error('save failed');
+      await api.patch(API_PATHS.USER_ME(), { dongCode: code, regionCode: regionOf(code, name) });
       // JWT 쿠키에 dongCode/regionCode 반영 후 하드 내비게이션 — 미들웨어가 새 쿠키를 읽어야 함
       window.location.href = '/';
-    } catch {
+    } catch (err) {
+      handleApiError(err, { fallback: '동네 저장에 실패했어요. 다시 시도해주세요.' });
       setSaving(false);
     }
   }

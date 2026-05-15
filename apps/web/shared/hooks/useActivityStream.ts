@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 import type { MapUser } from '@makeforest/types';
 import { useActivityStore } from '@/shared/store/activityStore';
+import { api } from '@/shared/lib/api';
+import { API_PATHS } from '@/shared/lib/apiPaths';
 
 export type ActivityMap = Record<string, number>;
 export type { MapUser };
@@ -26,7 +28,6 @@ export function useActivityStream() {
   const { setActivity, setActiveUsers } = useActivityStore();
 
   useEffect(() => {
-    const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
     let es: EventSource;
     let retryDelay = 1000;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -34,8 +35,7 @@ export function useActivityStream() {
 
     void (async () => {
       try {
-        const res = await fetch(`${SERVER_URL}/map/snapshot`);
-        const { heatmap: rawHeatmap, users } = await res.json() as { heatmap: ActivityMap; users: MapUser[] };
+        const { heatmap: rawHeatmap, users } = await api.get<{ heatmap: ActivityMap; users: MapUser[] }>(API_PATHS.SERVER_MAP_SNAPSHOT());
         if (destroyed) return;
         setActiveUsers(users);
         const alias = await loadAlias();
@@ -49,7 +49,7 @@ export function useActivityStream() {
     })();
 
     const connect = () => {
-      es = new EventSource(`${SERVER_URL}/sse/activity-stream`);
+      es = new EventSource(API_PATHS.SERVER_SSE_ACTIVITY());
 
       es.addEventListener('users:overlay', (e: MessageEvent<string>) => {
         const users = JSON.parse(e.data) as MapUser[];
