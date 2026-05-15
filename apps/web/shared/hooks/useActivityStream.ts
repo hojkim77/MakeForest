@@ -9,21 +9,6 @@ import { API_PATHS } from '@/shared/lib/apiPaths';
 export type ActivityMap = Record<string, number>;
 export type { MapUser };
 
-let aliasCache: Record<string, string> | null = null;
-
-export function _resetAliasCache() { aliasCache = null; }
-
-async function loadAlias(): Promise<Record<string, string>> {
-  if (aliasCache) return aliasCache;
-  try {
-    const res = await fetch('/dong-alias.json');
-    aliasCache = await res.json() as Record<string, string>;
-  } catch {
-    aliasCache = {};
-  }
-  return aliasCache;
-}
-
 export function useActivityStream() {
   const { setActivity, setActiveUsers } = useActivityStore();
 
@@ -35,16 +20,10 @@ export function useActivityStream() {
 
     void (async () => {
       try {
-        const { heatmap: rawHeatmap, users } = await api.get<{ heatmap: ActivityMap; users: MapUser[] }>(API_PATHS.SERVER_MAP_SNAPSHOT());
+        const { heatmap, users } = await api.get<{ heatmap: ActivityMap; users: MapUser[] }>(API_PATHS.SERVER_MAP_SNAPSHOT());
         if (destroyed) return;
         setActiveUsers(users);
-        const alias = await loadAlias();
-        const merged: ActivityMap = {};
-        for (const [code, count] of Object.entries(rawHeatmap)) {
-          const target = alias[code] ?? code;
-          merged[target] = (merged[target] ?? 0) + count;
-        }
-        setActivity(merged);
+        setActivity(heatmap);
       } catch {}
     })();
 
@@ -56,16 +35,9 @@ export function useActivityStream() {
         setActiveUsers(users);
       });
 
-      es.addEventListener('heatmap:update', async (e: MessageEvent<string>) => {
+      es.addEventListener('heatmap:update', (e: MessageEvent<string>) => {
         retryDelay = 1000;
-        const raw = JSON.parse(e.data) as ActivityMap;
-        const alias = await loadAlias();
-        const merged: ActivityMap = {};
-        for (const [code, count] of Object.entries(raw)) {
-          const target = alias[code] ?? code;
-          merged[target] = (merged[target] ?? 0) + count;
-        }
-        setActivity(merged);
+        setActivity(JSON.parse(e.data) as ActivityMap);
       });
 
       es.onerror = () => {
