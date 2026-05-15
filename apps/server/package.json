@@ -7,11 +7,13 @@
     "dev": "tsx watch --env-file=.env src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "lint": "eslint src --ext .ts",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist",
     "test": "jest --no-coverage",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "migrate:dong-codes": "tsx --env-file=.env src/scripts/migrateDongCodes.ts"
   },
   "dependencies": {
     "@makeforest/db": "*",
