@@ -141,7 +141,7 @@ export function MapContainer() {
           className="absolute inset-0 transition-opacity duration-300"
           style={{ opacity: isForest ? 1 : 0, pointerEvents: isForest ? 'auto' : 'none' }}
         >
-          <ForestMap regionCode={forestState?.regionCode ?? ''} active={isForest} />
+          <ForestMap regionCode={forestState?.regionCode ?? ''} active={isForest} scale={forestT.scale} />
         </div>
         <div
           className="absolute inset-0 transition-opacity duration-300"
