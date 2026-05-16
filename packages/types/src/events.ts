@@ -29,7 +29,7 @@ export interface MapUser {
   dongCode: string;
   pixelX: number;
   pixelY: number;
-  waterCount: number;      // 생애 누적 물주기 횟수 (stage 계산용)
+  totalWaterCount: number; // 생애 누적 물주기 횟수 (stage 계산용)
   todayWaterCount: number; // 오늘 물주기 횟수 (표시·순위용, 최대 12)
   creatureStage: number;
   sessionStatus: 'RUNNING' | 'COMPLETE' | 'IDLE';

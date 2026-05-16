@@ -17,7 +17,7 @@ export async function GET() {
     }),
     prisma.userCreature.findUnique({
       where: { userId: session.user.id },
-      select: { stage: true, waterCount: true },
+      select: { stage: true, totalWaterCount: true },
     }),
   ]);
 
@@ -25,6 +25,6 @@ export async function GET() {
     waterCount: focusSession?.waterCount ?? 0,
     date: today,
     creatureStage: creature?.stage ?? 0,
-    creatureWaterCount: creature?.waterCount ?? 0,
+    creatureWaterCount: creature?.totalWaterCount ?? 0,
   });
 }

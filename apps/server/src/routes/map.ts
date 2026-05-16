@@ -26,7 +26,7 @@ export async function buildUsersOverlay(): Promise<MapUser[]> {
     dongCode: s.dongCode,
     pixelX: s.pixelX,
     pixelY: s.pixelY,
-    waterCount: s.waterCount,
+    totalWaterCount: s.totalWaterCount,
     todayWaterCount: s.todayWaterCount,
     creatureStage: s.creatureStage,
     sessionStatus: s.status === 'RUNNING' ? 'RUNNING' : s.status === 'IDLE' ? 'IDLE' : 'COMPLETE',

@@ -23,11 +23,11 @@
 - **12-water daily limit** — `DailySession.waterCount >= 12` returns 409
 - Each water updates the user's `UserCreature` evolution stage (response includes `userCreature: { stage, waterCount }`)
 - On success: broadcasts `water:toast` SSE to the whole neighborhood + immediately re-broadcasts `users:overlay`
-- Response format: `{ myWaterCount: number, userCreature: { stage: number, waterCount: number } }`
+- Response format: `{ myWaterCount: number, userCreature: { stage: number, totalWaterCount: number } }`
   - `myWaterCount`: waters given today (1–12, based on DailySession)
-  - `userCreature.waterCount`: **lifetime** cumulative water count (used to compute stage)
-  - `userCreature.stage`: current stage (0–9) based on cumulative waterCount
-- UI: 6-hour range split into 12 segments (30 min each); `growthPercent = myWaterCount / 12 * 100` (today only)
+  - `userCreature.totalWaterCount`: **lifetime** cumulative water count (used to compute stage)
+  - `userCreature.stage`: current stage (0–9) based on cumulative totalWaterCount
+- UI: 6-hour range split into 12 segments (30 min each); `growthPercent` = progress toward next creature stage (based on `totalWaterCount`)
 
 ## Mypage Stats API (H)
 
