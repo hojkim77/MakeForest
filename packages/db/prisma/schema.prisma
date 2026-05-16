@@ -86,8 +86,8 @@ model Dong {
 model UserCreature {
   id         String   @id @default(uuid())
   userId     String   @unique
-  stage      Int      @default(0) // 0~9, 누적 waterCount 기반 자동 계산
-  waterCount Int      @default(0) // 생애 누적 물주기 횟수
+  stage           Int      @default(0) // 0~9, 누적 totalWaterCount 기반 자동 계산
+  totalWaterCount Int      @default(0) // 생애 누적 물주기 횟수
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

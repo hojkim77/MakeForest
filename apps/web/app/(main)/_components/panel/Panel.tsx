@@ -17,18 +17,17 @@ export async function Panel() {
   const isLoggedIn = !!session?.user?.id;
   const myRegionCode = session?.user?.regionCode ?? null;
 
-  let initialWater = { waterCount: 0, creatureStage: 0, growthPercent: 0 };
+  let initialWater = { waterCount: 0, creatureStage: 0, totalWaterCount: 0 };
   if (isLoggedIn && session?.user?.id) {
     const today = getKstDateString();
     const [waterData, userData] = await Promise.all([
       api.get<{ waterCount: number }>(API_PATHS.SERVER_WATER_ME(session.user.id, today)),
-      api.get<{ userCreature: { stage: number } | null }>(API_PATHS.SERVER_USER_ME(session.user.id)),
+      api.get<{ userCreature: { stage: number; totalWaterCount: number } | null }>(API_PATHS.SERVER_USER_ME(session.user.id)),
     ]);
-    const wc = waterData.waterCount ?? 0;
     initialWater = {
-      waterCount: wc,
+      waterCount: waterData.waterCount ?? 0,
       creatureStage: userData.userCreature?.stage ?? 0,
-      growthPercent: Math.min(Math.round((wc / 12) * 100), 100),
+      totalWaterCount: userData.userCreature?.totalWaterCount ?? 0,
     };
   }
 
@@ -41,7 +40,7 @@ export async function Panel() {
         <NeighborhoodWaterFeed myRegionCode={myRegionCode} />
 
         {isLoggedIn && <CreatureSection />}
-        {isLoggedIn && <NeighborhoodStats myRegionCode={myRegionCode} />}
+        {isLoggedIn && <NeighborhoodStats />}
 
         {isLoggedIn ? (
           <>

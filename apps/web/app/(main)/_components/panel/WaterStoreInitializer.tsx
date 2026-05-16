@@ -6,7 +6,7 @@ import { useWaterStore } from '@/shared/store';
 interface Props {
   waterCount: number;
   creatureStage: number;
-  growthPercent: number;
+  totalWaterCount: number;
 }
 
 export function WaterStoreInitializer(props: Props) {

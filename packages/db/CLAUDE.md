@@ -13,7 +13,7 @@
 
 **UserCreature** — permanent single creature per user (one per user, no date field)
 - `@@unique([userId])` — one per user, never deleted or reset
-- `stage` 0–9, `waterCount` = lifetime cumulative waters
+- `stage` 0–9, `totalWaterCount` = lifetime cumulative waters
 - Evolution thresholds: `[0, 12, 36, 72, 132, 216, 336, 504, 744, 1080]` (hardcoded in `water.logic.ts`)
 - Daily water limit (12/day) is tracked separately via `DailySession.waterCount`
 

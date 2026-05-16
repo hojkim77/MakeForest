@@ -1,5 +1,5 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useActivityStream, _resetAliasCache } from '@/shared/hooks/useActivityStream';
+import { useActivityStream } from '@/shared/hooks/useActivityStream';
 import { useActivityStore } from '@/shared/store/activityStore';
 
 // ── MockEventSource ──────────────────────────────────────────────────────────
@@ -37,22 +37,10 @@ class MockEventSource {
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
-function setupEmptyAlias() {
-  mockFetch.mockImplementation((url: string) =>
+function setupFetch() {
+  mockFetch.mockImplementation(() =>
     Promise.resolve({
-      json: () => Promise.resolve(
-        url.includes('/map/snapshot') ? { heatmap: {}, users: [] } : {}
-      ),
-    })
-  );
-}
-
-function setupAlias(alias: Record<string, string>) {
-  mockFetch.mockImplementation((url: string) =>
-    Promise.resolve({
-      json: () => Promise.resolve(
-        url.includes('/map/snapshot') ? { heatmap: {}, users: [] } : alias
-      ),
+      json: () => Promise.resolve({ heatmap: {}, users: [] }),
     })
   );
 }
@@ -63,7 +51,6 @@ beforeEach(() => {
   MockEventSource.lastInstance = null;
   MockEventSource.callCount = 0;
   mockFetch.mockReset();
-  _resetAliasCache();
   useActivityStore.setState({ activity: {}, activeUsers: [] });
   jest.useFakeTimers();
 });
@@ -76,7 +63,7 @@ afterEach(() => {
 
 describe('SSE 연결', () => {
   it('마운트 시 /map/activity-stream URL로 연결', () => {
-    setupEmptyAlias();
+    setupFetch();
     renderHook(() => useActivityStream());
 
     expect(MockEventSource.lastInstance).not.toBeNull();
@@ -84,7 +71,7 @@ describe('SSE 연결', () => {
   });
 
   it('언마운트 시 EventSource.close() 호출', () => {
-    setupEmptyAlias();
+    setupFetch();
     const { unmount } = renderHook(() => useActivityStream());
     const instance = MockEventSource.lastInstance!;
 
@@ -94,28 +81,26 @@ describe('SSE 연결', () => {
 });
 
 describe('heatmap:update 이벤트', () => {
-  it('alias 합산 + 원본 코드 유지 + 상태 업데이트', async () => {
-    // '1111000', '1111001' → 'target' 으로 병합, '9999000' 은 alias 없어 원본 유지
-    setupAlias({ '1111000': 'target', '1111001': 'target' });
+  it('수신한 데이터를 그대로 store에 반영', async () => {
+    setupFetch();
     renderHook(() => useActivityStream());
     await waitFor(() => MockEventSource.lastInstance !== null);
 
     await act(async () => {
       MockEventSource.lastInstance!.triggerEvent('heatmap:update', {
         '1111000': 2,
-        '1111001': 3,
         '9999000': 1,
       });
     });
 
-    await waitFor(() => useActivityStore.getState().activity['target'] !== undefined);
-    expect(useActivityStore.getState().activity).toEqual({ target: 5, '9999000': 1 });
+    await waitFor(() => useActivityStore.getState().activity['1111000'] !== undefined);
+    expect(useActivityStore.getState().activity).toEqual({ '1111000': 2, '9999000': 1 });
   });
 });
 
 describe('오류 및 재연결 (지수 백오프)', () => {
   it('onerror → 1000ms 후 재연결', () => {
-    setupEmptyAlias();
+    setupFetch();
     renderHook(() => useActivityStream());
     const first = MockEventSource.lastInstance!;
 
@@ -130,7 +115,7 @@ describe('오류 및 재연결 (지수 백오프)', () => {
   });
 
   it('두 번째 오류 → 2000ms 후 재연결 (백오프 2배)', () => {
-    setupEmptyAlias();
+    setupFetch();
     renderHook(() => useActivityStream());
 
     // 1차 오류
@@ -148,7 +133,7 @@ describe('오류 및 재연결 (지수 백오프)', () => {
   });
 
   it('언마운트 후 오류 → 재연결 없음', () => {
-    setupEmptyAlias();
+    setupFetch();
     const { unmount } = renderHook(() => useActivityStream());
     const instance = MockEventSource.lastInstance!;
     unmount();
@@ -161,7 +146,7 @@ describe('오류 및 재연결 (지수 백오프)', () => {
   });
 
   it('성공적인 이벤트 수신 후 오류 → retryDelay 1000ms로 리셋', async () => {
-    setupEmptyAlias();
+    setupFetch();
     renderHook(() => useActivityStream());
 
     // 1차 오류 → 재연결

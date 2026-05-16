@@ -21,7 +21,7 @@ Render order:
 - Stage name: 씨앗 / 새싹 / 나무1 / 나무2 / 나무3 / 고목 / 노거수 / 정령수 / 신수 / 세계수
 
 **Middle — Personal Growth Rate**
-- Personal growth rate gauge bar (`growthPercent = myWaterCount / 12 * 100`) — based on today's waters by the user
+- Personal growth rate gauge bar (`growthPercent` = progress toward next creature stage, based on `UserCreature.totalWaterCount`)
 - Neighborhood name + growth rate % text
 
 **Bottom — Focus/Watering Combined Section (`TimerWaterSection`)**

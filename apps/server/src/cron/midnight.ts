@@ -76,13 +76,13 @@ async function autoWaterUnwatered(date: string): Promise<void> {
 
     await prisma.$transaction(async (tx) => {
       const existing = await tx.userCreature.findUnique({ where: { userId: session.userId } });
-      const newWaterCount = (existing?.waterCount ?? 0) + 1;
+      const newWaterCount = (existing?.totalWaterCount ?? 0) + 1;
       const newStage = calcPersonalStage(newWaterCount);
 
       await tx.userCreature.upsert({
         where: { userId: session.userId },
-        update: { waterCount: newWaterCount, stage: newStage },
-        create: { userId: session.userId, waterCount: newWaterCount, stage: newStage },
+        update: { totalWaterCount: newWaterCount, stage: newStage },
+        create: { userId: session.userId, totalWaterCount: newWaterCount, stage: newStage },
       });
 
       await tx.focusSession.update({

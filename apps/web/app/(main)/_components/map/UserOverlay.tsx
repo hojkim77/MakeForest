@@ -9,6 +9,7 @@ interface UserOverlayProps {
   users: MapUser[];
   mapW: number;
   mapH: number;
+  scale: number;
 }
 
 const STATUS_OPACITY: Record<string, number> = {
@@ -17,9 +18,17 @@ const STATUS_OPACITY: Record<string, number> = {
   IDLE: 0.25,
 };
 
-const SPRITE_SIZE = 2;    // 시각적 크기 (px)
-const HIT_SIZE = 1;       // 호버 hit area (px) — div 크기
-const JITTER_RADIUS = 0.5; // 같은 동 유저 이격 (hit area 절반 — 2명은 비겹침 보장)
+const MIN_SCREEN_PX = 30;  // 화면 기준 최소 스프라이트 크기 (유저 20명 이상)
+const MAX_SCREEN_PX = 100; // 화면 기준 최대 스프라이트 크기 (유저 1명 이하)
+const MIN_SIZE_AT = 20;    // 이 유저 수 이상이면 MIN_SCREEN_PX 고정
+
+function spriteSizeForCount(count: number): number {
+  if (count <= 1) return MAX_SCREEN_PX;
+  const t = Math.min(1, (count - 1) / (MIN_SIZE_AT - 1));
+  return MAX_SCREEN_PX - t * (MAX_SCREEN_PX - MIN_SCREEN_PX);
+}
+
+const JITTER_RADIUS = 0.5;
 
 function jitteredPositions(users: MapUser[], mapW: number, mapH: number) {
   const grouped = new Map<string, MapUser[]>();
@@ -54,8 +63,10 @@ interface HoverState {
   screenY: number;
 }
 
-export function UserOverlay({ users, mapW, mapH }: UserOverlayProps) {
+export function UserOverlay({ users, mapW, mapH, scale }: UserOverlayProps) {
   const [hovered, setHovered] = useState<HoverState | null>(null);
+
+  const spritePx = spriteSizeForCount(users.length) / scale;
 
   const positioned = useMemo(
     () => jitteredPositions(users, mapW, mapH),
@@ -77,8 +88,8 @@ export function UserOverlay({ users, mapW, mapH }: UserOverlayProps) {
               top: `${baseTop}%`,
               transform: `translate(calc(-50% + ${jx}px), calc(-50% + ${jy}px))`,
               opacity,
-              width: HIT_SIZE,
-              height: HIT_SIZE,
+              width: 1,
+              height: 1,
               overflow: 'visible',
             }}
             onMouseEnter={(e) => {
@@ -88,7 +99,7 @@ export function UserOverlay({ users, mapW, mapH }: UserOverlayProps) {
             onMouseLeave={() => setHovered(null)}
           >
             <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none' }}>
-              <CreatureSprite stage={stage} size={SPRITE_SIZE} />
+              <CreatureSprite stage={stage} size={spritePx} />
             </div>
           </div>
         );

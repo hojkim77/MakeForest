@@ -40,7 +40,7 @@ export interface ActiveSessionCache {
   nickname: string;
   pixelX: number;
   pixelY: number;
-  waterCount: number;       // 생애 누적
+  totalWaterCount: number;  // 생애 누적
   todayWaterCount: number;  // 오늘 물주기 횟수
   creatureStage: number;
   todosPublic: boolean;

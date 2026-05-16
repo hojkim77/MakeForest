@@ -55,7 +55,7 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
             prisma.dong.findUnique({ where: { code: dongCode }, select: { lat: true, lng: true } }),
             prisma.userCreature.findUnique({
               where: { userId },
-              select: { waterCount: true, stage: true },
+              select: { totalWaterCount: true, stage: true },
             }),
           ]);
           const { toPixel } = await import('./map');
@@ -69,7 +69,7 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
             nickname: user?.nickname ?? '누군가',
             pixelX,
             pixelY,
-            waterCount: creature?.waterCount ?? 0,
+            totalWaterCount: creature?.totalWaterCount ?? 0,
             todayWaterCount: session.waterCount ?? 0,
             creatureStage: creature?.stage ?? 0,
             todosPublic: user?.todosPublic ?? true,
@@ -129,7 +129,7 @@ sessionsRouter.patch('/:id', async (req: Request, res: Response) => {
         const cached = await getSession(id);
         if (cached) {
           if (action === 'complete') {
-            await setSession(id, { ...cached, status: 'COMPLETED' }, 25 * 3600);
+            await setSession(id, { ...cached, status: 'COMPLETED' });
           } else {
             await setSession(id, { ...cached, status: 'ABANDONED' });
           }

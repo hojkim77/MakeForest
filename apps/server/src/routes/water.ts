@@ -44,13 +44,13 @@ waterRouter.post('/', async (req: Request, res: Response) => {
       });
 
       const existing = await tx.userCreature.findUnique({ where: { userId } });
-      const lifetimeCount = (existing?.waterCount ?? 0) + 1;
+      const lifetimeCount = (existing?.totalWaterCount ?? 0) + 1;
       const newStage = calcPersonalStage(lifetimeCount);
 
       const updated = await tx.userCreature.upsert({
         where: { userId },
-        update: { waterCount: lifetimeCount, stage: newStage },
-        create: { userId, waterCount: lifetimeCount, stage: newStage },
+        update: { totalWaterCount: lifetimeCount, stage: newStage },
+        create: { userId, totalWaterCount: lifetimeCount, stage: newStage },
       });
 
       // FocusSession waterCount 증가 + totalElapsedSec 갱신
@@ -82,11 +82,11 @@ waterRouter.post('/', async (req: Request, res: Response) => {
           if (cached?.userId === userId) {
             await setSession(sid, {
               ...cached,
-              waterCount: userCreature.waterCount,
+              totalWaterCount: userCreature.totalWaterCount,
               todayWaterCount: newWaterCount,
               creatureStage: userCreature.stage,
               status: 'IDLE',
-            }, 25 * 3600);
+            });
             break;
           }
         }
@@ -103,7 +103,7 @@ waterRouter.post('/', async (req: Request, res: Response) => {
 
     return res.json({
       myWaterCount: newWaterCount,
-      userCreature: { stage: userCreature.stage, waterCount: userCreature.waterCount },
+      userCreature: { stage: userCreature.stage, totalWaterCount: userCreature.totalWaterCount },
     });
   } catch (err) {
     console.error('[water] POST error:', err);

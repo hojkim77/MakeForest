@@ -21,9 +21,10 @@ function forestColor(count: number, breathe: number): string {
 interface ForestMapProps {
   regionCode: string;
   active: boolean;
+  scale?: number;
 }
 
-export function ForestMap({ regionCode, active }: ForestMapProps) {
+export function ForestMap({ regionCode, active, scale = 1 }: ForestMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { data: pixelMap } = usePixelMapData();
   const activity = useActivityStore((s) => s.activity);
@@ -81,7 +82,7 @@ export function ForestMap({ regionCode, active }: ForestMapProps) {
         style={{ imageRendering: 'pixelated' }}
       />
       {active && (
-        <UserOverlay users={regionUsers} mapW={pixelMap.w} mapH={pixelMap.h} />
+        <UserOverlay users={regionUsers} mapW={pixelMap.w} mapH={pixelMap.h} scale={scale} />
       )}
     </div>
   );

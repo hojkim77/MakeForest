@@ -16,7 +16,7 @@ userRouter.get('/me', async (req: Request, res: Response) => {
       }),
       prisma.userCreature.findUnique({
         where: { userId },
-        select: { stage: true, waterCount: true },
+        select: { stage: true, totalWaterCount: true },
       }),
     ]);
 
