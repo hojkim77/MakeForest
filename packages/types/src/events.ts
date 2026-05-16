@@ -1,7 +1,7 @@
 import type { Todo } from './session';
 
 // SSE 이벤트 타입 (Express → Client)
-export type SSEEventType = 'dong:users' | 'heatmap:update' | 'water:toast' | 'users:overlay' | 'ping';
+export type SSEEventType = 'dong:users' | 'heatmap:update' | 'water:toast' | 'session:toast' | 'users:overlay' | 'ping';
 
 export interface ActiveUser {
   nickname: string;
@@ -18,9 +18,22 @@ export interface HeatmapUpdatePayload {
   [dongCode: string]: number;
 }
 
+export interface CollectionProgress {
+  creatureType: string;
+  currentCount: number;
+  targetCount: number;
+  isCompleted: boolean;
+}
+
 export interface WaterToastPayload {
   dongCode: string;
   nickname: string;
+}
+
+export interface SessionToastPayload {
+  dongCode: string;
+  nickname: string;
+  collectionProgress?: CollectionProgress;
 }
 
 export interface MapUser {
@@ -43,6 +56,7 @@ export type SSEPayload =
   | DongUsersPayload
   | HeatmapUpdatePayload
   | WaterToastPayload
+  | SessionToastPayload
   | UsersOverlayPayload;
 
 export interface SSEEvent {
