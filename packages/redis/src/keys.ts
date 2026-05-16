@@ -10,4 +10,4 @@ heatmapSido: (sidoCode: string) => `heatmap:sido:${sidoCode}`,
   overlayDailySessions: (date: string) => `overlay:sessions:${date}`,
 } as const;
 
-export const SESSION_TTL_SECONDS = 6 * 60 * 60; // 6시간
+export const SESSION_TTL_SECONDS = 25 * 60 * 60; // 25시간

@@ -86,7 +86,7 @@ waterRouter.post('/', async (req: Request, res: Response) => {
               todayWaterCount: newWaterCount,
               creatureStage: userCreature.stage,
               status: 'IDLE',
-            }, 25 * 3600);
+            });
             break;
           }
         }

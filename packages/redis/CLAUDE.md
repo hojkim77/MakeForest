@@ -11,7 +11,7 @@
   waterCount, creatureStage          // updated on each water
   todosPublic                        // privacy control
   ```
-- TTL: **6 hours** (`SESSION_TTL_SECONDS = 21600`) — midnight batch abandons RUNNING sessions, but TTL also exists as a safety net
+- TTL: **25 hours** (`SESSION_TTL_SECONDS = 90000`) — midnight batch abandons RUNNING sessions, but TTL also exists as a safety net
 - Written on `POST /sessions`; updated on water, pause, and resume
 - After midnight batch marks RUNNING sessions as ABANDONED, the `session:` keys expire via TTL (no explicit delete)
 
@@ -33,6 +33,6 @@
 ## Rules
 
 - Redis is a real-time read cache — the DB is always the source of truth
-- Session cache TTL = 6 hours; midnight batch explicitly deletes dongActive / regionActive / heatmapDong; session keys expire via TTL
+- Session cache TTL = 25 hours; midnight batch explicitly deletes dongActive / regionActive / heatmapDong; session keys expire via TTL
 - No `creature:stage` key — individual creature state is managed through `waterCount` / `creatureStage` fields inside the session cache
 - After midnight batch: entire heatmapDong hash deleted + dongActive / regionActive sets cleaned up

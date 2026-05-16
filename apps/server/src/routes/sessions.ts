@@ -129,7 +129,7 @@ sessionsRouter.patch('/:id', async (req: Request, res: Response) => {
         const cached = await getSession(id);
         if (cached) {
           if (action === 'complete') {
-            await setSession(id, { ...cached, status: 'COMPLETED' }, 25 * 3600);
+            await setSession(id, { ...cached, status: 'COMPLETED' });
           } else {
             await setSession(id, { ...cached, status: 'ABANDONED' });
           }
