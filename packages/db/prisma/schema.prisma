@@ -121,6 +121,22 @@ model PushSubscription {
   @@index([userId])
 }
 
+// 동네 공동 채집 미션 — 매일 자정 생성, 물주기로 currentCount 증가
+model DailyCollection {
+  id           String    @id @default(uuid())
+  dongCode     String
+  date         String    // KST "YYYY-MM-DD"
+  creatureType String    // CREATURE_TYPES 14종 중 1종
+  targetCount  Int       // 활성 유저 수 기반 목표 (max(8, round(activeUsers * 6)))
+  currentCount Int       @default(0)
+  isCompleted  Boolean   @default(false)
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@unique([dongCode, date])
+  @@index([dongCode, date])
+}
+
 enum SessionStatus {
   RUNNING
   PAUSED

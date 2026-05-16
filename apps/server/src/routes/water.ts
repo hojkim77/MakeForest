@@ -73,10 +73,11 @@ waterRouter.post('/', async (req: Request, res: Response) => {
       return [log, updated];
     });
 
-    // Redis 캐시 waterCount/creatureStage 업데이트
+    // Redis 캐시 waterCount/creatureStage 업데이트 + collection increment + SSE broadcast
     void (async () => {
       try {
         const sessionIds = await getActiveDongSessions(dongCode);
+
         for (const sid of sessionIds) {
           const cached = await getSession(sid);
           if (cached?.userId === userId) {
@@ -91,15 +92,15 @@ waterRouter.post('/', async (req: Request, res: Response) => {
           }
         }
         broadcastUsersOverlay();
+
+        broadcastToRegion(regionCode, {
+          type: 'water:toast',
+          data: { dongCode, nickname: nickname ?? '누군가' },
+        });
       } catch (err) {
         console.error('[water] Redis/SSE sync error:', err);
       }
     })();
-
-    broadcastToRegion(regionCode, {
-      type: 'water:toast',
-      data: { dongCode, nickname: nickname ?? '누군가' },
-    });
 
     return res.json({
       myWaterCount: newWaterCount,
