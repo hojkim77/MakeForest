@@ -21,4 +21,5 @@ export const API_PATHS = {
   LOCATION_DETECT:     (lat: number, lng: number) => `/api/location/detect?lat=${lat}&lng=${lng}`,
   MAP_FOSSILS:         (dongCode: string) => `/api/map/${dongCode}`,
   PUSH_NOTIFY:         () => '/api/push/notify',
+  SERVER_COLLECTION_TODAY:   (dongCode: string) => `${S}/collection/today?dongCode=${dongCode}`,
 } as const;
