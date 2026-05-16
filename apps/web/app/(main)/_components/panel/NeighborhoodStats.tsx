@@ -1,13 +1,10 @@
 'use client';
 
-import { useMapStore, useWaterStore } from '@/shared/store';
-import { regionDisplayName } from '@makeforest/types';
+import { useWaterStore } from '@/shared/store';
 
-export function NeighborhoodStats({ myRegionCode }: { myRegionCode: string | null }) {
+
+export function NeighborhoodStats() {
   const growthPercent = useWaterStore((s) => s.growthPercent);
-  const focusedRegionCode = useMapStore((s) => s.focusedRegionCode);
-  const activeRegionCode = focusedRegionCode ?? myRegionCode;
-  const neighborhoodName = activeRegionCode ? regionDisplayName(activeRegionCode) : '내 동네';
   const clamped = Math.max(0, Math.min(100, growthPercent));
 
   return (
@@ -18,7 +15,7 @@ export function NeighborhoodStats({ myRegionCode }: { myRegionCode: string | nul
 
       <div className="flex justify-between items-center">
         <span className="font-mono text-pixel-stat text-on-surface">
-          {neighborhoodName} 내 성장률
+          내 생명체 성장률
         </span>
         <span className="font-mono text-pixel-stat text-primary">{clamped}%</span>
       </div>

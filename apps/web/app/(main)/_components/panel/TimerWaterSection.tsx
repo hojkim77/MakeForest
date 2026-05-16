@@ -74,7 +74,7 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
     if (isWatering) return;
     setIsWatering(true);
     try {
-      const data = await api.post<{ myWaterCount: number; userCreature: { stage: number; waterCount: number } }>(API_PATHS.WATER());
+      const data = await api.post<{ myWaterCount: number; userCreature: { stage: number; totalWaterCount: number } }>(API_PATHS.WATER());
       applyWaterResponse(data);
       if (data.myWaterCount >= TOTAL_SEGMENTS) {
         toast.success('오늘 집중 고생하셨어요! 🌱');
