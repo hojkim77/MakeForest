@@ -49,8 +49,8 @@ export function MapOverlay() {
 
   return (
     <>
-      {/* Title card — top left */}
-      <div className="absolute top-6 left-6 z-10 p-md bg-background border border-outline">
+      {/* Title card — top right */}
+      <div className="absolute top-6 right-6 z-10 p-md bg-background border border-outline text-right">
         <p className="font-mono text-pixel-stat text-primary-container uppercase tracking-wider">
           {isForest && focusedRegionCode
             ? regionDisplayName(focusedRegionCode)
@@ -69,8 +69,8 @@ export function MapOverlay() {
         )}
       </div>
 
-      {/* Legend — bottom right */}
-      <div className="absolute bottom-16 right-6 z-10 flex flex-col gap-sm p-md bg-inverse-surface border border-outline">
+      {/* Legend — bottom left */}
+      <div className="absolute bottom-16 left-6 z-10 flex flex-col gap-sm p-md bg-inverse-surface border border-outline">
         {LEGEND.map(({ colorClass, label }) => (
           <div key={label} className="flex items-center gap-md">
             <div className={`w-3 h-3 ${colorClass}`} />

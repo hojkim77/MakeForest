@@ -4,18 +4,31 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { usePixelMapData } from '@/shared/hooks/usePixelMapData';
 import { useActivityStore } from '@/shared/store';
 import { UserOverlay } from './UserOverlay';
+import { CollectionCreatureOverlay } from './CollectionCreatureOverlay';
 import { regionOf } from '@makeforest/types';
 
 const PIXEL_SIZE = 4;
 const SEA_COLOR = '#0e2318';
 const INACTIVE_COLOR = '#707972';
+const BREATHE_STEPS = 24; // 0.5 luma per step — 시각적으로 구분 불가
 
-// 활성도 + 브리딩 팩터 → 숲 색상
+const FOREST_COLOR_TABLE: readonly (readonly string[])[] = Array.from(
+  { length: 21 },
+  (_, count) => {
+    if (count === 0) return Array<string>(BREATHE_STEPS).fill(INACTIVE_COLOR);
+    return Array.from({ length: BREATHE_STEPS }, (_, step) => {
+      const breathe = step / (BREATHE_STEPS - 1);
+      const t = Math.min(count / 20, 1);
+      const l = 20 + t * 36 + breathe * 12;
+      return `hsl(138,60%,${Math.round(l)}%)`;
+    });
+  },
+);
+
 function forestColor(count: number, breathe: number): string {
-  if (count === 0) return INACTIVE_COLOR;
-  const t = Math.min(count / 20, 1);
-  const l = 20 + t * 36 + breathe * 12;
-  return `hsl(138,60%,${l.toFixed(0)}%)`;
+  const ci = Math.min(Math.floor(count), 20);
+  const bi = Math.min(Math.round(breathe * (BREATHE_STEPS - 1)), BREATHE_STEPS - 1);
+  return FOREST_COLOR_TABLE[ci]?.[bi] ?? INACTIVE_COLOR;
 }
 
 interface ForestMapProps {
@@ -83,6 +96,9 @@ export function ForestMap({ regionCode, active, scale = 1 }: ForestMapProps) {
       />
       {active && (
         <UserOverlay users={regionUsers} mapW={pixelMap.w} mapH={pixelMap.h} scale={scale} />
+      )}
+      {active && (
+        <CollectionCreatureOverlay mapW={pixelMap.w} mapH={pixelMap.h} scale={scale} />
       )}
     </div>
   );

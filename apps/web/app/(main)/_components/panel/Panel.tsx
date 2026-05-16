@@ -8,27 +8,37 @@ import { CreatureSection } from './CreatureSection';
 import { TimerWaterSection } from './TimerWaterSection';
 import { TaskList } from './TaskList';
 import { NeighborhoodStats } from './NeighborhoodStats';
-import { NeighborhoodWaterFeed } from './NeighborhoodWaterFeed';
+import { ActivityToastFeed } from './ActivityToastFeed';
+import { PanelSideTabs } from './PanelSideTabs';
 import { LoginPrompt } from './LoginPrompt';
 import { getKstDateString } from '@/shared/utils/date';
+import type { CollectionData } from './DailyCollectionCard';
 
 export async function Panel() {
   const session = await auth();
   const isLoggedIn = !!session?.user?.id;
   const myRegionCode = session?.user?.regionCode ?? null;
+  const myDongCode = session?.user?.dongCode ?? null;
 
   let initialWater = { waterCount: 0, creatureStage: 0, totalWaterCount: 0 };
+  let initialCollection: CollectionData | null = null;
+
   if (isLoggedIn && session?.user?.id) {
     const today = getKstDateString();
-    const [waterData, userData] = await Promise.all([
+    const [waterData, userData, collectionData] = await Promise.all([
       api.get<{ waterCount: number }>(API_PATHS.SERVER_WATER_ME(session.user.id, today)),
       api.get<{ userCreature: { stage: number; totalWaterCount: number } | null }>(API_PATHS.SERVER_USER_ME(session.user.id)),
+      myDongCode
+        ? api.get<CollectionData>(API_PATHS.SERVER_COLLECTION_TODAY(myDongCode)).catch(() => null)
+        : Promise.resolve(null),
     ]);
+
     initialWater = {
       waterCount: waterData.waterCount ?? 0,
       creatureStage: userData.userCreature?.stage ?? 0,
       totalWaterCount: userData.userCreature?.totalWaterCount ?? 0,
     };
+    initialCollection = collectionData;
   }
 
   return (
@@ -37,7 +47,7 @@ export async function Panel() {
         <WaterStoreInitializer {...initialWater} />
         <PeekingBanner myRegionCode={myRegionCode} />
         <SloganSection myRegionCode={myRegionCode} />
-        <NeighborhoodWaterFeed myRegionCode={myRegionCode} />
+        <ActivityToastFeed myRegionCode={myRegionCode} />
 
         {isLoggedIn && <CreatureSection />}
         {isLoggedIn && <NeighborhoodStats />}
@@ -51,6 +61,12 @@ export async function Panel() {
           <LoginPrompt />
         )}
       </div>
+
+      <PanelSideTabs
+        dongCode={myDongCode}
+        regionCode={myRegionCode}
+        initialCollection={initialCollection}
+      />
     </aside>
   );
 }

@@ -17,11 +17,15 @@ const MAX_COUNT = 20;
 const SEA_COLOR = '#b4cdd8';
 const SOIL_COLOR = '#707972';
 
-function dongColor(count: number): string {
+const DONG_COLOR_TABLE: readonly string[] = Array.from({ length: MAX_COUNT + 1 }, (_, count) => {
   if (count === 0) return SOIL_COLOR;
-  const t = Math.min(count / MAX_COUNT, 1);
+  const t = count / MAX_COUNT;
   const l = 81 - t * 56;
-  return `hsl(148,60%,${l.toFixed(0)}%)`;
+  return `hsl(148,60%,${Math.round(l)}%)`;
+});
+
+function dongColor(count: number): string {
+  return DONG_COLOR_TABLE[Math.min(Math.floor(count), MAX_COUNT)] ?? SOIL_COLOR;
 }
 
 interface PixelMapProps {
