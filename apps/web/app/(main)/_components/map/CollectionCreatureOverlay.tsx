@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
 import { usePixelMapData } from '@/shared/hooks/usePixelMapData';
 import { CollectionCreatureSprite } from '@/shared/components/ui/CollectionCreatureSprite';
+import { regionOf } from '@makeforest/types';
 
-interface CollectionState {
+interface CompletedCollection {
   creatureType: string;
-  isCompleted: boolean;
+  date: string;
 }
 
 const SERVER_URL =
@@ -15,8 +15,8 @@ const SERVER_URL =
     ? (process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000')
     : 'http://localhost:4000';
 
-function seededCellIndex(dongCode: string, length: number): number {
-  const hash = dongCode.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+function seededIndex(seed: string, length: number): number {
+  const hash = seed.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
   return hash % length;
 }
 
@@ -24,63 +24,60 @@ interface Props {
   mapW: number;
   mapH: number;
   scale: number;
+  regionCode: string | null;
 }
 
-export function CollectionCreatureOverlay({ mapW, mapH, scale }: Props) {
-  const { data: session } = useSession();
-  const dongCode = session?.user?.dongCode ?? null;
+export function CollectionCreatureOverlay({ mapW, mapH, scale, regionCode }: Props) {
   const { data: pixelMap } = usePixelMapData();
-  const [collection, setCollection] = useState<CollectionState | null>(null);
+  const [completed, setCompleted] = useState<CompletedCollection[]>([]);
 
   useEffect(() => {
-    if (!dongCode) return;
+    if (!regionCode) return;
 
     let cancelled = false;
-    fetch(`${SERVER_URL}/collection/today?dongCode=${encodeURIComponent(dongCode)}`)
+    fetch(`${SERVER_URL}/collection/completed?regionCode=${encodeURIComponent(regionCode)}`)
       .then((r) => r.json())
-      .then((data: CollectionState) => { if (!cancelled) setCollection(data); })
+      .then((data: CompletedCollection[]) => { if (!cancelled) setCompleted(data); })
       .catch(() => {});
 
     return () => { cancelled = true; };
-  }, [dongCode]);
+  }, [regionCode]);
 
-  // 미션 완료 시에만 장식 스프라이트 표시
-  if (!dongCode || !collection?.isCompleted) return null;
+  if (!regionCode || !completed.length) return null;
 
-  const dongCells = pixelMap.cells.filter((c) => c.code === dongCode);
-  if (!dongCells.length) return null;
-
-  const cell = dongCells[seededCellIndex(dongCode, dongCells.length)]!;
-  const left = (cell.x / mapW) * 100;
-  const top = (cell.y / mapH) * 100;
+  const regionCells = pixelMap.cells.filter((c) => regionOf(c.code, c.name) === regionCode);
+  if (!regionCells.length) return null;
 
   const spritePx = Math.max(16, 40 / scale);
 
   return (
     <div className="pointer-events-none absolute inset-0">
-      <div
-        className="absolute"
-        style={{
-          left: `${left}%`,
-          top: `${top}%`,
-          width: 1,
-          height: 1,
-          overflow: 'visible',
-        }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            left: '50%',
-            top: '50%',
-            transform: 'translate(-50%, -50%)',
-            filter: 'drop-shadow(0 0 4px gold)',
-            pointerEvents: 'none',
-          }}
-        >
-          <CollectionCreatureSprite creatureType={collection.creatureType} size={spritePx} />
-        </div>
-      </div>
+      {completed.map(({ creatureType, date }) => {
+        const cell = regionCells[seededIndex(`${regionCode}:${date}`, regionCells.length)]!;
+        const left = (cell.x / mapW) * 100;
+        const top = (cell.y / mapH) * 100;
+
+        return (
+          <div
+            key={date}
+            className="absolute"
+            style={{ left: `${left}%`, top: `${top}%`, width: 1, height: 1, overflow: 'visible' }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                left: '50%',
+                top: '50%',
+                transform: 'translate(-50%, -50%)',
+                filter: 'drop-shadow(0 0 4px gold)',
+                pointerEvents: 'none',
+              }}
+            >
+              <CollectionCreatureSprite creatureType={creatureType} size={spritePx} />
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

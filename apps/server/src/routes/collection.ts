@@ -8,34 +8,34 @@ import type { CollectionProgress } from '@makeforest/types';
 export const collectionRouter = Router();
 
 // DailyCollection을 가져오거나 없으면 lazy 생성
-export async function getOrCreateCollection(dongCode: string, date: string) {
+export async function getOrCreateCollection(regionCode: string, date: string) {
   const existing = await prisma.dailyCollection.findUnique({
-    where: { dongCode_date: { dongCode, date } },
+    where: { regionCode_date: { regionCode, date } },
   });
   if (existing) return existing;
 
   const sevenDaysAgo = addDays(date, -7);
   const activeRows = await prisma.wateringLog.findMany({
-    where: { dongCode, date: { gte: sevenDaysAgo, lt: date } },
+    where: { date: { gte: sevenDaysAgo, lt: date }, user: { regionCode } },
     distinct: ['userId'],
     select: { userId: true },
   });
   const target = calcCollectionTarget(activeRows.length);
-  const creatureType = pickDailyCreature(dongCode, date);
+  const creatureType = pickDailyCreature(regionCode, date);
 
   return prisma.dailyCollection.upsert({
-    where: { dongCode_date: { dongCode, date } },
+    where: { regionCode_date: { regionCode, date } },
     update: {},
-    create: { dongCode, date, creatureType, targetCount: target, currentCount: 0 },
+    create: { regionCode, date, creatureType, targetCount: target, currentCount: 0 },
   });
 }
 
-// 물주기 시 currentCount 증가, 달성 체크 후 CollectionProgress 반환
+// 세션 시작 시 currentCount 증가, 달성 체크 후 CollectionProgress 반환
 export async function incrementCollection(
-  dongCode: string,
+  regionCode: string,
   date: string,
 ): Promise<CollectionProgress> {
-  const collection = await getOrCreateCollection(dongCode, date);
+  const collection = await getOrCreateCollection(regionCode, date);
 
   if (collection.isCompleted) {
     return {
@@ -50,7 +50,7 @@ export async function incrementCollection(
   const isCompleted = newCount >= collection.targetCount;
 
   const updated = await prisma.dailyCollection.update({
-    where: { dongCode_date: { dongCode, date } },
+    where: { regionCode_date: { regionCode, date } },
     data: {
       currentCount: newCount,
       isCompleted,
@@ -66,14 +66,14 @@ export async function incrementCollection(
   };
 }
 
-// GET /collection/today?dongCode=
+// GET /collection/today?regionCode=
 collectionRouter.get('/today', async (req: Request, res: Response) => {
   try {
-    const { dongCode } = req.query as { dongCode?: string };
-    if (!dongCode) return res.status(400).json({ error: 'dongCode required' });
+    const { regionCode } = req.query as { regionCode?: string };
+    if (!regionCode) return res.status(400).json({ error: 'regionCode required' });
 
     const today = getKstDateString();
-    const collection = await getOrCreateCollection(dongCode, today);
+    const collection = await getOrCreateCollection(regionCode, today);
 
     return res.json({
       creatureType: collection.creatureType,
@@ -83,6 +83,25 @@ collectionRouter.get('/today', async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error('[collection] GET /today error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /collection/completed?regionCode=
+collectionRouter.get('/completed', async (req: Request, res: Response) => {
+  try {
+    const { regionCode } = req.query as { regionCode?: string };
+    if (!regionCode) return res.status(400).json({ error: 'regionCode required' });
+
+    const completed = await prisma.dailyCollection.findMany({
+      where: { regionCode, isCompleted: true },
+      select: { creatureType: true, date: true },
+      orderBy: { date: 'asc' },
+    });
+
+    return res.json(completed);
+  } catch (err) {
+    console.error('[collection] GET /completed error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

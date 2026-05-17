@@ -25,6 +25,9 @@ model User {
   pushSubscriptions PushSubscription[]
   userCreatures     UserCreature[]
   fossils           Fossil[]
+  communityPosts    CommunityPost[]
+  communityComments CommunityComment[]
+  communityReactions CommunityReaction[]
 
   @@unique([provider, providerId])
   @@index([dongCode])
@@ -122,20 +125,62 @@ model PushSubscription {
   @@index([userId])
 }
 
-// 동네 공동 채집 미션 — 매일 자정 생성, 물주기로 currentCount 증가
+// 지역 공동 채집 미션 — lazy 생성, 세션 시작으로 currentCount 증가
 model DailyCollection {
   id           String    @id @default(uuid())
-  dongCode     String
+  regionCode   String
   date         String    // KST "YYYY-MM-DD"
   creatureType String    // CREATURE_TYPES 14종 중 1종
-  targetCount  Int       // 활성 유저 수 기반 목표 (max(8, round(activeUsers * 6)))
+  targetCount  Int       // 활성 유저 수 기반 목표 (max(4, round(activeUsers * 3)))
   currentCount Int       @default(0)
   isCompleted  Boolean   @default(false)
   completedAt  DateTime?
   createdAt    DateTime  @default(now())
 
-  @@unique([dongCode, date])
-  @@index([dongCode, date])
+  @@unique([regionCode, date])
+  @@index([regionCode, date])
+}
+
+model CommunityPost {
+  id        String             @id
+  userId    String
+  sessionId String             @unique
+  date      String
+  createdAt DateTime           @default(now())
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments  CommunityComment[]
+  reactions CommunityReaction[]
+
+  @@unique([userId, date])
+  @@index([createdAt])
+  @@index([date])
+}
+
+model CommunityComment {
+  id        String        @id
+  postId    String
+  userId    String
+  content   String
+  createdAt DateTime      @default(now())
+
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+}
+
+model CommunityReaction {
+  id     String        @id
+  postId String
+  userId String
+  emoji  String
+
+  post   CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId, emoji])
+  @@index([postId])
 }
 
 enum SessionStatus {

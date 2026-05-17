@@ -101,7 +101,7 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
           ]);
           const regionCode = dongRow ? regionOf(dongCode, dongRow.name) : dongCode.substring(0, 5);
           const nickname = cached?.nickname ?? '누군가';
-          const collectionProgress = await incrementCollection(dongCode, today);
+          const collectionProgress = await incrementCollection(regionCode, today);
           broadcastToRegion(regionCode, {
             type: 'session:toast',
             data: { dongCode, nickname, collectionProgress },
