@@ -1,8 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
 import { redis, RedisKeys, setSession, getSession, addActiveDong, getDongActiveCount, addDailyOverlaySession } from '@makeforest/redis';
-import { broadcastHeatmap, broadcastUsersOverlay } from './sse';
+import { broadcastHeatmap, broadcastToRegion, broadcastUsersOverlay } from './sse';
 import { getKstDateString } from './water.logic';
+import { regionOf } from '@makeforest/types';
+import { incrementCollection } from './collection';
 import type { SessionAction } from '@makeforest/types';
 
 export const sessionsRouter = Router();
@@ -36,7 +38,11 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
       },
     });
 
-    const result = { sessionId: session.id, startedAt: session.startedAt };
+    // create 시: createdAt ≈ startedAt → 차이 < 2s
+    // update 시: startedAt = now(), createdAt = 최초 생성 시각 → 차이 큼
+    const isNewSession = Math.abs(session.createdAt.getTime() - session.startedAt.getTime()) < 2000;
+
+    const result = { sessionId: session.id, startedAt: session.startedAt, isNewSession };
 
     // Redis 캐싱 + SSE 브로드캐스트
     void (async () => {
@@ -52,7 +58,7 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
               where: { id: userId },
               select: { nickname: true, todosPublic: true },
             }),
-            prisma.dong.findUnique({ where: { code: dongCode }, select: { lat: true, lng: true } }),
+            prisma.dong.findUnique({ where: { code: dongCode }, select: { lat: true, lng: true, name: true } }),
             prisma.userCreature.findUnique({
               where: { userId },
               select: { totalWaterCount: true, stage: true },
@@ -86,6 +92,21 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
         for (const [code, cnt] of Object.entries(heatmapRaw)) activity[code] = Number(cnt);
         broadcastHeatmap(activity);
         broadcastUsersOverlay();
+
+        // 첫 세션 시작 → 미션 기여 + session:toast 브로드캐스트
+        if (isNewSession) {
+          const [dongRow, cached] = await Promise.all([
+            prisma.dong.findUnique({ where: { code: dongCode }, select: { name: true } }),
+            getSession(session.id),
+          ]);
+          const regionCode = dongRow ? regionOf(dongCode, dongRow.name) : dongCode.substring(0, 5);
+          const nickname = cached?.nickname ?? '누군가';
+          const collectionProgress = await incrementCollection(dongCode, today);
+          broadcastToRegion(regionCode, {
+            type: 'session:toast',
+            data: { dongCode, nickname, collectionProgress },
+          });
+        }
       } catch (err) {
         console.error('[sessions] Redis/SSE sync error:', err);
       }

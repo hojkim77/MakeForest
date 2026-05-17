@@ -7,6 +7,7 @@ import { waterRouter } from './routes/water';
 import { creatureRouter } from './routes/creature';
 import { statsRouter } from './routes/stats';
 import { userRouter } from './routes/user';
+import { collectionRouter } from './routes/collection';
 import { registerCronJobs } from './cron/midnight';
 import { requireInternalAuth } from './middleware/auth';
 import { testRouter } from './routes/test';
@@ -25,6 +26,7 @@ app.use('/creature', creatureRouter);
 // Public: stats (read-only)
 app.use('/stats', statsRouter);
 app.use('/user', userRouter);
+app.use('/collection', collectionRouter);
 
 // Internal: require Next.js-issued secret on mutating routes
 app.use('/sessions', requireInternalAuth, sessionsRouter);
