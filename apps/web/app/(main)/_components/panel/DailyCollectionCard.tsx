@@ -29,7 +29,7 @@ export function DailyCollectionCard({ dongCode, regionCode, initialCollection }:
 
     es.addEventListener('session:toast', (e) => {
       const payload = JSON.parse((e as MessageEvent<string>).data) as SessionToastPayload;
-      if (payload.dongCode !== dongCode || !payload.collectionProgress) return;
+      if (!payload.collectionProgress) return;
       setCollection((prev) =>
         prev ? { ...prev, ...payload.collectionProgress! } : prev,
       );

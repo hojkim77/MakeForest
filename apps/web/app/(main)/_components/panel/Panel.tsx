@@ -28,8 +28,8 @@ export async function Panel() {
     const [waterData, userData, collectionData] = await Promise.all([
       api.get<{ waterCount: number }>(API_PATHS.SERVER_WATER_ME(session.user.id, today)),
       api.get<{ userCreature: { stage: number; totalWaterCount: number } | null }>(API_PATHS.SERVER_USER_ME(session.user.id)),
-      myDongCode
-        ? api.get<CollectionData>(API_PATHS.SERVER_COLLECTION_TODAY(myDongCode)).catch(() => null)
+      myRegionCode
+        ? api.get<CollectionData>(API_PATHS.SERVER_COLLECTION_TODAY(myRegionCode)).catch(() => null)
         : Promise.resolve(null),
     ]);
 

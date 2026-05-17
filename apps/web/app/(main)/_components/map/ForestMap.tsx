@@ -98,7 +98,7 @@ export function ForestMap({ regionCode, active, scale = 1 }: ForestMapProps) {
         <UserOverlay users={regionUsers} mapW={pixelMap.w} mapH={pixelMap.h} scale={scale} />
       )}
       {active && (
-        <CollectionCreatureOverlay mapW={pixelMap.w} mapH={pixelMap.h} scale={scale} />
+        <CollectionCreatureOverlay mapW={pixelMap.w} mapH={pixelMap.h} scale={scale} regionCode={regionCode} />
       )}
     </div>
   );
