@@ -8,6 +8,8 @@ import { creatureRouter } from './routes/creature';
 import { statsRouter } from './routes/stats';
 import { userRouter } from './routes/user';
 import { collectionRouter } from './routes/collection';
+import { communityRouter } from './routes/community';
+import { rankingRouter } from './routes/ranking';
 import { registerCronJobs } from './cron/midnight';
 import { requireInternalAuth } from './middleware/auth';
 import { testRouter } from './routes/test';
@@ -27,6 +29,8 @@ app.use('/creature', creatureRouter);
 app.use('/stats', statsRouter);
 app.use('/user', userRouter);
 app.use('/collection', collectionRouter);
+app.use('/community', communityRouter);
+app.use('/ranking', rankingRouter);
 
 // Internal: require Next.js-issued secret on mutating routes
 app.use('/sessions', requireInternalAuth, sessionsRouter);

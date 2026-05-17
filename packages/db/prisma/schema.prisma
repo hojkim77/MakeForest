@@ -20,14 +20,14 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  sessions          FocusSession[]
-  wateringLogs      WateringLog[]
-  pushSubscriptions PushSubscription[]
-  userCreatures     UserCreature[]
-  fossils           Fossil[]
-  communityPosts    CommunityPost[]
-  communityComments CommunityComment[]
+  sessions           FocusSession[]
+  wateringLogs       WateringLog[]
+  pushSubscriptions  PushSubscription[]
+  userCreatures      UserCreature[]
+  fossils            Fossil[]
+  communityPosts     CommunityPost[]
   communityReactions CommunityReaction[]
+  communityComments  CommunityComment[]
 
   @@unique([provider, providerId])
   @@index([dongCode])
@@ -180,6 +180,49 @@ model CommunityReaction {
   user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId, emoji])
+  @@index([postId])
+}
+
+// 커뮤니티 피드 — 세션 첫 시작 시 자동 생성
+model CommunityPost {
+  id        String   @id @default(uuid())
+  userId    String
+  sessionId String   @unique
+  date      String   // KST "YYYY-MM-DD"
+  createdAt DateTime @default(now())
+
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reactions CommunityReaction[]
+  comments  CommunityComment[]
+
+  @@unique([userId, date])
+  @@index([createdAt])
+  @@index([date])
+}
+
+model CommunityReaction {
+  id     String @id @default(uuid())
+  postId String
+  userId String
+  emoji  String // "🔥" | "💪" | "👏"
+
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId, emoji])
+  @@index([postId])
+}
+
+model CommunityComment {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+
+  post CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([postId])
 }
 

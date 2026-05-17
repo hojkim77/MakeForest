@@ -9,6 +9,7 @@ import { Icon } from './Icon';
 const NAV_ITEMS = [
   { label: 'Dashboard', href: '/mypage' },
   { label: 'Forest Map', href: '/' },
+  { label: 'Community', href: '/community' },
 ] as const;
 
 export function TopAppBar() {

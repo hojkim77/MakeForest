@@ -93,7 +93,7 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
         broadcastHeatmap(activity);
         broadcastUsersOverlay();
 
-        // 첫 세션 시작 → 미션 기여 + session:toast 브로드캐스트
+        // 첫 세션 시작 → 미션 기여 + session:toast 브로드캐스트 + 커뮤니티 포스트 자동 생성
         if (isNewSession) {
           const [dongRow, cached] = await Promise.all([
             prisma.dong.findUnique({ where: { code: dongCode }, select: { name: true } }),
@@ -101,7 +101,10 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
           ]);
           const regionCode = dongRow ? regionOf(dongCode, dongRow.name) : dongCode.substring(0, 5);
           const nickname = cached?.nickname ?? '누군가';
-          const collectionProgress = await incrementCollection(regionCode, today);
+          const [collectionProgress] = await Promise.all([
+            incrementCollection(dongCode, today),
+            prisma.communityPost.create({ data: { userId, sessionId: session.id, date: today } }),
+          ]);
           broadcastToRegion(regionCode, {
             type: 'session:toast',
             data: { dongCode, nickname, collectionProgress },
