@@ -141,48 +141,6 @@ model DailyCollection {
   @@index([regionCode, date])
 }
 
-model CommunityPost {
-  id        String             @id
-  userId    String
-  sessionId String             @unique
-  date      String
-  createdAt DateTime           @default(now())
-
-  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  comments  CommunityComment[]
-  reactions CommunityReaction[]
-
-  @@unique([userId, date])
-  @@index([createdAt])
-  @@index([date])
-}
-
-model CommunityComment {
-  id        String        @id
-  postId    String
-  userId    String
-  content   String
-  createdAt DateTime      @default(now())
-
-  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([postId])
-}
-
-model CommunityReaction {
-  id     String        @id
-  postId String
-  userId String
-  emoji  String
-
-  post   CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([postId, userId, emoji])
-  @@index([postId])
-}
-
 // 커뮤니티 피드 — 세션 첫 시작 시 자동 생성
 model CommunityPost {
   id        String   @id @default(uuid())
