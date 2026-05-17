@@ -25,21 +25,19 @@ export function PanelSideTabs({ dongCode, regionCode, initialCollection }: Props
         <TabButton label="공통 미션" active={open} onClick={toggle} />
       </div>
 
-      {/* Drawer — appears to the right of tab button, auto-height */}
-      {open && (
-        <div
-          className="fixed top-[49px] w-64 max-h-[calc(100vh-49px-2rem)] bg-surface-container border border-outline-variant overflow-y-auto z-20"
-          style={{ left: 420 + TAB_BUTTON_WIDTH }}
-        >
-          <div className="p-md">
-            <DailyCollectionCard
-              dongCode={dongCode}
-              regionCode={regionCode}
-              initialCollection={initialCollection}
-            />
-          </div>
+      {/* Drawer — always mounted so SSE stays connected; hidden when closed */}
+      <div
+        className={`fixed top-[49px] w-64 max-h-[calc(100vh-49px-2rem)] bg-surface-container border border-outline-variant overflow-y-auto z-20 ${open ? '' : 'hidden'}`}
+        style={{ left: 420 + TAB_BUTTON_WIDTH }}
+      >
+        <div className="p-md">
+          <DailyCollectionCard
+            dongCode={dongCode}
+            regionCode={regionCode}
+            initialCollection={initialCollection}
+          />
         </div>
-      )}
+      </div>
     </>
   );
 }
