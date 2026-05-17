@@ -37,6 +37,7 @@ model FocusSession {
   dongCode        String
   date            String        // KST "YYYY-MM-DD"
   startedAt       DateTime      @default(now())
+  createdAt       DateTime      @default(now())
   totalElapsedSec Int           @default(0) // 완료된 사이클 누적 집중 시간 (waterCount * 1800)
   waterCount      Int           @default(0) // 오늘 물주기 횟수 (최대 12)
   todos           Json          @default("[]")

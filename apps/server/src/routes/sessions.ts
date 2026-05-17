@@ -20,13 +20,6 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
 
     const today = getKstDateString();
 
-    // 오늘 세션이 이미 있는지 확인 — 없으면 첫 시작 (미션 기여 대상)
-    const existing = await prisma.focusSession.findUnique({
-      where: { userId_date: { userId, date: today } },
-      select: { id: true },
-    });
-    const isNewSession = !existing;
-
     // 하루 1개 세션: startedAt 갱신 + status=RUNNING (재개 시에도 동일)
     const session = await prisma.focusSession.upsert({
       where: { userId_date: { userId, date: today } },
@@ -45,7 +38,11 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
       },
     });
 
-    const result = { sessionId: session.id, startedAt: session.startedAt };
+    // create 시: createdAt ≈ startedAt → 차이 < 2s
+    // update 시: startedAt = now(), createdAt = 최초 생성 시각 → 차이 큼
+    const isNewSession = Math.abs(session.createdAt.getTime() - session.startedAt.getTime()) < 2000;
+
+    const result = { sessionId: session.id, startedAt: session.startedAt, isNewSession };
 
     // Redis 캐싱 + SSE 브로드캐스트
     void (async () => {
