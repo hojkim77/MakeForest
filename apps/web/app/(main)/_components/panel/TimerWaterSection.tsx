@@ -65,8 +65,11 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
 
     if (!isLoggedIn) return;
     try {
-      const data = await api.post<{ sessionId: string; startedAt: string }>(API_PATHS.SESSIONS(), { todos });
+      const data = await api.post<{ sessionId: string; startedAt: string; isNewSession: boolean }>(API_PATHS.SESSIONS(), { todos });
       startSession(data.sessionId, Date.parse(data.startedAt));
+      if (data.isNewSession) {
+        toast.success('커뮤니티에 오늘의 집중이 공유됐어요!', { label: '보러 가기', href: '/community' });
+      }
     } catch (err) { handleApiError(err, { fallback: '타이머 구동에 실패했어요. 잠시 후 다시 시도해주세요.' }); }
   }
 

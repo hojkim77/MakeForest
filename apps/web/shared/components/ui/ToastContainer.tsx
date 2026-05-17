@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import Link from 'next/link';
 import { useToastStore, type Toast } from '@/shared/store/toastStore';
 import { Icon } from './Icon';
 
@@ -42,8 +43,17 @@ function ToastItem({ toast }: { toast: Toast }) {
   return (
     <ToastShell className={`gap-sm py-sm border border-outline ${styles.container}`}>
       <Icon name={styles.iconName} filled size={18} className={styles.icon} />
-      <span>{toast.message}</span>
-      <button onClick={() => removeToast(toast.id)} className="ml-xs opacity-60 hover:opacity-100">
+      <span className="flex-1">{toast.message}</span>
+      {toast.action && (
+        <Link
+          href={toast.action.href}
+          onClick={() => removeToast(toast.id)}
+          className="font-mono text-label underline underline-offset-2 opacity-80 hover:opacity-100"
+        >
+          {toast.action.label}
+        </Link>
+      )}
+      <button onClick={() => removeToast(toast.id)} className="opacity-60 hover:opacity-100">
         <Icon name="close" size={16} className={styles.icon} />
       </button>
     </ToastShell>

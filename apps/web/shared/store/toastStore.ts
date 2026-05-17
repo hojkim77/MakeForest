@@ -5,6 +5,7 @@ export interface Toast {
   type: 'error' | 'success' | 'info';
   message: string;
   duration: number;
+  action?: { label: string; href: string };
 }
 
 interface ToastStore {
