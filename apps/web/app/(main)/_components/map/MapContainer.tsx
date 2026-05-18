@@ -34,9 +34,11 @@ export function MapContainer() {
   useActivityStream();
   const { data: session, status } = useSession();
   const isLoggedIn = status === 'authenticated' && !!session?.user?.id;
+  const myRegionCode = (session?.user?.regionCode ?? null) as string | null;
   const { setMapMode, focusRegion, focusedRegionCode } = useMapStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const boundsMapRef = useRef<Map<string, RegionBounds> | null>(null);
 
   const [forestState, setForestState] = useState<ForestState | null>(null);
   const [forestT, setForestT] = useState({ scale: 1, tx: 0, ty: 0 });
@@ -108,7 +110,7 @@ export function MapContainer() {
     setPixelT(constrainPixelT({ scale: minScaleRef.current, tx: 0, ty: 0 }, width, height));
   }, [focusRegion, setPixelT, constrainPixelT, minScaleRef]);
 
-  // ── 패널 "내 동네로 돌아가기" → 픽셀 모드 복귀 ───────────────────
+  // ── focusedRegionCode 변화 → 숲 모드 진입 or 픽셀 복귀 ──────────
   useEffect(() => {
     if (focusedRegionCode === null) {
       setForestState(null);
@@ -116,8 +118,16 @@ export function MapContainer() {
       if (!el) return;
       const { width, height } = el.getBoundingClientRect();
       setPixelT((prev) => constrainPixelT(prev, width, height));
+    } else if (forestState?.regionCode !== focusedRegionCode) {
+      const bounds = boundsMapRef.current?.get(focusedRegionCode);
+      if (!bounds) return;
+      const el = containerRef.current;
+      if (!el) return;
+      const { width, height } = el.getBoundingClientRect();
+      setForestT(computeForestTransform(bounds, width, height));
+      setForestState({ regionCode: focusedRegionCode, bounds });
     }
-  }, [focusedRegionCode, setPixelT, constrainPixelT]);
+  }, [focusedRegionCode, forestState?.regionCode, setPixelT, constrainPixelT]);
 
   return (
     <div
@@ -147,11 +157,18 @@ export function MapContainer() {
           className="absolute inset-0 transition-opacity duration-300"
           style={{ opacity: isForest ? 0 : 1, pointerEvents: isForest ? 'none' : 'auto' }}
         >
-          <PixelMap {...(isLoggedIn ? { onRegionClick: handleRegionClick } : {})} />
+          <PixelMap
+            {...(isLoggedIn ? { onRegionClick: handleRegionClick } : {})}
+            onBoundsReady={(m) => { boundsMapRef.current = m; }}
+          />
         </div>
       </div>
 
-      <MyLocationButton onReset={resetView} isForest={isForest} />
+      <MyLocationButton
+        onReset={resetView}
+        isForest={isForest}
+        {...(myRegionCode ? { onGoHome: () => focusRegion(myRegionCode) } : {})}
+      />
 
       {process.env.NODE_ENV === 'development' && (
         <div className="absolute bottom-2 left-2 z-20 bg-black/50 px-2 py-0.5 font-mono text-label text-gray-400">
@@ -162,12 +179,21 @@ export function MapContainer() {
   );
 }
 
-function MyLocationButton({ onReset, isForest }: { onReset: () => void; isForest: boolean }) {
+function MyLocationButton({
+  onReset,
+  isForest,
+  onGoHome,
+}: {
+  onReset: () => void;
+  isForest: boolean;
+  onGoHome?: () => void;
+}) {
+  const handleClick = isForest ? onReset : (onGoHome ?? onReset);
   return (
     <button
-      onClick={onReset}
+      onClick={handleClick}
       className="absolute bottom-4 right-4 z-20 flex h-10 w-10 items-center justify-center bg-surface border border-outline-variant hover:bg-surface-container-high active:scale-95 transition-transform"
-      title={isForest ? '전체 보기로 돌아가기' : '전체 보기'}
+      title={isForest ? '전체 보기로 돌아가기' : onGoHome ? '내 지역 숲으로' : '전체 보기'}
     >
       {isForest ? (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" viewBox="0 0 24 24" fill="currentColor">

@@ -12,7 +12,7 @@ export function PeekingBanner({ myRegionCode }: { myRegionCode: string | null })
 
   return (
     <button
-      onClick={() => focusRegion(null)}
+      onClick={() => focusRegion(myRegionCode)}
       className="flex items-center gap-sm p-sm bg-primary-fixed text-on-primary-fixed font-mono text-label uppercase tracking-wider w-full border border-primary active:translate-y-px transition-none"
     >
       <Icon name="arrow_back" size={16} />
