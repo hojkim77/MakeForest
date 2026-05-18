@@ -66,7 +66,7 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
   async function handleStart() {
     if (!isLoggedIn) return;
     if (todos.length === 0) {
-      toast.error('오늘 집중할 거 하나 이상 써주세요');
+      toast.error('오늘 집중 할 일을 하나 이상 추가해 주세요');
       setTodoOpen(true);
       return;
     }
