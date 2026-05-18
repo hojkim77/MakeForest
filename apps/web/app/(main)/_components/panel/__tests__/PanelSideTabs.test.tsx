@@ -114,6 +114,6 @@ describe('PanelSideTabs — 드로어 내용', () => {
         isLoggedIn={true}
       />,
     );
-    expect(screen.queryByText('MUSHROOM')).not.toBeInTheDocument();
+    expect(screen.queryByText('MUSHROOM')).not.toBeVisible();
   });
 });
