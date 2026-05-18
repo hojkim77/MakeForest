@@ -1,7 +1,7 @@
 import { auth } from '@/auth';
 import { TopAppBar } from '@/shared/components/ui/TopAppBar';
 import { API_PATHS } from '@/shared/lib/apiPaths';
-import type { CommunityFeedResponse, RankingResponse } from '@/shared/lib/communityTypes';
+import type { CommunityFeedResponse, RegionRankingResponse } from '@/shared/lib/communityTypes';
 import { CommunityFeedSection } from '../_components/community/CommunityFeedSection';
 import { RankingSidebar } from '../_components/community/RankingSidebar';
 
@@ -19,9 +19,9 @@ export default async function CommunityPage() {
     fetch(`${SERVER_URL}${API_PATHS.SERVER_COMMUNITY_FEED(feedParams.toString()).replace(`${SERVER_URL}`, '')}`)
       .then((r) => r.json() as Promise<CommunityFeedResponse>)
       .catch(() => ({ items: [], nextCursor: null } satisfies CommunityFeedResponse)),
-    fetch(API_PATHS.SERVER_RANKING_DONG('today'))
-      .then((r) => r.json() as Promise<RankingResponse>)
-      .catch(() => ({ period: 'today', rankings: [] } satisfies RankingResponse)),
+    fetch(API_PATHS.SERVER_RANKING_REGION('today'))
+      .then((r) => r.json() as Promise<RegionRankingResponse>)
+      .catch(() => ({ period: 'today', rankings: [] } satisfies RegionRankingResponse)),
   ]);
 
   return (
@@ -30,7 +30,7 @@ export default async function CommunityPage() {
       <main className="pt-[49px] min-h-screen bg-background">
         <div className="max-w-5xl mx-auto px-lg py-xl flex gap-xl items-start">
           <div className="flex-1 min-w-0">
-            <CommunityFeedSection initialFeed={feedData} isLoggedIn={isLoggedIn} />
+            <CommunityFeedSection initialFeed={feedData} isLoggedIn={isLoggedIn} currentUserId={userId} />
           </div>
           <div className="w-64 flex-shrink-0">
             <RankingSidebar initialRanking={rankingData} />

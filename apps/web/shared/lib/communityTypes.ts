@@ -9,11 +9,13 @@ export interface CommunityComment {
   content: string;
   createdAt: string;
   user: { nickname: string };
+  isMyComment?: boolean;
 }
 
 export interface CommunityPost {
   id: string;
   createdAt: string;
+  dongName: string | null;
   user: { nickname: string; dongCode: string | null };
   session: {
     waterCount: number;
@@ -29,6 +31,7 @@ export interface CommunityPost {
 export interface CommunityFeedResponse {
   items: CommunityPost[];
   nextCursor: string | null;
+  dongNotFound?: boolean;
 }
 
 export interface DongRanking {
@@ -41,4 +44,17 @@ export interface DongRanking {
 export interface RankingResponse {
   period: 'today' | 'week' | 'all';
   rankings: DongRanking[];
+}
+
+export interface RegionRanking {
+  rank: number;
+  regionKey: string;
+  regionName: string;
+  totalWater: number;
+}
+
+export interface RegionRankingResponse {
+  period: 'today' | 'week' | 'all';
+  rankings: RegionRanking[];
+  myRegionKey?: string | null;
 }

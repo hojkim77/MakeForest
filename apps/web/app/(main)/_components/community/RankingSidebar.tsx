@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import type { DongRanking, RankingResponse } from '@/shared/lib/communityTypes';
+import type { RegionRanking, RegionRankingResponse } from '@/shared/lib/communityTypes';
+import { API_PATHS } from '@/shared/lib/apiPaths';
 
 type Period = 'today' | 'week' | 'all';
 
@@ -11,26 +12,21 @@ const TABS: { key: Period; label: string }[] = [
   { key: 'all', label: '전체' },
 ];
 
-const SERVER_URL =
-  typeof window !== 'undefined'
-    ? (process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000')
-    : 'http://localhost:4000';
-
 interface Props {
-  initialRanking: RankingResponse;
+  initialRanking: RegionRankingResponse;
 }
 
 export function RankingSidebar({ initialRanking }: Props) {
   const [period, setPeriod] = useState<Period>(initialRanking.period);
-  const [rankings, setRankings] = useState<DongRanking[]>(initialRanking.rankings);
+  const [rankings, setRankings] = useState<RegionRanking[]>(initialRanking.rankings);
   const [loading, setLoading] = useState(false);
 
   async function switchPeriod(next: Period) {
     if (next === period || loading) return;
     setLoading(true);
-    const res = await fetch(`${SERVER_URL}/ranking/dong?period=${next}`);
+    const res = await fetch(API_PATHS.SERVER_RANKING_REGION(next));
     if (res.ok) {
-      const data = await res.json() as RankingResponse;
+      const data = await res.json() as RegionRankingResponse;
       setRankings(data.rankings);
     }
     setPeriod(next);
@@ -39,7 +35,7 @@ export function RankingSidebar({ initialRanking }: Props) {
 
   return (
     <aside className="flex flex-col gap-md sticky top-[49px] h-[calc(100vh-49px-4rem)] overflow-y-auto">
-      <h2 className="font-mono text-pixel-stat text-on-surface uppercase tracking-tighter">동네 랭킹</h2>
+      <h2 className="font-mono text-pixel-stat text-on-surface uppercase tracking-tighter">지역 랭킹</h2>
 
       {/* Tabs */}
       <div className="flex gap-xs">
@@ -65,11 +61,11 @@ export function RankingSidebar({ initialRanking }: Props) {
           <p className="font-mono text-label text-outline">데이터가 없어요.</p>
         )}
         {rankings.map((r) => (
-          <div key={r.dongCode} className="flex items-center gap-sm px-sm py-xs bg-surface-container border border-outline-variant">
+          <div key={r.regionKey} className="flex items-center gap-sm px-sm py-xs bg-surface-container border border-outline-variant">
             <span className={`font-mono text-label w-6 text-center ${r.rank <= 3 ? 'text-primary' : 'text-outline'}`}>
               {r.rank}
             </span>
-            <span className="font-mono text-label text-on-surface flex-1 truncate">{r.dongName}</span>
+            <span className="font-mono text-label text-on-surface flex-1 truncate">{r.regionName}</span>
             <span className="font-mono text-label text-on-surface-variant">💧 {r.totalWater}</span>
           </div>
         ))}
