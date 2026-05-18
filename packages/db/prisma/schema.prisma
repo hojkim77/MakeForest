@@ -192,4 +192,5 @@ enum SessionStatus {
   PAUSED
   COMPLETED
   ABANDONED
+  IDLE
 }
