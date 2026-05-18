@@ -20,10 +20,10 @@ function getKstDateOffset(days: number): string {
   return getKstDateString(d);
 }
 
-// GET /community/feed?cursor=&limit=20&userId=&period=today|week|all&sort=recent|popular|water&dongName=
+// GET /community/feed?cursor=&limit=20&period=today|week|all&sort=recent|popular|water&dongName=
 communityRouter.get('/feed', async (req: Request, res: Response) => {
   try {
-    const { cursor, limit: limitStr, userId, period, sort, dongName } = req.query as Record<string, string | undefined>;
+    const { cursor, limit: limitStr, period, sort, dongName } = req.query as Record<string, string | undefined>;
     const limit = Math.min(Number(limitStr ?? 20), 50);
     const effectiveSort = sort === 'popular' || sort === 'water' ? sort : 'recent';
     const effectivePeriod = period === 'today' || period === 'week' ? period : 'all';
@@ -107,16 +107,14 @@ communityRouter.get('/feed', async (req: Request, res: Response) => {
       const creature = creatureMap.get(post.userId);
 
       const reactionCounts: Record<string, number> = {};
-      const myEmojis = new Set<string>();
       for (const r of post.reactions) {
         reactionCounts[r.emoji] = (reactionCounts[r.emoji] ?? 0) + 1;
-        if (userId && r.userId === userId) myEmojis.add(r.emoji);
       }
 
       const reactions = ['🔥', '💪', '👏'].map((emoji) => ({
         emoji,
         count: reactionCounts[emoji] ?? 0,
-        myReaction: myEmojis.has(emoji),
+        myReaction: false,
       }));
 
       return {
@@ -141,6 +139,31 @@ communityRouter.get('/feed', async (req: Request, res: Response) => {
     return res.json({ items: data, nextCursor });
   } catch (err) {
     console.error('[community] GET /feed error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /community/my-reactions?postIds=id1,id2,...&userId=
+communityRouter.get('/my-reactions', requireInternalAuth, async (req: Request, res: Response) => {
+  try {
+    const { postIds: postIdsStr, userId } = req.query as { postIds?: string; userId?: string };
+    if (!userId || !postIdsStr) return res.json({});
+
+    const postIds = postIdsStr.split(',').filter(Boolean);
+    if (postIds.length === 0) return res.json({});
+
+    const reactions = await prisma.communityReaction.findMany({
+      where: { postId: { in: postIds }, userId },
+      select: { postId: true, emoji: true },
+    });
+
+    const result: Record<string, string[]> = {};
+    for (const r of reactions) {
+      (result[r.postId] ??= []).push(r.emoji);
+    }
+    return res.json(result);
+  } catch (err) {
+    console.error('[community] GET /my-reactions error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

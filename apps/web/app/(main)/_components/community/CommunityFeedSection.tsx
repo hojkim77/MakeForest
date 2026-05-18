@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import type { CommunityPost, CommunityFeedResponse } from '@/shared/lib/communityTypes';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 import { PostCard } from './PostCard';
@@ -29,17 +30,36 @@ const TAB_CLASS = (active: boolean) =>
 
 interface Props {
   initialFeed: CommunityFeedResponse;
-  isLoggedIn: boolean;
 }
 
-export function CommunityFeedSection({ initialFeed, isLoggedIn }: Props) {
+
+export function CommunityFeedSection({ initialFeed }: Props) {
+  const { data: session } = useSession();
+  const isLoggedIn = !!session?.user?.id;
   const [posts, setPosts] = useState<CommunityPost[]>(initialFeed.items);
   const [nextCursor, setNextCursor] = useState(initialFeed.nextCursor);
+  const [myReactions, setMyReactions] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(false);
   const [period, setPeriod] = useState<Period>('all');
   const [sort, setSort] = useState<Sort>('recent');
   const [selectedRegionKey, setSelectedRegionKey] = useState<string | null>(null);
   const [selectedDongName, setSelectedDongName] = useState<string>('');
+
+  const fetchMyReactions = useCallback(async (items: CommunityPost[]) => {
+    if (!session?.user?.id || items.length === 0) return;
+    const postIds = items.map((p) => p.id).join(',');
+    try {
+      const res = await fetch(`${API_PATHS.COMMUNITY_MY_REACTIONS()}?postIds=${encodeURIComponent(postIds)}`);
+      if (!res.ok) return;
+      const data = await res.json() as Record<string, string[]>;
+      setMyReactions((prev) => ({ ...prev, ...data }));
+    } catch { }
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    void fetchMyReactions(initialFeed.items);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id]);
 
   const fetchFeed = useCallback(async (params: { period: Period; sort: Sort; dongName: string; cursor?: string }) => {
     const urlParams = new URLSearchParams({ limit: '20', period: params.period, sort: params.sort });
@@ -56,9 +76,10 @@ export function CommunityFeedSection({ initialFeed, isLoggedIn }: Props) {
     if (data) {
       setPosts(data.items);
       setNextCursor(data.nextCursor);
+      void fetchMyReactions(data.items);
     }
     setLoading(false);
-  }, [fetchFeed]);
+  }, [fetchFeed, fetchMyReactions]);
 
   const handlePeriodChange = useCallback((next: Period) => {
     setPeriod(next);
@@ -89,9 +110,10 @@ export function CommunityFeedSection({ initialFeed, isLoggedIn }: Props) {
     if (data) {
       setPosts((prev) => [...prev, ...data.items]);
       setNextCursor(data.nextCursor);
+      void fetchMyReactions(data.items);
     }
     setLoading(false);
-  }, [nextCursor, loading, period, sort, selectedDongName, fetchFeed]);
+  }, [nextCursor, loading, period, sort, selectedDongName, fetchFeed, fetchMyReactions]);
 
   return (
     <section className="flex flex-col gap-md">
@@ -132,7 +154,7 @@ export function CommunityFeedSection({ initialFeed, isLoggedIn }: Props) {
       )}
 
       {posts.map((post) => (
-        <PostCard key={post.id} post={post} isLoggedIn={isLoggedIn} />
+        <PostCard key={post.id} post={post} isLoggedIn={isLoggedIn} myReactionEmojis={myReactions[post.id] ?? []} />
       ))}
 
       {sort === 'recent' && nextCursor && (
