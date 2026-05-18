@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import type { CommunityPost, CommunityFeedResponse } from '@/shared/lib/communityTypes';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 import { PostCard } from './PostCard';
+import { RegionAccordion } from './RegionAccordion';
 
 type Period = 'all' | 'today' | 'week';
 type Sort = 'recent' | 'popular' | 'water';
@@ -20,19 +21,27 @@ const SORT_OPTIONS: { key: Sort; label: string }[] = [
   { key: 'water', label: '물주기 많은 순' },
 ];
 
+const TAB_CLASS = (active: boolean) =>
+  `px-sm py-xs font-mono text-label border transition-colors ${
+    active
+      ? 'border-primary bg-primary-container text-on-primary-container'
+      : 'border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-variant'
+  }`;
+
 interface Props {
   initialFeed: CommunityFeedResponse;
   isLoggedIn: boolean;
+  currentUserId?: string | undefined;
 }
 
-export function CommunityFeedSection({ initialFeed, isLoggedIn }: Props) {
+export function CommunityFeedSection({ initialFeed, isLoggedIn, currentUserId }: Props) {
   const [posts, setPosts] = useState<CommunityPost[]>(initialFeed.items);
   const [nextCursor, setNextCursor] = useState(initialFeed.nextCursor);
   const [loading, setLoading] = useState(false);
   const [period, setPeriod] = useState<Period>('all');
   const [sort, setSort] = useState<Sort>('recent');
-  const [dongName, setDongName] = useState('');
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [selectedRegionKey, setSelectedRegionKey] = useState<string | null>(null);
+  const [selectedDongName, setSelectedDongName] = useState<string>('');
 
   const fetchFeed = useCallback(async (params: { period: Period; sort: Sort; dongName: string; cursor?: string }) => {
     const urlParams = new URLSearchParams({ limit: '20', period: params.period, sort: params.sort });
@@ -43,9 +52,9 @@ export function CommunityFeedSection({ initialFeed, isLoggedIn }: Props) {
     return res.json() as Promise<CommunityFeedResponse>;
   }, []);
 
-  const resetFeed = useCallback(async (nextPeriod: Period, nextSort: Sort, nextDongName: string) => {
+  const resetFeed = useCallback(async (nextPeriod: Period, nextSort: Sort, dongName: string) => {
     setLoading(true);
-    const data = await fetchFeed({ period: nextPeriod, sort: nextSort, dongName: nextDongName });
+    const data = await fetchFeed({ period: nextPeriod, sort: nextSort, dongName });
     if (data) {
       setPosts(data.items);
       setNextCursor(data.nextCursor);
@@ -55,38 +64,36 @@ export function CommunityFeedSection({ initialFeed, isLoggedIn }: Props) {
 
   const handlePeriodChange = useCallback((next: Period) => {
     setPeriod(next);
-    void resetFeed(next, sort, dongName);
-  }, [sort, dongName, resetFeed]);
+    void resetFeed(next, sort, selectedDongName);
+  }, [sort, selectedDongName, resetFeed]);
 
   const handleSortChange = useCallback((next: Sort) => {
     setSort(next);
-    void resetFeed(period, next, dongName);
-  }, [period, dongName, resetFeed]);
+    void resetFeed(period, next, selectedDongName);
+  }, [period, selectedDongName, resetFeed]);
 
-  const handleDongNameChange = useCallback((value: string) => {
-    setDongName(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      void resetFeed(period, sort, value);
-    }, 300);
+  const handleRegionSelect = useCallback((regionKey: string, regionName: string) => {
+    setSelectedRegionKey(regionKey);
+    setSelectedDongName(regionName);
+    void resetFeed(period, sort, regionName);
   }, [period, sort, resetFeed]);
 
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
+  const handleRegionReset = useCallback(() => {
+    setSelectedRegionKey(null);
+    setSelectedDongName('');
+    void resetFeed(period, sort, '');
+  }, [period, sort, resetFeed]);
 
   const loadMore = useCallback(async () => {
     if (!nextCursor || loading) return;
     setLoading(true);
-    const data = await fetchFeed({ period, sort, dongName, cursor: nextCursor });
+    const data = await fetchFeed({ period, sort, dongName: selectedDongName, cursor: nextCursor });
     if (data) {
       setPosts((prev) => [...prev, ...data.items]);
       setNextCursor(data.nextCursor);
     }
     setLoading(false);
-  }, [nextCursor, loading, period, sort, dongName, fetchFeed]);
+  }, [nextCursor, loading, period, sort, selectedDongName, fetchFeed]);
 
   return (
     <section className="flex flex-col gap-md">
@@ -97,48 +104,37 @@ export function CommunityFeedSection({ initialFeed, isLoggedIn }: Props) {
         {/* Period tabs */}
         <div className="flex gap-xs">
           {PERIOD_TABS.map(({ key, label }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => handlePeriodChange(key)}
-              className={`px-sm py-xs font-mono text-label border transition-colors
-                ${period === key
-                  ? 'border-primary bg-primary-container text-on-primary-container'
-                  : 'border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-variant'
-                }`}
-            >
+            <button key={key} type="button" onClick={() => handlePeriodChange(key)} className={TAB_CLASS(period === key)}>
               {label}
             </button>
           ))}
         </div>
 
-        {/* Sort select */}
-        <select
-          value={sort}
-          onChange={(e) => handleSortChange(e.target.value as Sort)}
-          className="px-sm py-xs font-mono text-label border border-outline-variant bg-surface-container text-on-surface-variant"
-        >
+        {/* Sort buttons */}
+        <div className="flex gap-xs">
           {SORT_OPTIONS.map(({ key, label }) => (
-            <option key={key} value={key}>{label}</option>
+            <button key={key} type="button" onClick={() => handleSortChange(key)} className={TAB_CLASS(sort === key)}>
+              {label}
+            </button>
           ))}
-        </select>
-
-        {/* Dong name search */}
-        <input
-          type="text"
-          placeholder="동네 검색"
-          value={dongName}
-          onChange={(e) => handleDongNameChange(e.target.value)}
-          className="px-sm py-xs font-mono text-label border border-outline-variant bg-surface text-on-surface placeholder:text-outline flex-1 min-w-[120px]"
-        />
+        </div>
       </div>
 
+      {/* Region filter accordion */}
+      <RegionAccordion
+        selectedRegionKey={selectedRegionKey}
+        onSelect={handleRegionSelect}
+        onReset={handleRegionReset}
+      />
+
       {!loading && posts.length === 0 && (
-        <p className="font-mono text-label text-outline">집중 기록이 없어요.</p>
+        <p className="font-mono text-label text-outline">
+          {selectedDongName ? '해당 지역의 집중 기록이 없어요.' : '집중 기록이 없어요.'}
+        </p>
       )}
 
       {posts.map((post) => (
-        <PostCard key={post.id} post={post} isLoggedIn={isLoggedIn} />
+        <PostCard key={post.id} post={post} isLoggedIn={isLoggedIn} currentUserId={currentUserId} />
       ))}
 
       {sort === 'recent' && nextCursor && (

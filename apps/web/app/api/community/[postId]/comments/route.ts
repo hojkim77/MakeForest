@@ -5,8 +5,11 @@ const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000'
 const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET ?? '';
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ postId: string }> }) {
+  const session = await auth();
   const { postId } = await params;
-  const res = await fetch(`${SERVER_URL}/community/${postId}/comments`);
+  const url = new URL(`${SERVER_URL}/community/${postId}/comments`);
+  if (session?.user?.id) url.searchParams.set('userId', session.user.id);
+  const res = await fetch(url.toString());
   const data = await res.json() as unknown;
   return NextResponse.json(data, { status: res.status });
 }

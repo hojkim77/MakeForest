@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
   if (q.length < 1) return NextResponse.json([]);
 
   const results = await prisma.dong.findMany({
-    where: { name: { contains: q } },
+    where: { name: { contains: q, mode: 'insensitive' } },
     take: 10,
     select: { code: true, name: true, sigunguCode: true, sidoCode: true },
   });

@@ -147,6 +147,7 @@ model CommunityPost {
   userId    String
   sessionId String   @unique
   date      String   // KST "YYYY-MM-DD"
+  dongName  String?
   createdAt DateTime @default(now())
 
   user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
 import { requireInternalAuth } from '../middleware/auth';
+import { searchDongCodesByName } from '../dongCache';
 
 export const communityRouter = Router();
 
@@ -35,16 +36,12 @@ communityRouter.get('/feed', async (req: Request, res: Response) => {
       dateWhere['date'] = { gte: getKstDateOffset(6) };
     }
 
-    // dongName → dongCode list
+    // dongName → dongCode list (in-memory cache)
     let dongCodeFilter: string[] | undefined;
     if (dongName?.trim()) {
-      const dongs = await prisma.dong.findMany({
-        where: { name: { contains: dongName.trim(), mode: 'insensitive' } },
-        select: { code: true },
-      });
-      dongCodeFilter = dongs.map((d) => d.code);
+      dongCodeFilter = await searchDongCodesByName(dongName.trim());
       if (dongCodeFilter.length === 0) {
-        return res.json({ items: [], nextCursor: null });
+        return res.json({ items: [], nextCursor: null, dongNotFound: true });
       }
     }
 
@@ -125,6 +122,7 @@ communityRouter.get('/feed', async (req: Request, res: Response) => {
       return {
         id: post.id,
         createdAt: post.createdAt.toISOString(),
+        dongName: post.dongName ?? null,
         user: { nickname: post.user.nickname, dongCode: post.user.dongCode },
         session: session
           ? {
@@ -177,6 +175,7 @@ communityRouter.post('/:postId/reactions', requireInternalAuth, async (req: Requ
 communityRouter.get('/:postId/comments', async (req: Request, res: Response) => {
   try {
     const postId = String(req.params['postId']);
+    const { userId } = req.query as { userId?: string };
     const comments = await prisma.communityComment.findMany({
       where: { postId },
       orderBy: { createdAt: 'asc' },
@@ -187,9 +186,27 @@ communityRouter.get('/:postId/comments', async (req: Request, res: Response) => 
       content: c.content,
       createdAt: c.createdAt.toISOString(),
       user: c.user,
+      isMyComment: userId ? c.userId === userId : false,
     })));
   } catch (err) {
     console.error('[community] GET /comments error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /community/:postId/comments/:commentId
+communityRouter.delete('/:postId/comments/:commentId', requireInternalAuth, async (req: Request, res: Response) => {
+  try {
+    const { commentId } = req.params as { commentId: string };
+    const { userId } = req.body as { userId: string };
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const comment = await prisma.communityComment.findUnique({ where: { id: commentId }, select: { userId: true } });
+    if (!comment) return res.status(404).json({ error: 'Not found' });
+    if (comment.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+    await prisma.communityComment.delete({ where: { id: commentId } });
+    return res.status(204).send();
+  } catch (err) {
+    console.error('[community] DELETE /comments error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

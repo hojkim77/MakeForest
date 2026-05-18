@@ -9,6 +9,7 @@ import { CommentSection } from './CommentSection';
 interface Props {
   post: CommunityPost;
   isLoggedIn: boolean;
+  currentUserId?: string | undefined;
 }
 
 function formatElapsed(sec: number): string {
@@ -18,7 +19,7 @@ function formatElapsed(sec: number): string {
   return `${m}분`;
 }
 
-export function PostCard({ post, isLoggedIn }: Props) {
+export function PostCard({ post, isLoggedIn, currentUserId }: Props) {
   const [reactions, setReactions] = useState<CommunityReaction[]>(post.reactions);
 
   return (
@@ -28,8 +29,8 @@ export function PostCard({ post, isLoggedIn }: Props) {
         <CreatureSprite stage={Math.min(9, Math.max(0, post.creature.stage)) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9} size={32} />
         <div className="flex flex-col">
           <span className="font-mono text-label text-on-surface">{post.user.nickname}</span>
-          {post.user.dongCode && (
-            <span className="font-mono text-label text-outline">{post.user.dongCode}</span>
+          {(post.dongName ?? post.user.dongCode) && (
+            <span className="font-mono text-label text-outline">{post.dongName ?? post.user.dongCode}</span>
           )}
         </div>
         <div className="ml-auto flex items-center gap-sm font-mono text-label text-outline">
@@ -65,6 +66,7 @@ export function PostCard({ post, isLoggedIn }: Props) {
         postId={post.id}
         initialCount={post.commentCount}
         isLoggedIn={isLoggedIn}
+        currentUserId={currentUserId}
       />
     </article>
   );
