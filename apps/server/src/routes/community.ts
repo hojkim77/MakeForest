@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
 import { requireInternalAuth } from '../middleware/auth';
-import { searchDongCodesByName } from '../dongCache';
 
 export const communityRouter = Router();
 
@@ -20,10 +19,10 @@ function getKstDateOffset(days: number): string {
   return getKstDateString(d);
 }
 
-// GET /community/feed?cursor=&limit=20&period=today|week|all&sort=recent|popular|water&dongName=
+// GET /community/feed?cursor=&limit=20&period=today|week|all&sort=recent|popular|water&regionKey=
 communityRouter.get('/feed', async (req: Request, res: Response) => {
   try {
-    const { cursor, limit: limitStr, period, sort, dongName } = req.query as Record<string, string | undefined>;
+    const { cursor, limit: limitStr, period, sort, regionKey } = req.query as Record<string, string | undefined>;
     const limit = Math.min(Number(limitStr ?? 20), 50);
     const effectiveSort = sort === 'popular' || sort === 'water' ? sort : 'recent';
     const effectivePeriod = period === 'today' || period === 'week' ? period : 'all';
@@ -36,20 +35,9 @@ communityRouter.get('/feed', async (req: Request, res: Response) => {
       dateWhere['date'] = { gte: getKstDateOffset(6) };
     }
 
-    // dongName → dongCode list (in-memory cache)
-    let dongCodeFilter: string[] | undefined;
-    if (dongName?.trim()) {
-      dongCodeFilter = await searchDongCodesByName(dongName.trim());
-      if (dongCodeFilter.length === 0) {
-        return res.json({ items: [], nextCursor: null, dongNotFound: true });
-      }
-    }
-
-    const userWhere = dongCodeFilter ? { dongCode: { in: dongCodeFilter } } : undefined;
-
     const postWhere = {
       ...dateWhere,
-      ...(userWhere ? { user: userWhere } : {}),
+      ...(regionKey?.trim() ? { regionCode: regionKey.trim() } : {}),
     };
 
     // For popular/water sorts: no cursor pagination, fetch limit items sorted accordingly

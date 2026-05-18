@@ -42,8 +42,7 @@ export function CommunityFeedSection({ initialFeed }: Props) {
   const [loading, setLoading] = useState(false);
   const [period, setPeriod] = useState<Period>('all');
   const [sort, setSort] = useState<Sort>('recent');
-  const [selectedRegionKey, setSelectedRegionKey] = useState<string | null>(null);
-  const [selectedDongName, setSelectedDongName] = useState<string>('');
+  const [selectedRegion, setSelectedRegion] = useState<{ key: string; name: string } | null>(null);
 
   const fetchMyReactions = useCallback(async (items: CommunityPost[]) => {
     if (!session?.user?.id || items.length === 0) return;
@@ -61,18 +60,18 @@ export function CommunityFeedSection({ initialFeed }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id]);
 
-  const fetchFeed = useCallback(async (params: { period: Period; sort: Sort; dongName: string; cursor?: string }) => {
+  const fetchFeed = useCallback(async (params: { period: Period; sort: Sort; regionKey: string; cursor?: string }) => {
     const urlParams = new URLSearchParams({ limit: '20', period: params.period, sort: params.sort });
     if (params.cursor) urlParams.set('cursor', params.cursor);
-    if (params.dongName.trim()) urlParams.set('dongName', params.dongName.trim());
+    if (params.regionKey.trim()) urlParams.set('regionKey', params.regionKey.trim());
     const res = await fetch(`${API_PATHS.COMMUNITY_FEED()}?${urlParams}`);
     if (!res.ok) return null;
     return res.json() as Promise<CommunityFeedResponse>;
   }, []);
 
-  const resetFeed = useCallback(async (nextPeriod: Period, nextSort: Sort, dongName: string) => {
+  const resetFeed = useCallback(async (nextPeriod: Period, nextSort: Sort, regionKey: string) => {
     setLoading(true);
-    const data = await fetchFeed({ period: nextPeriod, sort: nextSort, dongName });
+    const data = await fetchFeed({ period: nextPeriod, sort: nextSort, regionKey });
     if (data) {
       setPosts(data.items);
       setNextCursor(data.nextCursor);
@@ -83,37 +82,35 @@ export function CommunityFeedSection({ initialFeed }: Props) {
 
   const handlePeriodChange = useCallback((next: Period) => {
     setPeriod(next);
-    void resetFeed(next, sort, selectedDongName);
-  }, [sort, selectedDongName, resetFeed]);
+    void resetFeed(next, sort, selectedRegion?.key ?? '');
+  }, [sort, selectedRegion, resetFeed]);
 
   const handleSortChange = useCallback((next: Sort) => {
     setSort(next);
-    void resetFeed(period, next, selectedDongName);
-  }, [period, selectedDongName, resetFeed]);
+    void resetFeed(period, next, selectedRegion?.key ?? '');
+  }, [period, selectedRegion, resetFeed]);
 
   const handleRegionSelect = useCallback((regionKey: string, regionName: string) => {
-    setSelectedRegionKey(regionKey);
-    setSelectedDongName(regionName);
-    void resetFeed(period, sort, regionName);
+    setSelectedRegion({ key: regionKey, name: regionName });
+    void resetFeed(period, sort, regionKey);
   }, [period, sort, resetFeed]);
 
   const handleRegionReset = useCallback(() => {
-    setSelectedRegionKey(null);
-    setSelectedDongName('');
+    setSelectedRegion(null);
     void resetFeed(period, sort, '');
   }, [period, sort, resetFeed]);
 
   const loadMore = useCallback(async () => {
     if (!nextCursor || loading) return;
     setLoading(true);
-    const data = await fetchFeed({ period, sort, dongName: selectedDongName, cursor: nextCursor });
+    const data = await fetchFeed({ period, sort, regionKey: selectedRegion?.key ?? '', cursor: nextCursor });
     if (data) {
       setPosts((prev) => [...prev, ...data.items]);
       setNextCursor(data.nextCursor);
       void fetchMyReactions(data.items);
     }
     setLoading(false);
-  }, [nextCursor, loading, period, sort, selectedDongName, fetchFeed, fetchMyReactions]);
+  }, [nextCursor, loading, period, sort, selectedRegion, fetchFeed, fetchMyReactions]);
 
   return (
     <section className="flex flex-col gap-md">
@@ -142,14 +139,14 @@ export function CommunityFeedSection({ initialFeed }: Props) {
 
       {/* Region filter accordion */}
       <RegionAccordion
-        selectedRegionKey={selectedRegionKey}
+        selectedRegionKey={selectedRegion?.key ?? null}
         onSelect={handleRegionSelect}
         onReset={handleRegionReset}
       />
 
       {!loading && posts.length === 0 && (
         <p className="font-mono text-label text-outline">
-          {selectedDongName ? '해당 지역의 집중 기록이 없어요.' : '집중 기록이 없어요.'}
+          {selectedRegion ? '해당 지역의 집중 기록이 없어요.' : '집중 기록이 없어요.'}
         </p>
       )}
 

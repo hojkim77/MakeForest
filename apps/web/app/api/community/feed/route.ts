@@ -12,10 +12,10 @@ export async function GET(req: NextRequest) {
 
   const period = searchParams.get('period');
   const sort = searchParams.get('sort');
-  const dongName = searchParams.get('dongName');
+  const regionKey = searchParams.get('regionKey');
   if (period) params.set('period', period);
   if (sort) params.set('sort', sort);
-  if (dongName) params.set('dongName', dongName);
+  if (regionKey) params.set('regionKey', regionKey);
 
   const res = await fetch(`${SERVER_URL}/community/feed?${params}`);
   const data = await res.json() as unknown;
