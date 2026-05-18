@@ -16,6 +16,7 @@ export const API_PATHS = {
   WATER_ME: () => '/api/water/me',
   SESSIONS: () => '/api/sessions',
   SESSION: (id: string) => `/api/sessions/${id}`,
+  SESSION_TODOS: (id: string) => `/api/sessions/${id}/todos`,
   USER_ME: () => '/api/user/me',
   LOCATION_SEARCH: (q: string) => `/api/location/search?q=${encodeURIComponent(q)}`,
   LOCATION_DETECT: (lat: number, lng: number) => `/api/location/detect?lat=${lat}&lng=${lng}`,
@@ -25,6 +26,9 @@ export const API_PATHS = {
   SERVER_COLLECTION_COMPLETED: (regionCode: string) => `${S}/collection/completed?regionCode=${encodeURIComponent(regionCode)}`,
   SERVER_COMMUNITY_FEED: (params: string) => `${S}/community/feed?${params}`,
   SERVER_RANKING_DONG: (period: string) => `${S}/ranking/dong?period=${period}`,
+  SERVER_RANKING_REGION: (period: string, myDongCode?: string) =>
+    `${S}/ranking/region?period=${period}${myDongCode ? `&myDongCode=${myDongCode}` : ''}`,
+  LOCATION_REGIONS: () => '/api/location/regions',
   COMMUNITY_FEED: () => '/api/community/feed',
   COMMUNITY_REACTIONS: (postId: string) => `/api/community/${postId}/reactions`,
   COMMUNITY_COMMENTS: (postId: string) => `/api/community/${postId}/comments`,

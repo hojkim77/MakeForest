@@ -1,11 +1,13 @@
 import { create } from 'zustand';
 
+type PanelTab = 'collection' | 'ranking' | null;
+
 interface PanelState {
-  collectionDrawerOpen: boolean;
-  toggleCollectionDrawer: () => void;
+  activeTab: PanelTab;
+  toggleTab: (tab: 'collection' | 'ranking') => void;
 }
 
 export const usePanelStore = create<PanelState>((set) => ({
-  collectionDrawerOpen: false,
-  toggleCollectionDrawer: () => set((s) => ({ collectionDrawerOpen: !s.collectionDrawerOpen })),
+  activeTab: null,
+  toggleTab: (tab) => set((s) => ({ activeTab: s.activeTab === tab ? null : tab })),
 }));

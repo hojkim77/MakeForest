@@ -6,13 +6,13 @@ import { PeekingBanner } from './PeekingBanner';
 import { SloganSection } from './SloganSection';
 import { CreatureSection } from './CreatureSection';
 import { TimerWaterSection } from './TimerWaterSection';
-import { TaskList } from './TaskList';
 import { NeighborhoodStats } from './NeighborhoodStats';
 import { ActivityToastFeed } from './ActivityToastFeed';
 import { PanelSideTabs } from './PanelSideTabs';
 import { LoginPrompt } from './LoginPrompt';
 import { getKstDateString } from '@/shared/utils/date';
 import type { CollectionData } from './DailyCollectionCard';
+import type { RegionRankingResponse } from '@/shared/lib/communityTypes';
 
 export async function Panel() {
   const session = await auth();
@@ -22,6 +22,9 @@ export async function Panel() {
 
   let initialWater = { waterCount: 0, creatureStage: 0, totalWaterCount: 0 };
   let initialCollection: CollectionData | null = null;
+  const rankingData = await api
+    .get<RegionRankingResponse>(API_PATHS.SERVER_RANKING_REGION('today', myDongCode ?? undefined))
+    .catch(() => ({ period: 'today' as const, rankings: [], myRegionKey: null }));
 
   if (isLoggedIn && session?.user?.id) {
     const today = getKstDateString();
@@ -53,10 +56,7 @@ export async function Panel() {
         {isLoggedIn && <NeighborhoodStats />}
 
         {isLoggedIn ? (
-          <>
-            <TimerWaterSection myRegionCode={myRegionCode} />
-            <TaskList myRegionCode={myRegionCode} />
-          </>
+          <TimerWaterSection myRegionCode={myRegionCode} />
         ) : (
           <LoginPrompt />
         )}
@@ -66,6 +66,9 @@ export async function Panel() {
         dongCode={myDongCode}
         regionCode={myRegionCode}
         initialCollection={initialCollection}
+        myRegionKey={rankingData.myRegionKey ?? null}
+        initialRanking={rankingData}
+        isLoggedIn={isLoggedIn}
       />
     </aside>
   );

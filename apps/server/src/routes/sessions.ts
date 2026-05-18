@@ -6,6 +6,7 @@ import { getKstDateString } from './water.logic';
 import { regionOf } from '@makeforest/types';
 import { incrementCollection } from './collection';
 import type { SessionAction } from '@makeforest/types';
+import { getDongCoords, getDongFullName, getDongShortName } from '../dongCache';
 
 export const sessionsRouter = Router();
 
@@ -53,19 +54,19 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
           await setSession(session.id, { ...cached, startedAt: session.startedAt.toISOString(), status: 'RUNNING' });
         } else {
           // 신규 세션 — 전체 초기화
-          const [user, dong, creature] = await Promise.all([
+          const [user, dongCoords, creature] = await Promise.all([
             prisma.user.findUnique({
               where: { id: userId },
               select: { nickname: true, todosPublic: true },
             }),
-            prisma.dong.findUnique({ where: { code: dongCode }, select: { lat: true, lng: true, name: true } }),
+            getDongCoords(dongCode),
             prisma.userCreature.findUnique({
               where: { userId },
               select: { totalWaterCount: true, stage: true },
             }),
           ]);
           const { toPixel } = await import('./map');
-          const { pixelX, pixelY } = dong ? toPixel(dong.lat, dong.lng) : { pixelX: 0, pixelY: 0 };
+          const { pixelX, pixelY } = dongCoords ? toPixel(dongCoords.lat, dongCoords.lng) : { pixelX: 0, pixelY: 0 };
           await setSession(session.id, {
             userId,
             dongCode,
@@ -95,15 +96,16 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
 
         // 첫 세션 시작 → 미션 기여 + session:toast 브로드캐스트 + 커뮤니티 포스트 자동 생성
         if (isNewSession) {
-          const [dongRow, cached] = await Promise.all([
-            prisma.dong.findUnique({ where: { code: dongCode }, select: { name: true } }),
+          const [dongFullName, cached] = await Promise.all([
+            getDongFullName(dongCode),
             getSession(session.id),
           ]);
-          const regionCode = dongRow ? regionOf(dongCode, dongRow.name) : dongCode.substring(0, 5);
+          const regionCode = dongFullName ? regionOf(dongCode, dongFullName) : dongCode.substring(0, 5);
           const nickname = cached?.nickname ?? '누군가';
+          const dongName = await getDongShortName(dongCode);
           const [collectionProgress] = await Promise.all([
-            incrementCollection(dongCode, today),
-            prisma.communityPost.create({ data: { userId, sessionId: session.id, date: today } }),
+            incrementCollection(regionCode, today),
+            prisma.communityPost.create({ data: { userId, sessionId: session.id, date: today, dongName } }),
           ]);
           broadcastToRegion(regionCode, {
             type: 'session:toast',
@@ -118,6 +120,30 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
     return res.json(result);
   } catch (err) {
     console.error('[sessions] POST error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PATCH /sessions/:id/todos — 할일 목록 업데이트
+sessionsRouter.patch('/:id/todos', async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params['id']);
+    const { todos } = req.body as { todos: unknown[] };
+
+    await prisma.focusSession.update({
+      where: { id },
+      data: { todos: todos as unknown as never },
+    });
+
+    // Redis 캐시 갱신
+    const cached = await getSession(id);
+    if (cached) {
+      await setSession(id, { ...cached, todos: todos as never });
+    }
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('[sessions] PATCH /todos error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

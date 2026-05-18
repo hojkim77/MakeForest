@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { TimerWaterSection } from '../TimerWaterSection';
-import { useTimerStore, useWaterStore } from '@/shared/store';
+import { useTimerStore, useWaterStore, useTodoStore } from '@/shared/store';
 
 // ── Mock: next-auth ──────────────────────────────────────────────────────────
 jest.mock('next-auth/react', () => ({ useSession: jest.fn() }));
@@ -60,9 +60,10 @@ beforeEach(() => {
   mockFetch.mockReset();
   mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
   useTimerStore.setState({
-    sessionId: null, startedAt: null, status: 'idle', cycleCount: 0, todos: [],
+    sessionId: null, startedAt: null, status: 'idle', cycleCount: 0,
   });
   useWaterStore.setState({ waterCount: 0, creatureStage: 0, growthPercent: 0, isWatering: false });
+  useTodoStore.setState({ todos: [{ id: 'todo-1', text: '테스트 할 일', done: false }], savedTodos: [], open: false });
   jest.useFakeTimers();
 });
 

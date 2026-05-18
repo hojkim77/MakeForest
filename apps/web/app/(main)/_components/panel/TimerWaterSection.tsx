@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
-import { useMapStore, useTimerStore, useWaterStore } from '@/shared/store';
+import { useMapStore, useTimerStore, useWaterStore, useTodoStore } from '@/shared/store';
 import { CYCLE_MS, CYCLE_SEC } from '@/shared/store/timerStore';
 import { Icon } from '@/shared/components/ui/Icon';
 import { formatDuration } from '@/shared/utils/format';
@@ -27,7 +27,9 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
   const focusedRegionCode = useMapStore((s) => s.focusedRegionCode);
   const isPeeking = focusedRegionCode !== null && focusedRegionCode !== myRegionCode;
 
-  const { sessionId, startedAt, status: timerStatus, cycleCount, todos, startSession, complete, reset } = useTimerStore();
+  const { sessionId, startedAt, status: timerStatus, cycleCount, startSession, complete, reset } = useTimerStore();
+  const todos = useTodoStore((s) => s.todos);
+  const setTodoOpen = useTodoStore((s) => s.setOpen);
   const { waterCount, isWatering, setIsWatering, applyWaterResponse } = useWaterStore();
 
   // 30분 완료 시 서버 세션 complete + 푸시 알림
@@ -62,8 +64,12 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
   const totalSec = Math.min(waterCount * CYCLE_SEC + elapsedSec, DAILY_MAX_SEC);
 
   async function handleStart() {
-
     if (!isLoggedIn) return;
+    if (todos.length === 0) {
+      toast.error('오늘 집중할 거 하나 이상 써주세요');
+      setTodoOpen(true);
+      return;
+    }
     try {
       const data = await api.post<{ sessionId: string; startedAt: string; isNewSession: boolean }>(API_PATHS.SESSIONS(), { todos });
       startSession(data.sessionId, Date.parse(data.startedAt));

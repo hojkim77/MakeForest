@@ -73,16 +73,3 @@ describe('reset', () => {
   });
 });
 
-describe('todos', () => {
-  it('addTodo / toggleTodo / removeTodo', () => {
-    useTimerStore.getState().addTodo('할 일 1');
-    expect(useTimerStore.getState().todos).toHaveLength(1);
-
-    const id = useTimerStore.getState().todos[0]!.id;
-    useTimerStore.getState().toggleTodo(id);
-    expect(useTimerStore.getState().todos[0]!.done).toBe(true);
-
-    useTimerStore.getState().removeTodo(id);
-    expect(useTimerStore.getState().todos).toHaveLength(0);
-  });
-});
