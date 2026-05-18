@@ -5,6 +5,7 @@ interface TodoState {
   todos: Todo[];
   savedTodos: Todo[];
   open: boolean;
+  init: (todos: Todo[]) => void;
   addTodo: (text: string) => void;
   toggleTodo: (id: string) => void;
   removeTodo: (id: string) => void;
@@ -31,6 +32,8 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     set((s) => ({ todos: s.todos.filter((t) => t.id !== id) })),
 
   setOpen: (open) => set({ open }),
+
+  init: (todos) => set({ todos, savedTodos: todos }),
 
   markSaved: () => set((s) => ({ savedTodos: s.todos })),
 }));

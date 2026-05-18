@@ -9,6 +9,7 @@ export const API_PATHS = {
   SERVER_MAP_SNAPSHOT: () => `${S}/map/snapshot`,
   SERVER_CREATURE: (rc: string) => `${S}/creature/${encodeURIComponent(rc)}`,
   SERVER_WATER_ME: (userId: string, date: string) => `${S}/water/me?userId=${userId}&date=${date}`,
+  SERVER_SESSION_TODAY: (userId: string) => `${S}/sessions/today?userId=${userId}`,
   SERVER_SSE_ACTIVITY: () => `${S}/sse/activity-stream`,
   SERVER_SSE_REGION: (rc: string) => `${S}/sse/activity-stream/regionCode/${encodeURIComponent(rc)}`,
   // Next.js API 라우트 (클라이언트 컴포넌트)

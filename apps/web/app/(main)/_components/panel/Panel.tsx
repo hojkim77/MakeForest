@@ -2,6 +2,8 @@ import { auth } from '@/auth';
 import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 import { WaterStoreInitializer } from './WaterStoreInitializer';
+import { SessionStoreInitializer } from './SessionStoreInitializer';
+import type { TodaySession } from './SessionStoreInitializer';
 import { PeekingBanner } from './PeekingBanner';
 import { SloganSection } from './SloganSection';
 import { CreatureSection } from './CreatureSection';
@@ -22,18 +24,20 @@ export async function Panel() {
 
   let initialWater = { waterCount: 0, creatureStage: 0, totalWaterCount: 0 };
   let initialCollection: CollectionData | null = null;
+  let todaySession: TodaySession | null = null;
   const rankingData = await api
     .get<RegionRankingResponse>(API_PATHS.SERVER_RANKING_REGION('today', myDongCode ?? undefined))
     .catch(() => ({ period: 'today' as const, rankings: [], myRegionKey: null }));
 
   if (isLoggedIn && session?.user?.id) {
     const today = getKstDateString();
-    const [waterData, userData, collectionData] = await Promise.all([
+    const [waterData, userData, collectionData, sessionData] = await Promise.all([
       api.get<{ waterCount: number }>(API_PATHS.SERVER_WATER_ME(session.user.id, today)),
       api.get<{ userCreature: { stage: number; totalWaterCount: number } | null }>(API_PATHS.SERVER_USER_ME(session.user.id)),
       myRegionCode
         ? api.get<CollectionData>(API_PATHS.SERVER_COLLECTION_TODAY(myRegionCode)).catch(() => null)
         : Promise.resolve(null),
+      api.get<TodaySession>(API_PATHS.SERVER_SESSION_TODAY(session.user.id)).catch(() => null),
     ]);
 
     initialWater = {
@@ -42,12 +46,14 @@ export async function Panel() {
       totalWaterCount: userData.userCreature?.totalWaterCount ?? 0,
     };
     initialCollection = collectionData;
+    todaySession = sessionData;
   }
 
   return (
     <aside className="w-[420px] flex-shrink-0 bg-surface-container border-r border-outline-variant flex flex-col h-full overflow-y-auto">
       <div className="flex flex-col gap-xl p-lg flex-1">
         <WaterStoreInitializer {...initialWater} />
+        <SessionStoreInitializer session={todaySession} />
         <PeekingBanner myRegionCode={myRegionCode} />
         <SloganSection myRegionCode={myRegionCode} />
         <ActivityToastFeed myRegionCode={myRegionCode} />

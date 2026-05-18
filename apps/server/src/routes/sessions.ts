@@ -148,6 +148,20 @@ sessionsRouter.patch('/:id/todos', async (req: Request, res: Response) => {
   }
 });
 
+// GET /sessions/today — 오늘 세션 조회 (userId query param)
+sessionsRouter.get('/today', async (req: Request, res: Response) => {
+  const userId = String(req.query['userId'] ?? '');
+  if (!userId) return res.status(400).json({ error: 'userId required' });
+
+  const today = getKstDateString();
+  const session = await prisma.focusSession.findUnique({
+    where: { userId_date: { userId, date: today } },
+  });
+
+  if (!session) return res.status(404).json({ error: 'Not found' });
+  return res.json(session);
+});
+
 // GET /sessions/:id
 sessionsRouter.get('/:id', async (req: Request, res: Response) => {
   const id = String(req.params['id']);
