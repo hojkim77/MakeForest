@@ -21,10 +21,9 @@ interface Props {
   postId: string;
   initialCount: number;
   isLoggedIn: boolean;
-  currentUserId?: string | undefined;
 }
 
-export function CommentSection({ postId, initialCount, isLoggedIn, currentUserId }: Props) {
+export function CommentSection({ postId, initialCount, isLoggedIn, }: Props) {
   const [open, setOpen] = useState(false);
   const [comments, setComments] = useState<CommunityComment[]>([]);
   const [loaded, setLoaded] = useState(false);

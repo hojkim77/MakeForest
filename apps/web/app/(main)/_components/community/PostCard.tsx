@@ -9,7 +9,6 @@ import { CommentSection } from './CommentSection';
 interface Props {
   post: CommunityPost;
   isLoggedIn: boolean;
-  currentUserId?: string | undefined;
 }
 
 function formatElapsed(sec: number): string {
@@ -19,7 +18,7 @@ function formatElapsed(sec: number): string {
   return `${m}분`;
 }
 
-export function PostCard({ post, isLoggedIn, currentUserId }: Props) {
+export function PostCard({ post, isLoggedIn }: Props) {
   const [reactions, setReactions] = useState<CommunityReaction[]>(post.reactions);
 
   return (
@@ -66,7 +65,6 @@ export function PostCard({ post, isLoggedIn, currentUserId }: Props) {
         postId={post.id}
         initialCount={post.commentCount}
         isLoggedIn={isLoggedIn}
-        currentUserId={currentUserId}
       />
     </article>
   );

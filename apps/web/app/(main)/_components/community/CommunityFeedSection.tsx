@@ -22,19 +22,17 @@ const SORT_OPTIONS: { key: Sort; label: string }[] = [
 ];
 
 const TAB_CLASS = (active: boolean) =>
-  `px-sm py-xs font-mono text-label border transition-colors ${
-    active
-      ? 'border-primary bg-primary-container text-on-primary-container'
-      : 'border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-variant'
+  `px-sm py-xs font-mono text-label border transition-colors ${active
+    ? 'border-primary bg-primary-container text-on-primary-container'
+    : 'border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-variant'
   }`;
 
 interface Props {
   initialFeed: CommunityFeedResponse;
   isLoggedIn: boolean;
-  currentUserId?: string | undefined;
 }
 
-export function CommunityFeedSection({ initialFeed, isLoggedIn, currentUserId }: Props) {
+export function CommunityFeedSection({ initialFeed, isLoggedIn }: Props) {
   const [posts, setPosts] = useState<CommunityPost[]>(initialFeed.items);
   const [nextCursor, setNextCursor] = useState(initialFeed.nextCursor);
   const [loading, setLoading] = useState(false);
@@ -134,7 +132,7 @@ export function CommunityFeedSection({ initialFeed, isLoggedIn, currentUserId }:
       )}
 
       {posts.map((post) => (
-        <PostCard key={post.id} post={post} isLoggedIn={isLoggedIn} currentUserId={currentUserId} />
+        <PostCard key={post.id} post={post} isLoggedIn={isLoggedIn} />
       ))}
 
       {sort === 'recent' && nextCursor && (

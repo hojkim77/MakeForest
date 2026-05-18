@@ -30,7 +30,7 @@ export default async function CommunityPage() {
       <main className="pt-[49px] min-h-screen bg-background">
         <div className="max-w-5xl mx-auto px-lg py-xl flex gap-xl items-start">
           <div className="flex-1 min-w-0">
-            <CommunityFeedSection initialFeed={feedData} isLoggedIn={isLoggedIn} currentUserId={userId} />
+            <CommunityFeedSection initialFeed={feedData} isLoggedIn={isLoggedIn} />
           </div>
           <div className="w-64 flex-shrink-0">
             <RankingSidebar initialRanking={rankingData} />
