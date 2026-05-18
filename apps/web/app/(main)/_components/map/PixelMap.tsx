@@ -30,9 +30,10 @@ function dongColor(count: number): string {
 
 interface PixelMapProps {
   onRegionClick?: (regionCode: string, bounds: RegionBounds) => void;
+  onBoundsReady?: (bounds: Map<string, RegionBounds>) => void;
 }
 
-export function PixelMap({ onRegionClick }: PixelMapProps) {
+export function PixelMap({ onRegionClick, onBoundsReady }: PixelMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { data: pixelMap, loading } = usePixelMapData();
   const activity = useActivityStore((s) => s.activity);
@@ -61,6 +62,10 @@ export function PixelMap({ onRegionClick }: PixelMapProps) {
     return { cells, bounds, firstName };
   }, [pixelMap.cells]);
 
+  useEffect(() => {
+    onBoundsReady?.(regionMeta.bounds);
+  }, [regionMeta.bounds, onBoundsReady]);
+
   const regionStats = useMemo(() => {
     const m = new Map<string, { totalUsers: number; sampleName: string }>();
     for (const [rc, cellList] of regionMeta.cells) {
@@ -77,7 +82,7 @@ export function PixelMap({ onRegionClick }: PixelMapProps) {
     return m;
   }, [pixelMap]);
 
-  const renderRef = useRef<() => void>(() => {});
+  const renderRef = useRef<() => void>(() => { });
 
   const { hlRegionRef, hlAlphaRef, enterRegion, leaveRegion } = useCanvasHighlight(renderRef);
 

@@ -4,6 +4,7 @@ import { redis, RedisKeys, removeActiveDong } from '@makeforest/redis';
 import { broadcastHeatmap } from '../routes/sse';
 import { calcPersonalStage, getKstDateString } from '../routes/water.logic';
 import { toPixel, GRID_W, GRID_H } from '../routes/map.logic';
+import { getDongCoords } from '../dongCache';
 
 const CREATURE_TYPES = [
   'SEED', 'SPROUT', 'GRASS', 'FLOWER_A', 'FLOWER_B',
@@ -132,13 +133,6 @@ async function createUserFossils(date: string): Promise<void> {
   });
   const creatureMap = new Map(creatures.map((c) => [c.userId, c.stage]));
 
-  const dongCodes = [...new Set(wateredToday.map((w) => w.dongCode))];
-  const dongRecords = await prisma.dong.findMany({
-    where: { code: { in: dongCodes } },
-    select: { code: true, lat: true, lng: true },
-  });
-  const dongCoordMap = new Map(dongRecords.map((d) => [d.code, { lat: d.lat, lng: d.lng }]));
-
   const [y, m, day] = date.split('-').map(Number);
   const dayOfYear = Math.floor(
     (new Date(y!, m! - 1, day!).getTime() - new Date(y!, 0, 0).getTime()) / 86400000,
@@ -146,7 +140,7 @@ async function createUserFossils(date: string): Promise<void> {
 
   for (const { userId, dongCode } of wateredToday) {
     const stage = creatureMap.get(userId) ?? 0;
-    const coord = dongCoordMap.get(dongCode);
+    const coord = await getDongCoords(dongCode);
     if (!coord) continue;
 
     const { pixelX, pixelY } = toPixel(coord.lat, coord.lng);

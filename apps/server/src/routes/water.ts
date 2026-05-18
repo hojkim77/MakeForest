@@ -4,6 +4,7 @@ import { broadcastToRegion, broadcastUsersOverlay } from './sse';
 import { calcPersonalStage, getKstDateString } from './water.logic';
 import { regionOf } from '@makeforest/types';
 import { getSession, setSession, getActiveDongSessions } from '@makeforest/redis';
+import { getDongFullName } from '../dongCache';
 
 export const waterRouter = Router();
 
@@ -32,8 +33,8 @@ waterRouter.post('/', async (req: Request, res: Response) => {
       return res.status(409).json({ error: '오늘 물주기 횟수를 모두 사용했습니다.' });
     }
 
-    const dong = await prisma.dong.findUnique({ where: { code: dongCode }, select: { name: true } });
-    const regionCode = dong ? regionOf(dongCode, dong.name) : dongCode.substring(0, 5);
+    const dongName = await getDongFullName(dongCode);
+    const regionCode = dongName ? regionOf(dongCode, dongName) : dongCode.substring(0, 5);
 
     const newWaterCount = (focusSession?.waterCount ?? 0) + 1;
 

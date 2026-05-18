@@ -25,6 +25,8 @@ class MockEventSource {
 }
 (global as unknown as Record<string, unknown>).EventSource = MockEventSource;
 
+const defaultRanking = { period: 'today' as const, rankings: [], myRegionKey: null };
+
 function makeCollection(overrides = {}) {
   return {
     creatureType: 'MUSHROOM',
@@ -38,67 +40,80 @@ function makeCollection(overrides = {}) {
 
 beforeEach(() => {
   MockEventSource.lastInstance = null;
-  usePanelStore.setState({ collectionDrawerOpen: false });
+  usePanelStore.setState({ activeTab: null });
 });
 
 describe('PanelSideTabs — 탭 버튼 렌더링', () => {
-  it('공통 미션 탭 버튼이 렌더링된다', () => {
+  it('공통 미션과 지역 랭킹 탭 버튼이 렌더링된다', () => {
     render(
-      <PanelSideTabs dongCode={null} regionCode={null} initialCollection={null} />,
+      <PanelSideTabs dongCode={null} regionCode={null} initialCollection={null} myRegionKey={null} initialRanking={defaultRanking} isLoggedIn={false} />,
     );
     expect(screen.getByRole('button', { name: /공통 미션/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /지역 랭킹/i })).toBeInTheDocument();
   });
 });
 
 describe('PanelSideTabs — 드로어 토글', () => {
-  it('공통 미션 탭 클릭 시 드로어가 열린다', () => {
+  it('공통 미션 탭 클릭 시 활성화된다', () => {
     render(
       <PanelSideTabs
         dongCode="1111010100"
         regionCode="11"
         initialCollection={makeCollection()}
+        myRegionKey={null}
+        initialRanking={defaultRanking}
+        isLoggedIn={true}
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: /공통 미션/i }));
-    expect(usePanelStore.getState().collectionDrawerOpen).toBe(true);
+    expect(usePanelStore.getState().activeTab).toBe('collection');
   });
 
-  it('탭 재클릭 시 드로어가 닫힌다', () => {
-    usePanelStore.setState({ collectionDrawerOpen: true });
+  it('탭 재클릭 시 닫힌다', () => {
+    usePanelStore.setState({ activeTab: 'collection' });
     render(
       <PanelSideTabs
         dongCode="1111010100"
         regionCode="11"
         initialCollection={makeCollection()}
+        myRegionKey={null}
+        initialRanking={defaultRanking}
+        isLoggedIn={true}
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: /공통 미션/i }));
-    expect(usePanelStore.getState().collectionDrawerOpen).toBe(false);
+    expect(usePanelStore.getState().activeTab).toBeNull();
   });
 });
 
 describe('PanelSideTabs — 드로어 내용', () => {
-  it('드로어 열림 시 공통 미션 내용이 표시된다', () => {
-    usePanelStore.setState({ collectionDrawerOpen: true });
+  it('공통 미션 탭 열림 시 미션 내용이 표시된다', () => {
+    usePanelStore.setState({ activeTab: 'collection' });
     render(
       <PanelSideTabs
         dongCode="1111010100"
         regionCode="11"
         initialCollection={makeCollection()}
+        myRegionKey={null}
+        initialRanking={defaultRanking}
+        isLoggedIn={true}
       />,
     );
     expect(screen.getByText('MUSHROOM')).toBeInTheDocument();
   });
 
-  it('드로어 닫힘 시 내용이 숨겨진다', () => {
-    usePanelStore.setState({ collectionDrawerOpen: false });
+  it('탭 닫힘 시 내용이 숨겨진다', () => {
+    usePanelStore.setState({ activeTab: null });
     render(
       <PanelSideTabs
         dongCode="1111010100"
         regionCode="11"
         initialCollection={makeCollection()}
+        myRegionKey={null}
+        initialRanking={defaultRanking}
+        isLoggedIn={true}
       />,
     );
-    expect(screen.queryByText('MUSHROOM')).not.toBeInTheDocument();
+    expect(screen.queryByText('MUSHROOM')).not.toBeVisible();
   });
 });

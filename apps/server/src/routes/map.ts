@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { prisma } from '@makeforest/db';
 import { redis, RedisKeys, getSession, getDailyOverlaySessions } from '@makeforest/redis';
+import { getAllDongs } from '../dongCache';
 import { toPixel, GRID_W, GRID_H, LAT_MIN, LAT_MAX, LNG_MIN, LNG_MAX } from './map.logic';
 import { getKstDateString } from './water.logic';
 import type { MapUser } from '@makeforest/types';
@@ -56,10 +56,7 @@ export async function buildUsersOverlay(): Promise<MapUser[]> {
 
 // GET /map/pixel-data — 전체 행정동 픽셀 좌표 (24h 캐시)
 mapRouter.get('/pixel-data', async (_req: Request, res: Response) => {
-  const dongs = await prisma.dong.findMany({
-    select: { code: true, name: true, lat: true, lng: true },
-  });
-
+  const dongs = await getAllDongs();
   res.setHeader('Cache-Control', 'public, max-age=86400');
   res.json(
     dongs.map((d) => ({

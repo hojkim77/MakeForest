@@ -6,12 +6,6 @@ import { usePixelMapData } from '@/shared/hooks/usePixelMapData';
 import { useMapStore } from '@/shared/store';
 import { regionDisplayName, regionOf } from '@makeforest/types';
 
-const LEGEND = [
-  { colorClass: 'bg-primary', label: 'Old Growth' },
-  { colorClass: 'bg-secondary', label: 'Sapling' },
-  { colorClass: 'bg-outline', label: 'Soil' },
-] as const;
-
 export function MapOverlay() {
   const activity = useActivityStore((s) => s.activity);
   const globalActiveUsers = Object.values(activity).reduce((sum, n) => sum + n, 0);
@@ -41,7 +35,7 @@ export function MapOverlay() {
     fetch(`/api/creature/${encodeURIComponent(focusedRegionCode)}`)
       .then((r) => r.json())
       .then((data: { totalWaterCount: number }) => { if (!cancelled) setTotalWaterCount(data.totalWaterCount); })
-      .catch(() => {});
+      .catch(() => { });
     return () => { cancelled = true; };
   }, [mapMode, focusedRegionCode]);
 
@@ -67,16 +61,6 @@ export function MapOverlay() {
             Live Sync: {globalActiveUsers.toLocaleString()} users active
           </p>
         )}
-      </div>
-
-      {/* Legend — bottom left */}
-      <div className="absolute bottom-16 left-6 z-10 flex flex-col gap-sm p-md bg-inverse-surface border border-outline">
-        {LEGEND.map(({ colorClass, label }) => (
-          <div key={label} className="flex items-center gap-md">
-            <div className={`w-3 h-3 ${colorClass}`} />
-            <span className="font-mono text-label text-inverse-on-surface">{label}</span>
-          </div>
-        ))}
       </div>
     </>
   );

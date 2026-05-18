@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
+import { getDongShortName } from '../dongCache';
 
 export const userRouter = Router();
 
@@ -22,9 +23,7 @@ userRouter.get('/me', async (req: Request, res: Response) => {
 
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const dongName = user.dongCode
-      ? (await prisma.dong.findUnique({ where: { code: user.dongCode }, select: { name: true } }))?.name ?? null
-      : null;
+    const dongName = user.dongCode ? await getDongShortName(user.dongCode) : null;
 
     return res.json({
       nickname: user.nickname,
