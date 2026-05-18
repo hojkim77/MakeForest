@@ -7,9 +7,9 @@ import { useSession, signOut } from 'next-auth/react';
 import { Icon } from './Icon';
 
 const NAV_ITEMS = [
-  { label: 'Dashboard', href: '/mypage' },
-  { label: 'Forest Map', href: '/' },
+  { label: 'Map', href: '/' },
   { label: 'Community', href: '/community' },
+  { label: 'Dashboard', href: '/mypage' },
 ] as const;
 
 export function TopAppBar() {
@@ -40,7 +40,7 @@ export function TopAppBar() {
         </Link>
 
         {/* Nav */}
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="hidden md:flex items-center gap-12">
           {NAV_ITEMS.map(({ label, href }) => {
             const isActive = pathname === href;
             return (
@@ -48,7 +48,7 @@ export function TopAppBar() {
                 key={href}
                 href={href}
                 className={[
-                  'font-mono text-label uppercase tracking-wider py-1 transition-none',
+                  'font-mono text-base font-bold uppercase tracking-wider py-1 transition-none',
                   isActive
                     ? 'text-primary-container border-b-2 border-primary-container'
                     : 'text-on-surface-variant hover:text-on-surface',
