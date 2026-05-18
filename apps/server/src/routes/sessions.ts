@@ -105,7 +105,7 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
           const dongName = await getDongShortName(dongCode);
           const [collectionProgress] = await Promise.all([
             incrementCollection(regionCode, today),
-            prisma.communityPost.create({ data: { userId, sessionId: session.id, date: today, dongName } }),
+            prisma.communityPost.create({ data: { userId, sessionId: session.id, date: today, dongName, regionCode } }),
           ]);
           broadcastToRegion(regionCode, {
             type: 'session:toast',

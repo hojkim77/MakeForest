@@ -55,11 +55,13 @@ waterRouter.post('/', async (req: Request, res: Response) => {
       });
 
       // FocusSession waterCount 증가 + totalElapsedSec 갱신
+      const statusReset = focusSession?.status === 'COMPLETED' ? ({ status: 'IDLE' } as const) : {};
       await tx.focusSession.upsert({
         where: { userId_date: { userId, date: today } },
         update: {
           waterCount: { increment: 1 },
           totalElapsedSec: newWaterCount * 1800,
+          ...statusReset,
         },
         create: {
           userId,
@@ -67,7 +69,7 @@ waterRouter.post('/', async (req: Request, res: Response) => {
           date: today,
           waterCount: 1,
           totalElapsedSec: 1800,
-          status: 'COMPLETED',
+          status: 'IDLE',
         },
       });
 

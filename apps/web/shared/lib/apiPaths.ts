@@ -31,6 +31,7 @@ export const API_PATHS = {
     `${S}/ranking/region?period=${period}${myDongCode ? `&myDongCode=${myDongCode}` : ''}`,
   LOCATION_REGIONS: () => '/api/location/regions',
   COMMUNITY_FEED: () => '/api/community/feed',
+  COMMUNITY_MY_REACTIONS: () => '/api/community/my-reactions',
   COMMUNITY_REACTIONS: (postId: string) => `/api/community/${postId}/reactions`,
   COMMUNITY_COMMENTS: (postId: string) => `/api/community/${postId}/comments`,
 } as const;

@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { PanelSideTabs } from '../PanelSideTabs';
+import { CollectionTab } from '../CollectionTab';
+import { RankingTab } from '../RankingTab';
 import { usePanelStore } from '@/shared/store';
 
 // ── MockEventSource ────────────────────────────────────────────────────────────
@@ -46,7 +47,10 @@ beforeEach(() => {
 describe('PanelSideTabs — 탭 버튼 렌더링', () => {
   it('공통 미션과 지역 랭킹 탭 버튼이 렌더링된다', () => {
     render(
-      <PanelSideTabs dongCode={null} regionCode={null} initialCollection={null} myRegionKey={null} initialRanking={defaultRanking} isLoggedIn={false} />,
+      <>
+        <CollectionTab dongCode={null} regionCode={null} initialCollection={null} />
+        <RankingTab myRegionKey={null} initialRanking={defaultRanking} />
+      </>,
     );
     expect(screen.getByRole('button', { name: /공통 미션/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /지역 랭킹/i })).toBeInTheDocument();
@@ -56,13 +60,10 @@ describe('PanelSideTabs — 탭 버튼 렌더링', () => {
 describe('PanelSideTabs — 드로어 토글', () => {
   it('공통 미션 탭 클릭 시 활성화된다', () => {
     render(
-      <PanelSideTabs
+      <CollectionTab
         dongCode="1111010100"
         regionCode="11"
         initialCollection={makeCollection()}
-        myRegionKey={null}
-        initialRanking={defaultRanking}
-        isLoggedIn={true}
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: /공통 미션/i }));
@@ -72,13 +73,10 @@ describe('PanelSideTabs — 드로어 토글', () => {
   it('탭 재클릭 시 닫힌다', () => {
     usePanelStore.setState({ activeTab: 'collection' });
     render(
-      <PanelSideTabs
+      <CollectionTab
         dongCode="1111010100"
         regionCode="11"
         initialCollection={makeCollection()}
-        myRegionKey={null}
-        initialRanking={defaultRanking}
-        isLoggedIn={true}
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: /공통 미션/i }));
@@ -90,13 +88,10 @@ describe('PanelSideTabs — 드로어 내용', () => {
   it('공통 미션 탭 열림 시 미션 내용이 표시된다', () => {
     usePanelStore.setState({ activeTab: 'collection' });
     render(
-      <PanelSideTabs
+      <CollectionTab
         dongCode="1111010100"
         regionCode="11"
         initialCollection={makeCollection()}
-        myRegionKey={null}
-        initialRanking={defaultRanking}
-        isLoggedIn={true}
       />,
     );
     expect(screen.getByText('MUSHROOM')).toBeInTheDocument();
@@ -105,13 +100,10 @@ describe('PanelSideTabs — 드로어 내용', () => {
   it('탭 닫힘 시 내용이 숨겨진다', () => {
     usePanelStore.setState({ activeTab: null });
     render(
-      <PanelSideTabs
+      <CollectionTab
         dongCode="1111010100"
         regionCode="11"
         initialCollection={makeCollection()}
-        myRegionKey={null}
-        initialRanking={defaultRanking}
-        isLoggedIn={true}
       />,
     );
     expect(screen.queryByText('MUSHROOM')).not.toBeVisible();

@@ -1,81 +1,69 @@
+import { Suspense } from 'react';
 import { auth } from '@/auth';
-import { api } from '@/shared/lib/api';
-import { API_PATHS } from '@/shared/lib/apiPaths';
-import { WaterStoreInitializer } from './WaterStoreInitializer';
-import { SessionStoreInitializer } from './SessionStoreInitializer';
-import type { TodaySession } from './SessionStoreInitializer';
 import { PeekingBanner } from './PeekingBanner';
 import { SloganSection } from './SloganSection';
-import { CreatureSection } from './CreatureSection';
-import { TimerWaterSection } from './TimerWaterSection';
-import { NeighborhoodStats } from './NeighborhoodStats';
 import { ActivityToastFeed } from './ActivityToastFeed';
+import { PanelMainContents } from './PanelMainContents';
 import { PanelSideTabs } from './PanelSideTabs';
-import { LoginPrompt } from './LoginPrompt';
-import { getKstDateString } from '@/shared/utils/date';
-import type { CollectionData } from './DailyCollectionCard';
-import type { RegionRankingResponse } from '@/shared/lib/communityTypes';
 
 export async function Panel() {
   const session = await auth();
-  const isLoggedIn = !!session?.user?.id;
+  const userId = session?.user?.id ?? null;
+  const isLoggedIn = !!userId;
   const myRegionCode = session?.user?.regionCode ?? null;
   const myDongCode = session?.user?.dongCode ?? null;
-
-  let initialWater = { waterCount: 0, creatureStage: 0, totalWaterCount: 0 };
-  let initialCollection: CollectionData | null = null;
-  let todaySession: TodaySession | null = null;
-  const rankingData = await api
-    .get<RegionRankingResponse>(API_PATHS.SERVER_RANKING_REGION('today', myDongCode ?? undefined))
-    .catch(() => ({ period: 'today' as const, rankings: [], myRegionKey: null }));
-
-  if (isLoggedIn && session?.user?.id) {
-    const today = getKstDateString();
-    const [waterData, userData, collectionData, sessionData] = await Promise.all([
-      api.get<{ waterCount: number }>(API_PATHS.SERVER_WATER_ME(session.user.id, today)),
-      api.get<{ userCreature: { stage: number; totalWaterCount: number } | null }>(API_PATHS.SERVER_USER_ME(session.user.id)),
-      myRegionCode
-        ? api.get<CollectionData>(API_PATHS.SERVER_COLLECTION_TODAY(myRegionCode)).catch(() => null)
-        : Promise.resolve(null),
-      api.get<TodaySession>(API_PATHS.SERVER_SESSION_TODAY(session.user.id)).catch(() => null),
-    ]);
-
-    initialWater = {
-      waterCount: waterData.waterCount ?? 0,
-      creatureStage: userData.userCreature?.stage ?? 0,
-      totalWaterCount: userData.userCreature?.totalWaterCount ?? 0,
-    };
-    initialCollection = collectionData;
-    todaySession = sessionData;
-  }
 
   return (
     <aside className="w-[420px] flex-shrink-0 bg-surface-container border-r border-outline-variant flex flex-col h-full overflow-y-auto">
       <div className="flex flex-col gap-xl p-lg flex-1">
-        <WaterStoreInitializer {...initialWater} />
-        <SessionStoreInitializer session={todaySession} />
         <PeekingBanner myRegionCode={myRegionCode} />
         <SloganSection myRegionCode={myRegionCode} />
         <ActivityToastFeed myRegionCode={myRegionCode} />
+        <Suspense fallback={isLoggedIn ? <PanelMainContentsSkeleton /> : null}>
+          <PanelMainContents userId={userId} isLoggedIn={isLoggedIn} myRegionCode={myRegionCode} />
+        </Suspense>
+      </div>
+      <Suspense fallback={null}>
+        <PanelSideTabs myDongCode={myDongCode} myRegionCode={myRegionCode} isLoggedIn={isLoggedIn} />
+      </Suspense>
+    </aside>
+  );
+}
 
-        {isLoggedIn && <CreatureSection />}
-        {isLoggedIn && <NeighborhoodStats />}
-
-        {isLoggedIn ? (
-          <TimerWaterSection myRegionCode={myRegionCode} />
-        ) : (
-          <LoginPrompt />
-        )}
+function PanelMainContentsSkeleton() {
+  return (
+    <>
+      {/* CreatureSection */}
+      <div className="flex flex-col items-center gap-md py-lg">
+        <div className="flex flex-col items-center justify-center bg-surface-container-high border border-outline-variant p-md gap-xs">
+          <div className="w-32 h-32 bg-surface-variant animate-pulse" />
+          <div className="h-3 w-20 mt-xs bg-surface-variant animate-pulse" />
+        </div>
       </div>
 
-      <PanelSideTabs
-        dongCode={myDongCode}
-        regionCode={myRegionCode}
-        initialCollection={initialCollection}
-        myRegionKey={rankingData.myRegionKey ?? null}
-        initialRanking={rankingData}
-        isLoggedIn={isLoggedIn}
-      />
-    </aside>
+      {/* NeighborhoodStats */}
+      <div className="flex flex-col gap-sm p-md bg-surface-container-low border border-outline-variant">
+        <div className="h-3 w-32 bg-surface-variant animate-pulse" />
+        <div className="flex justify-between items-center">
+          <div className="h-3 w-24 bg-surface-variant animate-pulse" />
+          <div className="h-3 w-8 bg-surface-variant animate-pulse" />
+        </div>
+        <div className="w-full h-2 bg-surface-variant" />
+      </div>
+
+      {/* TimerWaterSection */}
+      <div className="flex flex-col gap-sm border-t border-outline-variant pt-md">
+        <div className="flex gap-px w-full h-3">
+          {Array.from({ length: 12 }, (_, i) => (
+            <div key={i} className="flex-1 bg-surface-variant" />
+          ))}
+        </div>
+        <div className="flex items-end justify-between">
+          <div className="h-8 w-20 bg-surface-variant animate-pulse" />
+          <div className="h-3 w-24 bg-surface-variant animate-pulse" />
+        </div>
+        <div className="w-full h-9 bg-surface-variant animate-pulse" />
+      </div>
+    </>
   );
 }

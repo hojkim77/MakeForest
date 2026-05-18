@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CreatureSprite } from '@/shared/components/ui/CreatureSprite';
 import type { CommunityPost, CommunityReaction } from '@/shared/lib/communityTypes';
 import { ReactionBar } from './ReactionBar';
@@ -9,6 +9,7 @@ import { CommentSection } from './CommentSection';
 interface Props {
   post: CommunityPost;
   isLoggedIn: boolean;
+  myReactionEmojis: string[];
 }
 
 function formatElapsed(sec: number): string {
@@ -18,8 +19,13 @@ function formatElapsed(sec: number): string {
   return `${m}분`;
 }
 
-export function PostCard({ post, isLoggedIn }: Props) {
+export function PostCard({ post, isLoggedIn, myReactionEmojis }: Props) {
   const [reactions, setReactions] = useState<CommunityReaction[]>(post.reactions);
+
+  useEffect(() => {
+    if (myReactionEmojis.length === 0) return;
+    setReactions((prev) => prev.map((r) => ({ ...r, myReaction: myReactionEmojis.includes(r.emoji) })));
+  }, [myReactionEmojis]);
 
   return (
     <article className="flex flex-col gap-md p-md bg-surface-container border border-outline-variant">
