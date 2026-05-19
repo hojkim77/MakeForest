@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { useSession } from 'next-auth/react';
 import { LocationDetectStep, type DetectStatus } from './_components/LocationDetectStep';
+import { NicknameStep } from './_components/NicknameStep';
 import { regionOf } from '@makeforest/types';
 import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
@@ -13,13 +15,22 @@ const LocationSearchStep = dynamic(
   { ssr: false },
 );
 
-type Step = 'detect' | 'search';
+type Step = 'nickname' | 'detect' | 'search';
 
 export default function OnboardingPage() {
-  const [step, setStep] = useState<Step>('detect');
+  const { data: session } = useSession();
+  const [step, setStep] = useState<Step>('nickname');
+  const [nickname, setNickname] = useState('');
   const [detectStatus, setDetectStatus] = useState<DetectStatus>('detecting');
   const [detectedDong, setDetectedDong] = useState<{ code: string; name: string } | undefined>();
   const [saving, setSaving] = useState(false);
+
+  // session 로드 후 닉네임 초기값 설정 (소셜 계정 이름)
+  useEffect(() => {
+    if (session?.user?.name) {
+      setNickname((prev) => (prev ? prev : (session.user.name ?? '')));
+    }
+  }, [session?.user?.name]);
 
   // Request GPS on mount, auto-fall-back to search on failure
   useEffect(() => {
@@ -69,10 +80,15 @@ export default function OnboardingPage() {
     }
   }, []);
 
+  function handleNicknameConfirm(confirmed: string) {
+    setNickname(confirmed);
+    setStep('detect');
+  }
+
   async function saveDong(code: string, name: string) {
     setSaving(true);
     try {
-      await api.patch(API_PATHS.USER_ME(), { dongCode: code, regionCode: regionOf(code, name) });
+      await api.patch(API_PATHS.USER_ME(), { nickname, dongCode: code, regionCode: regionOf(code, name) });
       // JWT 쿠키에 dongCode/regionCode 반영 후 하드 내비게이션 — 미들웨어가 새 쿠키를 읽어야 함
       window.location.href = '/';
     } catch (err) {
@@ -95,9 +111,9 @@ export default function OnboardingPage() {
       {/* Top bar */}
       <header className="fixed top-0 left-0 w-full z-50 bg-[#F5F3EF] border-b border-[#E8E4DC] flex justify-between items-center px-md h-14">
         <div className="flex items-center gap-sm">
-          {step === 'search' && (
+          {(step === 'search' || step === 'detect') && (
             <button
-              onClick={() => setStep('detect')}
+              onClick={() => setStep(step === 'search' ? 'detect' : 'nickname')}
               className="text-on-surface-variant hover:bg-surface-container-high p-xs transition-colors"
               aria-label="뒤로"
             >
@@ -106,7 +122,9 @@ export default function OnboardingPage() {
           )}
           <span className="font-mono text-pixel-stat text-primary uppercase">Pixel Forest</span>
         </div>
-        <span className="font-mono text-label text-outline">동네 설정</span>
+        <span className="font-mono text-label text-outline">
+          {step === 'nickname' ? '닉네임 설정' : '동네 설정'}
+        </span>
       </header>
 
       {/* Content */}
@@ -118,6 +136,11 @@ export default function OnboardingPage() {
             </span>
             <p className="font-mono text-label text-outline uppercase">설정 저장 중…</p>
           </div>
+        ) : step === 'nickname' ? (
+          <NicknameStep
+            initialNickname={nickname}
+            onConfirm={handleNicknameConfirm}
+          />
         ) : step === 'detect' ? (
           <LocationDetectStep
             status={detectStatus}
