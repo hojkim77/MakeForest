@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import type { CommunityPost, CommunityFeedResponse } from '@/shared/lib/communityTypes';
 import { API_PATHS } from '@/shared/lib/apiPaths';
+import { api } from '@/shared/lib/api';
 import { PostCard } from './PostCard';
 import { RegionAccordion } from './RegionAccordion';
 
@@ -28,16 +29,11 @@ const TAB_CLASS = (active: boolean) =>
     : 'border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-variant'
   }`;
 
-interface Props {
-  initialFeed: CommunityFeedResponse;
-}
-
-
-export function CommunityFeedSection({ initialFeed }: Props) {
+export function CommunityFeedSection() {
   const { data: session } = useSession();
   const isLoggedIn = !!session?.user?.id;
-  const [posts, setPosts] = useState<CommunityPost[]>(initialFeed.items);
-  const [nextCursor, setNextCursor] = useState(initialFeed.nextCursor);
+  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [myReactions, setMyReactions] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(false);
   const [period, setPeriod] = useState<Period>('all');
@@ -48,25 +44,18 @@ export function CommunityFeedSection({ initialFeed }: Props) {
     if (!session?.user?.id || items.length === 0) return;
     const postIds = items.map((p) => p.id).join(',');
     try {
-      const res = await fetch(`${API_PATHS.COMMUNITY_MY_REACTIONS()}?postIds=${encodeURIComponent(postIds)}`);
-      if (!res.ok) return;
-      const data = await res.json() as Record<string, string[]>;
+      const data = await api.get<Record<string, string[]>>(
+        `${API_PATHS.COMMUNITY_MY_REACTIONS()}?postIds=${encodeURIComponent(postIds)}`,
+      );
       setMyReactions((prev) => ({ ...prev, ...data }));
     } catch { }
-  }, [session?.user?.id]);
-
-  useEffect(() => {
-    void fetchMyReactions(initialFeed.items);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id]);
 
   const fetchFeed = useCallback(async (params: { period: Period; sort: Sort; regionKey: string; cursor?: string }) => {
     const urlParams = new URLSearchParams({ limit: '20', period: params.period, sort: params.sort });
     if (params.cursor) urlParams.set('cursor', params.cursor);
     if (params.regionKey.trim()) urlParams.set('regionKey', params.regionKey.trim());
-    const res = await fetch(`${API_PATHS.COMMUNITY_FEED()}?${urlParams}`);
-    if (!res.ok) return null;
-    return res.json() as Promise<CommunityFeedResponse>;
+    return api.get<CommunityFeedResponse>(`${API_PATHS.COMMUNITY_FEED()}?${urlParams}`).catch(() => null);
   }, []);
 
   const resetFeed = useCallback(async (nextPeriod: Period, nextSort: Sort, regionKey: string) => {
@@ -79,6 +68,16 @@ export function CommunityFeedSection({ initialFeed }: Props) {
     }
     setLoading(false);
   }, [fetchFeed, fetchMyReactions]);
+
+  useEffect(() => {
+    void resetFeed('all', 'recent', '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    void fetchMyReactions(posts);
+
+  }, [session?.user?.id]);
 
   const handlePeriodChange = useCallback((next: Period) => {
     setPeriod(next);

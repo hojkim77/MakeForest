@@ -14,9 +14,10 @@ const TABS: { key: Period; label: string }[] = [
 
 interface Props {
   initialRanking: RegionRankingResponse;
+  fetchedAt: string;
 }
 
-export function RankingSidebar({ initialRanking }: Props) {
+export function RankingSidebar({ initialRanking, fetchedAt }: Props) {
   const [period, setPeriod] = useState<Period>(initialRanking.period);
   const [rankings, setRankings] = useState<RegionRanking[]>(initialRanking.rankings);
   const [loading, setLoading] = useState(false);
@@ -35,7 +36,9 @@ export function RankingSidebar({ initialRanking }: Props) {
 
   return (
     <aside className="flex flex-col gap-md sticky top-[49px] h-[calc(100vh-49px-4rem)] overflow-y-auto">
-      <h2 className="font-mono text-pixel-stat text-on-surface uppercase tracking-tighter">지역 랭킹</h2>
+      <h2 className="font-mono text-pixel-stat text-on-surface uppercase tracking-tighter">
+        지역 랭킹 <span className="text-outline normal-case">({fetchedAt} 기준)</span>
+      </h2>
 
       {/* Tabs */}
       <div className="flex gap-xs">
