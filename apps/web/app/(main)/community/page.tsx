@@ -1,8 +1,8 @@
 import { TopAppBar } from '@/shared/components/ui/TopAppBar';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 import type { CommunityFeedResponse, RegionRankingResponse } from '@/shared/lib/communityTypes';
-import { CommunityFeedSection } from '../_components/community/CommunityFeedSection';
-import { RankingSidebar } from '../_components/community/RankingSidebar';
+import { CommunityFeedSection } from './_components/CommunityFeedSection';
+import { RankingSidebar } from './_components/RankingSidebar';
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
 
