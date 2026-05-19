@@ -7,6 +7,7 @@ import { useActivityStream } from '@/shared/hooks/useActivityStream';
 import { usePixelPanZoom } from '@/shared/hooks/usePixelPanZoom';
 import { PixelMap, type RegionBounds } from './PixelMap';
 import { ForestMap } from './ForestMap';
+import { GcMonitorOverlay } from './GcMonitorOverlay';
 
 const CANVAS_W = 250 * 4;
 const CANVAS_H = 290 * 4;
@@ -175,6 +176,7 @@ export function MapContainer() {
           scale {t.scale.toFixed(2)} · {isForest ? `forest:${forestState?.regionCode}` : 'pixel'}
         </div>
       )}
+      {process.env.NODE_ENV === 'development' && isForest && <GcMonitorOverlay />}
     </div>
   );
 }

@@ -28,12 +28,7 @@ export function LoginButtons() {
           {loading === 'kakao' ? (
             <span className="material-symbols-outlined text-[20px] text-[#191919] animate-spin">sync</span>
           ) : (
-            <span
-              className="material-symbols-outlined text-[20px] text-[#191919]"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              chat_bubble
-            </span>
+            <img src="/images/kakao-logo.svg" alt="카카오" width={20} height={20} />
           )}
           <span className="font-mono text-label tracking-wider text-[#191919]">
             {loading === 'kakao' ? '연결 중…' : '카카오로 시작하기'}
@@ -50,7 +45,7 @@ export function LoginButtons() {
           {loading === 'google' ? (
             <span className="material-symbols-outlined text-[20px] text-on-surface animate-spin">sync</span>
           ) : (
-            <span className="material-symbols-outlined text-[20px] text-on-surface">google</span>
+            <img src="/images/google-logo.svg" alt="구글" width={20} height={20} />
           )}
           <span className="font-mono text-label tracking-wider text-on-surface">
             {loading === 'google' ? '연결 중…' : '구글로 시작하기'}
