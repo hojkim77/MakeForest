@@ -20,8 +20,8 @@ Run `git diff --staged` and `git status` to understand what's changed, then draf
 - No co-author tag
 - No trailing period
 - Imperative mood ("add", "fix", "remove" — not "added", "fixes")
-- If nothing is staged, run `git add -p` guidance or ask user what to stage — do NOT `git add .` automatically
+- If nothing is staged, infer which files to stage from the current conversation context and stage them — do NOT `git add .` and do NOT ask the user
 
 **Splitting commits:** If staged changes span clearly separate concerns (e.g., a bug fix mixed with a new feature, or changes across unrelated domains), split into multiple commits — one per logical unit. Only split when the concerns are genuinely independent; don't split for the sake of it.
 
-After drafting the message(s), show the full commit plan to the user and ask for confirmation before running anything.
+Draft the message(s) and run the commit(s) immediately — do not ask for confirmation.
