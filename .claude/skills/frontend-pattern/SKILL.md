@@ -147,3 +147,29 @@ Independent Suspense per section in RSC pages:
   <SectionComponent userId={userId} />
 </Suspense>
 ```
+
+---
+
+## API Types (Zod-derived)
+
+The frontend never imports from `'zod'` directly. All API types come from `@makeforest/types` as TypeScript-only imports.
+
+```typescript
+// Next.js API route — annotate the response type
+import type { CreateSessionResType } from '@makeforest/types';
+
+const res = await fetch('/api/sessions', { method: 'POST', body: ... });
+const data: CreateSessionResType = await res.json();
+```
+
+```typescript
+// React component — prop type or local variable
+import type { WaterResType, FocusStatsResType } from '@makeforest/types';
+
+function WaterButton({ onWater }: { onWater: (res: WaterResType) => void }) { ... }
+```
+
+When a new API endpoint needs a type:
+1. Add the Zod schema to `packages/types/src/schemas/<domain>.schema.ts`
+2. Export the inferred type: `export type XxxResType = z.infer<typeof XxxRes>`
+3. Import with `import type { XxxResType } from '@makeforest/types'` — never import Zod itself

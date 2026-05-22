@@ -1,6 +1,6 @@
 ---
 name: backend
-description: MakeForest backend architecture patterns — Express routing, Prisma transactions, Redis session caching, SSE broadcast, Cron batch, KST date handling.
+description: MakeForest backend implementation conventions — Express route code patterns, Prisma transactions, Redis session caching, SSE broadcast functions, Cron batch, KST date handling. Implementation-level only; API/DB design belongs to the architect.
 ---
 
 # MakeForest Backend Patterns
@@ -14,7 +14,7 @@ description: MakeForest backend architecture patterns — Express routing, Prism
 - Adding steps to the midnight batch (midnight.ts)
 - Writing business logic based on KST dates
 
-## Directory Structure
+## File Conventions
 
 ```
 routes/foo.ts        — Express router (HTTP handling, Redis/SSE sync)
@@ -24,27 +24,7 @@ middleware/          — Express middleware (currently: auth.ts)
 cron/                — node-cron batch registration and execution
 ```
 
-## Routing Layer
-
-### Public vs. Protected Endpoints
-
-```typescript
-// Public: read-only (no auth required)
-app.use('/sse', sseRouter);
-app.use('/map', mapRouter);
-app.use('/stats', statsRouter);
-app.use('/user', userRouter);
-app.use('/creature', creatureRouter);
-
-// Protected: writes (validates X-Internal-Secret)
-app.use('/sessions', requireInternalAuth, sessionsRouter);
-app.use('/water', requireInternalAuth, waterRouter);
-```
-
-Protected endpoints are proxied from the Next.js API layer after verifying user session.
-User info (`userId`, `dongCode`) is extracted from the request body — no JWT parsing.
-
-### Auth Middleware
+## Auth Middleware
 
 ```typescript
 // middleware/auth.ts
@@ -350,6 +330,43 @@ export function calcPersonalStage(waterCount: number): number {
 }
 ```
 
+## Zod Validation Pattern
+
+Schemas live in `packages/types/src/schemas/*.schema.ts`. The server imports and parses with `.parse()` — ZodErrors bubble up to the global handler.
+
+```typescript
+// packages/types/src/schemas/sessions.schema.ts
+import { z } from 'zod';
+
+export const CreateSessionBody = z.object({
+  dongCode: z.string(),
+  userId: z.string(),
+});
+
+export type CreateSessionBodyType = z.infer<typeof CreateSessionBody>;
+export type CreateSessionResType = z.infer<typeof CreateSessionRes>;
+```
+
+```typescript
+// apps/server/src/routes/sessions.ts
+import { CreateSessionBody } from '@makeforest/types';
+
+// Use .parse() — throws ZodError on invalid input, caught by global handler
+const { dongCode, userId } = CreateSessionBody.parse(req.body);
+```
+
+```typescript
+// apps/server/src/index.ts — global ZodError handler (already wired)
+if (err instanceof ZodError) {
+  res.status(400).json({ error: err.issues[0]?.message ?? 'Invalid request' });
+}
+```
+
+Rules:
+- Always `.parse()`, never `.safeParse()` — let the global handler emit the 400
+- Define schemas in `packages/types/src/schemas/` — never inline in routes
+- Export both the Zod schema (for `.parse()`) and the inferred type (for TypeScript)
+
 ## Response Format
 
 Success responses vary per API, but error responses follow a unified format.
@@ -359,7 +376,7 @@ Success responses vary per API, but error responses follow a unified format.
 { "error": "description string" }
 
 // Status code guide
-// 400 — missing required parameter
+// 400 — missing required parameter or Zod validation failure
 // 404 — resource not found
 // 409 — business rule violation (daily limit exceeded, etc.)
 // 500 — internal server error
