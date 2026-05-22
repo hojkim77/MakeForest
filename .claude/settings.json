@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/skylar/Desktop/MakeForest && yarn lint --silent 2>&1 | grep -v '^$' | head -10"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/skylar/Desktop/MakeForest && yarn test 2>&1 | tail -15"
+          },
+          {
+            "type": "command",
+            "command": "cd /Users/skylar/Desktop/MakeForest && yarn type-check 2>&1 | grep -E 'error TS' | head -20"
+          }
+        ]
+      }
+    ]
+  }
+}
