@@ -1,17 +1,7 @@
 import { formatDuration } from '@/shared/utils/format';
 import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
-
-interface FocusStats {
-  totalFocusSec: number;
-  currentStreak: number;
-  maxStreak: number;
-}
-
-interface RankStats {
-  neighborhoodRank: number;
-  neighborhoodTotal: number;
-}
+import type { FocusStatsResType, RankStatsResType } from '@makeforest/types';
 
 
 export async function StatsGrid({ userId, dongCode }: { userId: string; dongCode?: string | undefined }) {
@@ -19,8 +9,8 @@ export async function StatsGrid({ userId, dongCode }: { userId: string; dongCode
   if (dongCode) rankParams.set('dongCode', dongCode);
 
   const [focus, rank] = await Promise.all([
-    api.get<FocusStats>(API_PATHS.SERVER_STATS_FOCUS(userId), { next: { revalidate: 3600 } }),
-    api.get<RankStats>(API_PATHS.SERVER_STATS_RANK(rankParams.toString()), { next: { revalidate: 3600 } }),
+    api.get<FocusStatsResType>(API_PATHS.SERVER_STATS_FOCUS(userId), { next: { revalidate: 3600 } }),
+    api.get<RankStatsResType>(API_PATHS.SERVER_STATS_RANK(rankParams.toString()), { next: { revalidate: 3600 } }),
   ]);
 
   const cards = [

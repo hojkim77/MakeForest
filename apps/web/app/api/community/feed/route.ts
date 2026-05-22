@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { CommunityFeedResponse } from '@makeforest/types';
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
 
@@ -18,6 +19,6 @@ export async function GET(req: NextRequest) {
   if (regionKey) params.set('regionKey', regionKey);
 
   const res = await fetch(`${SERVER_URL}/community/feed?${params}`);
-  const data = await res.json() as unknown;
+  const data = await res.json() as CommunityFeedResponse;
   return NextResponse.json(data, { status: res.status });
 }

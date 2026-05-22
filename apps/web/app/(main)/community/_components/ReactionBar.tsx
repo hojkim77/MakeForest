@@ -1,6 +1,6 @@
 'use client';
 
-import type { CommunityReaction } from '@/shared/lib/communityTypes';
+import type { CommunityReaction } from '@makeforest/types';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 
 const EMOJIS = ['🔥', '💪', '👏'] as const;

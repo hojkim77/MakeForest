@@ -3,7 +3,7 @@ import { prisma } from '@makeforest/db';
 import { getKstDateString } from './water.logic';
 import { addDays } from './stats.logic';
 import { calcCollectionTarget, pickDailyCreature } from './collection.logic';
-import type { CollectionProgress } from '@makeforest/types';
+import { CollectionQuery, type CollectionProgress } from '@makeforest/types';
 
 export const collectionRouter = Router();
 
@@ -69,8 +69,7 @@ export async function incrementCollection(
 // GET /collection/today?regionCode=
 collectionRouter.get('/today', async (req: Request, res: Response) => {
   try {
-    const { regionCode } = req.query as { regionCode?: string };
-    if (!regionCode) return res.status(400).json({ error: 'regionCode required' });
+    const { regionCode } = CollectionQuery.parse(req.query);
 
     const today = getKstDateString();
     const collection = await getOrCreateCollection(regionCode, today);
@@ -90,8 +89,7 @@ collectionRouter.get('/today', async (req: Request, res: Response) => {
 // GET /collection/completed?regionCode=
 collectionRouter.get('/completed', async (req: Request, res: Response) => {
   try {
-    const { regionCode } = req.query as { regionCode?: string };
-    if (!regionCode) return res.status(400).json({ error: 'regionCode required' });
+    const { regionCode } = CollectionQuery.parse(req.query);
 
     const completed = await prisma.dailyCollection.findMany({
       where: { regionCode, isCompleted: true },

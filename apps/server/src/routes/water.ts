@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
 import { broadcastToRegion, broadcastUsersOverlay } from './sse';
 import { calcPersonalStage, getKstDateString } from './water.logic';
-import { regionOf } from '@makeforest/types';
+import { regionOf, WaterBody, WaterMeQuery } from '@makeforest/types';
 import { getSession, setSession, getActiveDongSessions } from '@makeforest/redis';
 import { getDongFullName } from '../dongCache';
 
@@ -11,15 +11,7 @@ export const waterRouter = Router();
 // POST /water — 물 주기
 waterRouter.post('/', async (req: Request, res: Response) => {
   try {
-    const { userId, dongCode, nickname } = req.body as {
-      userId: string;
-      dongCode: string;
-      nickname: string;
-    };
-
-    if (!userId || !dongCode) {
-      return res.status(400).json({ error: 'userId and dongCode required' });
-    }
+    const { userId, dongCode, nickname } = WaterBody.parse(req.body);
 
     const today = getKstDateString();
 
@@ -118,7 +110,7 @@ waterRouter.post('/', async (req: Request, res: Response) => {
 // GET /water/me?userId=...&date=...
 waterRouter.get('/me', async (req: Request, res: Response) => {
   try {
-    const { userId, date } = req.query as { userId: string; date?: string };
+    const { userId, date } = WaterMeQuery.parse(req.query);
     const today = date ?? getKstDateString();
 
     const session = await prisma.focusSession.findUnique({

@@ -1,10 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
 import { requireInternalAuth } from '../middleware/auth';
+import { CommunityFeedQuery, ReactionsQuery, ReactionBody, CommentQuery, CommentBody, DeleteCommentBody } from '@makeforest/types';
 
 export const communityRouter = Router();
-
-const ALLOWED_EMOJIS = new Set(['🔥', '💪', '👏']);
 
 function getKstDateString(now: Date = new Date()): string {
   return now
@@ -22,8 +21,8 @@ function getKstDateOffset(days: number): string {
 // GET /community/feed?cursor=&limit=20&period=today|week|all&sort=recent|popular|water&regionKey=
 communityRouter.get('/feed', async (req: Request, res: Response) => {
   try {
-    const { cursor, limit: limitStr, period, sort, regionKey } = req.query as Record<string, string | undefined>;
-    const limit = Math.min(Number(limitStr ?? 20), 50);
+    const { cursor, limit: limitRaw, period, sort, regionKey } = CommunityFeedQuery.parse(req.query);
+    const limit = limitRaw ?? 20;
     const effectiveSort = sort === 'popular' || sort === 'water' ? sort : 'recent';
     const effectivePeriod = period === 'today' || period === 'week' ? period : 'all';
 
@@ -134,8 +133,8 @@ communityRouter.get('/feed', async (req: Request, res: Response) => {
 // GET /community/my-reactions?postIds=id1,id2,...&userId=
 communityRouter.get('/my-reactions', requireInternalAuth, async (req: Request, res: Response) => {
   try {
-    const { postIds: postIdsStr, userId } = req.query as { postIds?: string; userId?: string };
-    if (!userId || !postIdsStr) return res.json({});
+    const { postIds: postIdsStr, userId } = ReactionsQuery.parse(req.query);
+    if (!postIdsStr) return res.json({});
 
     const postIds = postIdsStr.split(',').filter(Boolean);
     if (postIds.length === 0) return res.json({});
@@ -160,10 +159,7 @@ communityRouter.get('/my-reactions', requireInternalAuth, async (req: Request, r
 communityRouter.post('/:postId/reactions', requireInternalAuth, async (req: Request, res: Response) => {
   try {
     const postId = String(req.params['postId']);
-    const { emoji, userId } = req.body as { emoji: string; userId: string };
-
-    if (!userId || !emoji) return res.status(400).json({ error: 'userId and emoji required' });
-    if (!ALLOWED_EMOJIS.has(emoji)) return res.status(400).json({ error: 'invalid emoji' });
+    const { emoji, userId } = ReactionBody.parse(req.body);
 
     const existing = await prisma.communityReaction.findUnique({
       where: { postId_userId_emoji: { postId, userId, emoji } },
@@ -186,7 +182,7 @@ communityRouter.post('/:postId/reactions', requireInternalAuth, async (req: Requ
 communityRouter.get('/:postId/comments', async (req: Request, res: Response) => {
   try {
     const postId = String(req.params['postId']);
-    const { userId } = req.query as { userId?: string };
+    const { userId } = CommentQuery.parse(req.query);
     const comments = await prisma.communityComment.findMany({
       where: { postId },
       orderBy: { createdAt: 'asc' },
@@ -209,8 +205,7 @@ communityRouter.get('/:postId/comments', async (req: Request, res: Response) => 
 communityRouter.delete('/:postId/comments/:commentId', requireInternalAuth, async (req: Request, res: Response) => {
   try {
     const { commentId } = req.params as { commentId: string };
-    const { userId } = req.body as { userId: string };
-    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const { userId } = DeleteCommentBody.parse(req.body);
     const comment = await prisma.communityComment.findUnique({ where: { id: commentId }, select: { userId: true } });
     if (!comment) return res.status(404).json({ error: 'Not found' });
     if (comment.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
@@ -226,9 +221,7 @@ communityRouter.delete('/:postId/comments/:commentId', requireInternalAuth, asyn
 communityRouter.post('/:postId/comments', requireInternalAuth, async (req: Request, res: Response) => {
   try {
     const postId = String(req.params['postId']);
-    const { content, userId } = req.body as { content: string; userId: string };
-
-    if (!userId || !content?.trim()) return res.status(400).json({ error: 'userId and content required' });
+    const { content, userId } = CommentBody.parse(req.body);
 
     const post = await prisma.communityPost.findUnique({ where: { id: postId }, select: { id: true } });
     if (!post) return res.status(404).json({ error: 'Post not found' });

@@ -3,16 +3,14 @@ import { prisma } from '@makeforest/db';
 import { getKstDateString } from './water.logic';
 import { addDays } from './stats.logic';
 import { getDongShortName, getDongSigunguMap, getDongRegionKey } from '../dongCache';
+import { RankingPeriodQuery, RegionRankingQuery } from '@makeforest/types';
 
 export const rankingRouter = Router();
 
 // GET /ranking/dong?period=today|week|all
 rankingRouter.get('/dong', async (req: Request, res: Response) => {
   try {
-    const { period = 'today' } = req.query as { period?: string };
-    if (!['today', 'week', 'all'].includes(period)) {
-      return res.status(400).json({ error: 'period must be today, week, or all' });
-    }
+    const { period } = RankingPeriodQuery.parse(req.query);
 
     const today = getKstDateString();
     const where =
@@ -49,10 +47,7 @@ rankingRouter.get('/dong', async (req: Request, res: Response) => {
 // GET /ranking/region?period=today|week|all&myDongCode=
 rankingRouter.get('/region', async (req: Request, res: Response) => {
   try {
-    const { period = 'today', myDongCode } = req.query as { period?: string; myDongCode?: string };
-    if (!['today', 'week', 'all'].includes(period)) {
-      return res.status(400).json({ error: 'period must be today, week, or all' });
-    }
+    const { period, myDongCode } = RegionRankingQuery.parse(req.query);
 
     const today = getKstDateString();
     const where =

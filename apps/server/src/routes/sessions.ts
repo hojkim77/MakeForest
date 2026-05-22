@@ -3,9 +3,8 @@ import { prisma } from '@makeforest/db';
 import { redis, RedisKeys, setSession, getSession, addActiveDong, getDongActiveCount, addDailyOverlaySession } from '@makeforest/redis';
 import { broadcastHeatmap, broadcastToRegion, broadcastUsersOverlay } from './sse';
 import { getKstDateString } from './water.logic';
-import { regionOf } from '@makeforest/types';
+import { regionOf, CreateSessionBody, UpdateTodosBody, UpdateSessionBody, GetSessionQuery } from '@makeforest/types';
 import { incrementCollection } from './collection';
-import type { SessionAction } from '@makeforest/types';
 import { getDongCoords, getDongFullName, getDongShortName } from '../dongCache';
 
 export const sessionsRouter = Router();
@@ -13,11 +12,7 @@ export const sessionsRouter = Router();
 // POST /sessions — 세션 시작 또는 재개 (하루 1개 upsert)
 sessionsRouter.post('/', async (req: Request, res: Response) => {
   try {
-    const { dongCode, todos, userId } = req.body as { dongCode: string; todos: unknown[]; userId: string };
-
-    if (!userId || !dongCode) {
-      return res.status(400).json({ error: 'userId and dongCode required' });
-    }
+    const { dongCode, todos, userId } = CreateSessionBody.parse(req.body);
 
     const today = getKstDateString();
 
@@ -128,7 +123,7 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
 sessionsRouter.patch('/:id/todos', async (req: Request, res: Response) => {
   try {
     const id = String(req.params['id']);
-    const { todos } = req.body as { todos: unknown[] };
+    const { todos } = UpdateTodosBody.parse(req.body);
 
     await prisma.focusSession.update({
       where: { id },
@@ -150,8 +145,7 @@ sessionsRouter.patch('/:id/todos', async (req: Request, res: Response) => {
 
 // GET /sessions/today — 오늘 세션 조회 (userId query param)
 sessionsRouter.get('/today', async (req: Request, res: Response) => {
-  const userId = String(req.query['userId'] ?? '');
-  if (!userId) return res.status(400).json({ error: 'userId required' });
+  const { userId } = GetSessionQuery.parse(req.query);
 
   const today = getKstDateString();
   const session = await prisma.focusSession.findUnique({
@@ -173,12 +167,8 @@ sessionsRouter.get('/:id', async (req: Request, res: Response) => {
 // PATCH /sessions/:id — complete(30분 완료) | abandon(강제 종료)
 sessionsRouter.patch('/:id', async (req: Request, res: Response) => {
   try {
-    const { action } = req.body as { action: SessionAction };
+    const { action } = UpdateSessionBody.parse(req.body);
     const id = String(req.params['id']);
-
-    if (!['complete', 'abandon'].includes(action)) {
-      return res.status(400).json({ error: 'invalid action' });
-    }
 
     const newStatus = action === 'complete' ? 'COMPLETED' : 'ABANDONED';
 

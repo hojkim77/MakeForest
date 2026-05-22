@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import type { CommunityPost, CommunityFeedResponse } from '@/shared/lib/communityTypes';
+import type { CommunityPost, CommunityFeedResponse } from '@makeforest/types';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 import { api } from '@/shared/lib/api';
 import { PostCard } from './PostCard';

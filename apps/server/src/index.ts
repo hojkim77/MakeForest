@@ -1,5 +1,6 @@
-import express from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
+import { ZodError } from 'zod';
 import { sseRouter } from './routes/sse';
 import { sessionsRouter } from './routes/sessions';
 import { mapRouter } from './routes/map';
@@ -38,6 +39,16 @@ app.use('/water', requireInternalAuth, waterRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true, ts: new Date().toISOString() });
+});
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction): void => {
+  if (err instanceof ZodError) {
+    res.status(400).json({ error: err.issues[0]?.message ?? 'Invalid request' });
+    return;
+  }
+  console.error(err);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 // 부하 테스트 전용 엔드포인트 — test 환경 또는 LOAD_TEST=1 시 노출

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { CreatureSprite } from '@/shared/components/ui/CreatureSprite';
-import type { CommunityPost, CommunityReaction } from '@/shared/lib/communityTypes';
+import type { CommunityPost, CommunityReaction } from '@makeforest/types';
 import { ReactionBar } from './ReactionBar';
 import { CommentSection } from './CommentSection';
 

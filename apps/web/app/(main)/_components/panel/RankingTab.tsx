@@ -2,7 +2,7 @@
 
 import { usePanelStore } from '@/shared/store';
 import { RegionalRankingCard } from './RegionalRankingCard';
-import type { RegionRankingResponse } from '@/shared/lib/communityTypes';
+import type { RegionRankingResponse } from '@makeforest/types';
 import { TabButton } from './TabButton';
 
 interface Props {

@@ -1,14 +1,10 @@
 import { WeeklyChartLazy } from './WeeklyChartLazy';
 import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
-
-interface WeeklyStats {
-  weeklyData: { week: number; waterCount: number }[];
-  weeklyAvg: number;
-}
+import type { WeeklyStatsResType } from '@makeforest/types';
 
 export async function WeeklyChartSection({ userId }: { userId: string }) {
-  const data = await api.get<WeeklyStats>(API_PATHS.SERVER_STATS_WEEKLY(userId), { next: { revalidate: 3600 } });
+  const data = await api.get<WeeklyStatsResType>(API_PATHS.SERVER_STATS_WEEKLY(userId), { next: { revalidate: 3600 } });
   return <WeeklyChartLazy weeklyData={data.weeklyData} weeklyAvg={data.weeklyAvg} />;
 }
 

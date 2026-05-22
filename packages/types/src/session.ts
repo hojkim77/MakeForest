@@ -1,3 +1,11 @@
+import { z } from 'zod';
+
+export const TodoSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  done: z.boolean(),
+});
+
 export type SessionStatus =
   | 'RUNNING'
   | 'PAUSED'

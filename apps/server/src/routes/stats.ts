@@ -1,14 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
 import { getKstDateString, addDays, calcStreak } from './stats.logic';
+import { StatsQuery, StatsRankQuery } from '@makeforest/types';
 
 export const statsRouter = Router();
 
 // GET /stats/focus?userId=
 statsRouter.get('/focus', async (req: Request, res: Response) => {
   try {
-    const { userId } = req.query as { userId: string };
-    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const { userId } = StatsQuery.parse(req.query);
 
     const today = getKstDateString();
     const sessions = await prisma.focusSession.findMany({
@@ -30,8 +30,7 @@ statsRouter.get('/focus', async (req: Request, res: Response) => {
 // GET /stats/weekly?userId=
 statsRouter.get('/weekly', async (req: Request, res: Response) => {
   try {
-    const { userId } = req.query as { userId: string };
-    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const { userId } = StatsQuery.parse(req.query);
 
     const today = getKstDateString();
     const fourWeeksAgo = addDays(today, -28);
@@ -62,8 +61,7 @@ statsRouter.get('/weekly', async (req: Request, res: Response) => {
 // GET /stats/rank?userId=&dongCode=
 statsRouter.get('/rank', async (req: Request, res: Response) => {
   try {
-    const { userId, dongCode } = req.query as { userId: string; dongCode?: string };
-    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const { userId, dongCode } = StatsRankQuery.parse(req.query);
 
     if (!dongCode) return res.json({ neighborhoodRank: 0, neighborhoodTotal: 0 });
 

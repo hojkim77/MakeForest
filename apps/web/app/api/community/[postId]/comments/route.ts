@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import type { CommunityComment, CommentResType } from '@makeforest/types';
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
 const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET ?? '';
@@ -10,7 +11,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pos
   const url = new URL(`${SERVER_URL}/community/${postId}/comments`);
   if (session?.user?.id) url.searchParams.set('userId', session.user.id);
   const res = await fetch(url.toString());
-  const data = await res.json() as unknown;
+  const data = await res.json() as CommunityComment[];
   return NextResponse.json(data, { status: res.status });
 }
 
@@ -27,6 +28,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pos
     body: JSON.stringify({ content, userId: session.user.id }),
   });
 
-  const data = await res.json() as unknown;
+  const data = await res.json() as CommentResType;
   return NextResponse.json(data, { status: res.status });
 }

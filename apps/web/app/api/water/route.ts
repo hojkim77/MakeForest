@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import type { WaterResType } from '@makeforest/types';
 
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000';
 const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET ?? '';
@@ -24,6 +25,6 @@ export async function POST() {
     body: JSON.stringify({ userId, dongCode, nickname: nickname ?? '누군가' }),
   });
 
-  const data = await res.json() as unknown;
+  const data = await res.json() as WaterResType;
   return NextResponse.json(data, { status: res.status });
 }

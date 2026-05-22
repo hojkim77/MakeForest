@@ -1,5 +1,12 @@
 # Server — Timer & Watering API (E)
 
+## API 타입 규칙
+
+- 모든 라우트 요청/응답 타입은 `packages/types/src/schemas/` 에 Zod 스키마로 정의
+- 라우트 핸들러에서 `req.body as { ... }` 캐스팅 금지 — 반드시 `Schema.parse(req.body)` 사용
+- 유효성 검증 실패 시 ZodError가 throw되면 `apps/server/src/index.ts`의 에러 미들웨어가 자동으로 400 응답 처리
+- 새 엔드포인트 추가 시: `packages/types/src/schemas/<domain>.schema.ts` 에 스키마 정의 → `schemas/index.ts` 에 re-export → 라우트에서 import
+
 ## Auth (A)
 
 - Kakao / Google social login only

@@ -1,7 +1,7 @@
 import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 import type { CollectionData } from './DailyCollectionCard';
-import type { RegionRankingResponse } from '@/shared/lib/communityTypes';
+import type { RegionRankingResponse } from '@makeforest/types';
 import { CollectionTab } from './CollectionTab';
 import { RankingTab } from './RankingTab';
 import { TodoTab } from './TodoTab';

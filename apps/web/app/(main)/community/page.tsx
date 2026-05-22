@@ -1,7 +1,7 @@
 import { TopAppBar } from '@/shared/components/ui/TopAppBar';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 import { api } from '@/shared/lib/api';
-import type { RegionRankingResponse } from '@/shared/lib/communityTypes';
+import type { RegionRankingResponse } from '@makeforest/types';
 import { CommunityFeedSection } from './_components/CommunityFeedSection';
 import { RankingSidebar } from './_components/RankingSidebar';
 

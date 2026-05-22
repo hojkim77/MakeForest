@@ -32,6 +32,13 @@ shared/
 - `shared/types/` — cross-route TypeScript types
 - `shared/constants/` — cross-route constants
 
+## API 타입 규칙
+
+- 서버 API 요청/응답 타입은 `@makeforest/types` 에서 import (`z.infer<>` 기반 타입)
+- 컴포넌트 내부에 로컬 `interface`/`type` 로 API 응답 shape 재선언 금지
+- 패턴: `import type { FocusStatsResType } from '@makeforest/types'` → `api.get<FocusStatsResType>(...)`
+- 새 엔드포인트 추가 시 `packages/types/src/schemas/` 에 스키마를 먼저 정의하고 import
+
 ## G. Toast & Error Handling
 
 **범용 Toast** (`shared/lib/toast.ts`): `toast.error(msg)` / `toast.success(msg)` / `toast.info(msg)` 한 줄로 어디서든 사용. 내부적으로 `toastStore` (Zustand)에 push하고 `ToastContainer`가 우상단(`top-4 right-4 z-[70]`)에 렌더링.
