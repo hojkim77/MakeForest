@@ -15,6 +15,6 @@ export async function GET(req: NextRequest) {
     { headers: { 'x-internal-secret': INTERNAL_SECRET } },
   );
 
-  const data = await res.json() as unknown;
+  const data = await res.json() as Record<string, string[]>;
   return NextResponse.json(data, { status: res.status });
 }

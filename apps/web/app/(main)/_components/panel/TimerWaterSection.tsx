@@ -10,6 +10,7 @@ import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 import { toast } from '@/shared/lib/toast';
 import { handleApiError } from '@/shared/lib/handleApiError';
+import type { CreateSessionResType, WaterResType } from '@makeforest/types';
 
 const TOTAL_SEGMENTS = 12;
 const DAILY_MAX_SEC = TOTAL_SEGMENTS * CYCLE_SEC;
@@ -71,7 +72,7 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
       return;
     }
     try {
-      const data = await api.post<{ sessionId: string; startedAt: string; isNewSession: boolean }>(API_PATHS.SESSIONS(), { todos });
+      const data = await api.post<CreateSessionResType>(API_PATHS.SESSIONS(), { todos });
       startSession(data.sessionId, Date.parse(data.startedAt));
       if (data.isNewSession) {
         toast.success('커뮤니티에 오늘의 집중이 공유됐어요!', { label: '보러 가기', href: '/community' });
@@ -83,7 +84,7 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
     if (isWatering) return;
     setIsWatering(true);
     try {
-      const data = await api.post<{ myWaterCount: number; userCreature: { stage: number; totalWaterCount: number } }>(API_PATHS.WATER());
+      const data = await api.post<WaterResType>(API_PATHS.WATER());
       applyWaterResponse(data);
       if (data.myWaterCount >= TOTAL_SEGMENTS) {
         toast.success('오늘 집중 고생하셨어요! 🌱');

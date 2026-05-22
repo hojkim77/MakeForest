@@ -5,3 +5,4 @@ export * from './events';
 export * from './dong';
 export * from './region';
 export * from './community';
+export * from './schemas';

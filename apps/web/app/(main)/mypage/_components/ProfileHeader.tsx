@@ -1,15 +1,7 @@
 import { Icon } from '@/shared/components/ui/Icon';
 import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
-
-interface UserMe {
-  nickname: string;
-  avatarUrl: string | null;
-  dongCode: string | null;
-  dongName: string | null;
-  createdAt: string;
-  userCreature: { stage: number; waterCount: number } | null;
-}
+import type { UserMeResType } from '@makeforest/types';
 
 function formatJoinDate(iso: string): string {
   return new Date(iso).toLocaleDateString('ko-KR', {
@@ -20,7 +12,7 @@ function formatJoinDate(iso: string): string {
 }
 
 export async function ProfileHeader({ userId }: { userId: string }) {
-  const user = await api.get<UserMe>(API_PATHS.SERVER_USER_ME(userId), { next: { revalidate: 3600 } });
+  const user = await api.get<UserMeResType>(API_PATHS.SERVER_USER_ME(userId), { next: { revalidate: 3600 } });
 
   return (
     <section className="bg-surface-container p-6 border border-outline-variant">

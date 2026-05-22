@@ -1,14 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
 import { getDongShortName } from '../dongCache';
+import { UserMeQuery } from '@makeforest/types';
 
 export const userRouter = Router();
 
 // GET /user/me?userId=
 userRouter.get('/me', async (req: Request, res: Response) => {
   try {
-    const { userId } = req.query as { userId: string };
-    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const { userId } = UserMeQuery.parse(req.query);
 
     const [user, userCreature] = await Promise.all([
       prisma.user.findUnique({
