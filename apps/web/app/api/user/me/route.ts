@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, unstable_update } from '@/auth';
 import { prisma } from '@makeforest/db';
-import { normalizeDongCode, getDongName } from '@/shared/lib/dongUtils';
+import { normalizeDongCode, getDongName } from '@/shared/utils/dongUtils';
 import { regionOf } from '@makeforest/types';
 
 export async function GET() {
