@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { RegionRanking, RegionRankingResponse } from '@/shared/lib/communityTypes';
+import type { RegionRanking, RegionRankingResponse } from '@makeforest/types';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 
 type Period = 'today' | 'week' | 'all';

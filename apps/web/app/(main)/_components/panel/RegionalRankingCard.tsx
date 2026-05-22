@@ -1,6 +1,6 @@
 'use client';
 
-import type { RegionRankingResponse } from '@/shared/lib/communityTypes';
+import type { RegionRankingResponse } from '@makeforest/types';
 
 interface Props {
   myRegionKey: string | null | undefined;

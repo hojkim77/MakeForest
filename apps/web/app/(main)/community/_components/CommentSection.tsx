@@ -14,7 +14,7 @@ function formatCommentTime(isoString: string): string {
   const diffD = Math.floor(diffH / 24);
   return `${diffD}일 전`;
 }
-import type { CommunityComment } from '@/shared/lib/communityTypes';
+import type { CommunityComment } from '@makeforest/types';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 
 interface Props {
