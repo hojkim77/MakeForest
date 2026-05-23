@@ -8,7 +8,7 @@ export function NeighborhoodStats() {
   const clamped = Math.max(0, Math.min(100, growthPercent));
 
   return (
-    <div className="flex flex-col gap-sm p-md bg-surface-container-low border border-outline-variant">
+    <div data-guide="panel.myNeighborhood" className="flex flex-col gap-sm p-md bg-surface-container-low border border-outline-variant">
       <span className="font-mono text-label text-outline uppercase tracking-tighter">
         Current Neighborhood Status
       </span>

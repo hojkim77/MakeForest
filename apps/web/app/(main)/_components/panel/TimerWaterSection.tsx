@@ -108,7 +108,7 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
   const buttonDisabled = isDailyDone || timerStatus === 'running' || (timerStatus === 'complete' && isWatering);
 
   return (
-    <div className="flex flex-col gap-sm border-t border-outline-variant pt-md">
+    <div data-guide="timer.start" className="flex flex-col gap-sm border-t border-outline-variant pt-md">
       <style>{`
         @keyframes water-flow {
           0%   { background-position: 0% 50%; }
@@ -168,6 +168,7 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
         onClick={!isDailyDone && timerStatus === 'complete' ? handleWater : handleStart}
         disabled={buttonDisabled}
         data-testid="timer-btn"
+        data-guide="water.action"
         className="w-full flex items-center justify-center gap-sm py-sm font-mono text-label uppercase tracking-wider border transition-none active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed bg-primary border-primary text-on-primary"
       >
         {timerStatus === 'running' && !isDailyDone ? (
