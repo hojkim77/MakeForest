@@ -1,7 +1,7 @@
 ---
 name: planner
 description: Feature planning specialist. Use when the user describes a new feature, user story, or product idea. Produces a non-technical spec document — what to build, not how. Automatically activated when users say "기획", "기능 추가", "새 기능", "어떻게 만들지", "스펙 작성", or describe a user-facing feature in natural language.
-tools: ['Read', 'Glob']
+tools: ['Read', 'Glob', 'Write']
 model: opus
 ---
 

@@ -8,8 +8,8 @@ import { Icon } from './Icon';
 
 const NAV_ITEMS = [
   { label: 'Map', href: '/' },
-  { label: 'Community', href: '/community' },
-  { label: 'Dashboard', href: '/mypage' },
+  { label: 'Community', href: '/community', guideId: 'community.entry' },
+  { label: 'Dashboard', href: '/mypage', guideId: 'mypage.entry' },
 ] as const;
 
 export function TopAppBar() {
@@ -41,12 +41,14 @@ export function TopAppBar() {
 
         {/* Nav */}
         <nav className="hidden md:flex items-center gap-12">
-          {NAV_ITEMS.map(({ label, href }) => {
+          {NAV_ITEMS.map(({ label, href, ...rest }) => {
             const isActive = pathname === href;
+            const guideId = 'guideId' in rest ? (rest as { guideId?: string }).guideId : undefined;
             return (
               <Link
                 key={href}
                 href={href}
+                {...(guideId ? { 'data-guide': guideId } : {})}
                 className={[
                   'font-mono text-base font-bold uppercase tracking-wider py-1 transition-none',
                   isActive

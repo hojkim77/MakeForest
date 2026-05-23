@@ -11,6 +11,7 @@ import { userRouter } from './routes/user';
 import { collectionRouter } from './routes/collection';
 import { communityRouter } from './routes/community';
 import { rankingRouter } from './routes/ranking';
+import { guideRouter } from './routes/guide';
 import { registerCronJobs } from './cron/midnight';
 import { requireInternalAuth } from './middleware/auth';
 import { testRouter } from './routes/test';
@@ -36,6 +37,7 @@ app.use('/ranking', rankingRouter);
 // Internal: require Next.js-issued secret on mutating routes
 app.use('/sessions', requireInternalAuth, sessionsRouter);
 app.use('/water', requireInternalAuth, waterRouter);
+app.use('/guide', requireInternalAuth, guideRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true, ts: new Date().toISOString() });

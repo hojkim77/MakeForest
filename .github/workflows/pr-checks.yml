@@ -58,16 +58,55 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Wait for Vercel Preview
-        uses: patrickedqvist/wait-for-vercel-preview@v1.3.2
         id: vercel-preview
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          max_timeout: 300
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          REPO="${{ github.repository }}"
+          SHA="${{ github.event.pull_request.head.sha }}"
+          for i in $(seq 1 30); do
+            DEPLOYMENT_ID=$(gh api "repos/$REPO/deployments?sha=$SHA" \
+              --jq '[.[] | select(.environment | startswith("Preview"))][0].id' 2>/dev/null)
+            if [ -n "$DEPLOYMENT_ID" ] && [ "$DEPLOYMENT_ID" != "null" ]; then
+              STATE=$(gh api "repos/$REPO/deployments/$DEPLOYMENT_ID/statuses" \
+                --jq '.[0].state' 2>/dev/null)
+              TARGET_URL=$(gh api "repos/$REPO/deployments/$DEPLOYMENT_ID/statuses" \
+                --jq '.[0].target_url' 2>/dev/null)
+              if [ "$STATE" = "success" ] && [ -n "$TARGET_URL" ] && [ "$TARGET_URL" != "null" ]; then
+                echo "url=$TARGET_URL" >> $GITHUB_OUTPUT
+                echo "Preview URL: $TARGET_URL"
+                exit 0
+              fi
+            fi
+            echo "Attempt $i/30: not ready yet, retrying in 10s..."
+            sleep 10
+          done
+          echo "Timeout: Vercel preview not ready after 5 minutes"
+          exit 1
 
       - name: Run Lighthouse CI
+        id: lighthouse
         uses: treosh/lighthouse-ci-action@v12
         with:
-          urls: ${{ steps.vercel-preview.outputs.url }}
+          urls: ${{ steps.vercel-preview.outputs.url }}?x-vercel-protection-bypass=${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           uploadArtifacts: true
           temporaryPublicStorage: true
           configPath: .lighthouserc.json
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post Lighthouse results comment
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LINKS='${{ steps.lighthouse.outputs.links }}'
+          REPORT_URL=$(echo "$LINKS" | jq -r 'to_entries[0].value // empty')
+          if [ -n "$REPORT_URL" ]; then
+            BODY="🔦 **Lighthouse CI** — [결과 보기]($REPORT_URL)"
+          else
+            BODY="🔦 **Lighthouse CI** — 결과를 가져오지 못했습니다."
+          fi
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body "$BODY" --edit-last 2>/dev/null || \
+          gh pr comment ${{ github.event.pull_request.number }} --body "$BODY"

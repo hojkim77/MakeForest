@@ -21,6 +21,16 @@
             "command": "cd /Users/skylar/Desktop/MakeForest && yarn lint --silent 2>&1 | grep -v '^$' | head -10"
           }
         ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/skylar/Desktop/MakeForest/.claude/hooks/notify-spec-written.sh",
+            "async": true
+          }
+        ]
       }
     ],
     "Stop": [

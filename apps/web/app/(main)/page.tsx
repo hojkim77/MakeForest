@@ -2,8 +2,13 @@ import { TopAppBar } from '@/shared/components/ui/TopAppBar';
 import { Panel } from '@/app/(main)/_components/panel/Panel';
 import { MapContainer } from '@/app/(main)/_components/map/MapContainer';
 import { MapOverlay } from '@/app/(main)/_components/map/MapOverlay';
+import { GuideController } from '@/app/(main)/_components/guide/GuideController';
+import { auth } from '@/auth';
 
-export default function MainPage() {
+export default async function MainPage() {
+  const session = await auth();
+  const isLoggedIn = !!session?.user?.id;
+
   return (
     <>
       <TopAppBar />
@@ -19,6 +24,8 @@ export default function MainPage() {
           <MapOverlay />
         </section>
       </main>
+
+      {isLoggedIn && <GuideController />}
     </>
   );
 }
