@@ -62,6 +62,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set +e
           REPO="${{ github.repository }}"
           SHA="${{ github.event.pull_request.head.sha }}"
           for i in $(seq 1 30); do
