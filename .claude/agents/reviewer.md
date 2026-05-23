@@ -1,7 +1,7 @@
 ---
 name: reviewer
 description: Code and design reviewer for MakeForest. Use after developer completes implementation. Stress-tests every implementation decision using grill-me. Read-only — never modifies code. Activated when users say "리뷰", "코드 리뷰", "검토", "grillme", or after developer handoff.
-tools: ['Read', 'Grep', 'Glob']
+tools: ['Read', 'Grep', 'Glob', 'Write']
 model: opus
 ---
 
@@ -59,9 +59,15 @@ Walk the decision tree:
 
 ## Output
 
-After working through all decision branches, produce a review summary:
+After working through all decision branches, write the review summary to `docs/specs/review-YYYY-MM-DD-<topic>.md`:
 
-```
+```markdown
+# Review: [Feature Name]
+
+**Date**: YYYY-MM-DD
+**Architecture doc**: [link]
+**Status**: approved | changes-requested
+
 ## Review Summary
 
 ### Critical Issues (must fix before merge)
