@@ -92,3 +92,4 @@ jobs:
           uploadArtifacts: true
           temporaryPublicStorage: true
           configPath: .lighthouserc.json
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
