@@ -1,4 +1,16 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(git status*)",
+      "Bash(git log*)",
+      "Bash(git diff*)",
+      "Bash(find . *)",
+      "Bash(find /Users/skylar/Desktop/MakeForest*)",
+      "Bash(grep*)",
+      "Bash(yarn lint*)",
+      "Bash(yarn type-check*)"
+    ]
+  },
   "hooks": {
     "PostToolUse": [
       {
@@ -15,10 +27,6 @@
       {
         "matcher": "*",
         "hooks": [
-          {
-            "type": "command",
-            "command": "cd /Users/skylar/Desktop/MakeForest && yarn test 2>&1 | tail -15"
-          },
           {
             "type": "command",
             "command": "cd /Users/skylar/Desktop/MakeForest && yarn type-check 2>&1 | grep -E 'error TS' | head -20"
