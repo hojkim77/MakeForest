@@ -7,3 +7,4 @@ export * from './creature.schema';
 export * from './community.schema';
 export * from './ranking.schema';
 export * from './collection.schema';
+export * from './guide.schema';
