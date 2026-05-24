@@ -1,12 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { API_PATHS } from '@/shared/lib/apiPaths';
-
-interface RegionItem {
-  regionKey: string;
-  regionName: string;
-}
+import { useState } from 'react';
+import { useLocationRegionsQuery } from '@/shared/hooks/queries/useLocationRegionsQuery';
 
 interface Props {
   selectedRegionKey: string | null;
@@ -16,14 +11,7 @@ interface Props {
 
 export function RegionAccordion({ selectedRegionKey, onSelect, onReset }: Props) {
   const [open, setOpen] = useState(false);
-  const [regions, setRegions] = useState<RegionItem[]>([]);
-
-  useEffect(() => {
-    void fetch(API_PATHS.LOCATION_REGIONS())
-      .then((r) => r.json() as Promise<RegionItem[]>)
-      .then(setRegions)
-      .catch(() => { });
-  }, []);
+  const { data: regions = [] } = useLocationRegionsQuery();
 
   const selectedRegionName = regions.find((r) => r.regionKey === selectedRegionKey)?.regionName ?? null;
 

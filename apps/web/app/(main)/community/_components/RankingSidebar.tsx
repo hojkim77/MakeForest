@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import type { RegionRanking, RegionRankingResponse } from '@makeforest/types';
-import { API_PATHS } from '@/shared/lib/apiPaths';
+import type { RegionRankingResponse } from '@makeforest/types';
+import { useRankingQuery } from '@/shared/hooks/queries/useRankingQuery';
 
 type Period = 'today' | 'week' | 'all';
 
@@ -19,20 +19,8 @@ interface Props {
 
 export function RankingSidebar({ initialRanking, fetchedAt }: Props) {
   const [period, setPeriod] = useState<Period>(initialRanking.period);
-  const [rankings, setRankings] = useState<RegionRanking[]>(initialRanking.rankings);
-  const [loading, setLoading] = useState(false);
-
-  async function switchPeriod(next: Period) {
-    if (next === period || loading) return;
-    setLoading(true);
-    const res = await fetch(API_PATHS.SERVER_RANKING_REGION(next));
-    if (res.ok) {
-      const data = await res.json() as RegionRankingResponse;
-      setRankings(data.rankings);
-    }
-    setPeriod(next);
-    setLoading(false);
-  }
+  const { data, isFetching } = useRankingQuery(period, undefined, initialRanking);
+  const rankings = data?.rankings ?? [];
 
   return (
     <aside className="flex flex-col gap-md sticky top-[49px] h-[calc(100vh-49px-4rem)] overflow-y-auto">
@@ -46,7 +34,7 @@ export function RankingSidebar({ initialRanking, fetchedAt }: Props) {
           <button
             key={key}
             type="button"
-            onClick={() => void switchPeriod(key)}
+            onClick={() => setPeriod(key)}
             className={`px-sm py-xs font-mono text-label border transition-colors
               ${period === key
                 ? 'border-primary bg-primary-container text-on-primary-container'
@@ -60,7 +48,10 @@ export function RankingSidebar({ initialRanking, fetchedAt }: Props) {
 
       {/* Rankings */}
       <div className="flex flex-col gap-xs">
-        {rankings.length === 0 && (
+        {isFetching && rankings.length === 0 && (
+          <p className="font-mono text-label text-outline">불러오는 중...</p>
+        )}
+        {rankings.length === 0 && !isFetching && (
           <p className="font-mono text-label text-outline">데이터가 없어요.</p>
         )}
         {rankings.map((r) => (

@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { CreatureSprite } from '@/shared/components/ui/CreatureSprite';
-import type { CommunityPost, CommunityReaction } from '@makeforest/types';
+import type { CommunityPost } from '@makeforest/types';
 import { ReactionBar } from './ReactionBar';
 import { CommentSection } from './CommentSection';
 
@@ -10,6 +9,7 @@ interface Props {
   post: CommunityPost;
   isLoggedIn: boolean;
   myReactionEmojis: string[];
+  feedFilters: { period: string; sort: string; regionKey: string };
 }
 
 function formatElapsed(sec: number): string {
@@ -19,13 +19,11 @@ function formatElapsed(sec: number): string {
   return `${m}분`;
 }
 
-export function PostCard({ post, isLoggedIn, myReactionEmojis }: Props) {
-  const [reactions, setReactions] = useState<CommunityReaction[]>(post.reactions);
-
-  useEffect(() => {
-    if (myReactionEmojis.length === 0) return;
-    setReactions((prev) => prev.map((r) => ({ ...r, myReaction: myReactionEmojis.includes(r.emoji) })));
-  }, [myReactionEmojis]);
+export function PostCard({ post, isLoggedIn, myReactionEmojis, feedFilters }: Props) {
+  const reactions = post.reactions.map((r) => ({
+    ...r,
+    myReaction: myReactionEmojis.includes(r.emoji),
+  }));
 
   return (
     <article className="flex flex-col gap-md p-md bg-surface-container border border-outline-variant">
@@ -63,7 +61,8 @@ export function PostCard({ post, isLoggedIn, myReactionEmojis }: Props) {
         postId={post.id}
         reactions={reactions}
         isLoggedIn={isLoggedIn}
-        onUpdate={setReactions}
+
+        feedFilters={feedFilters}
       />
 
       {/* Comments */}

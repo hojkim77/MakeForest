@@ -1,7 +1,7 @@
 'use client';
 
 import type { CommunityReaction } from '@makeforest/types';
-import { API_PATHS } from '@/shared/lib/apiPaths';
+import { useReactionMutation } from '@/shared/hooks/mutations/useReactionMutation';
 
 const EMOJIS = ['🔥', '💪', '👏'] as const;
 
@@ -9,28 +9,15 @@ interface Props {
   postId: string;
   reactions: CommunityReaction[];
   isLoggedIn: boolean;
-  onUpdate: (reactions: CommunityReaction[]) => void;
+  feedFilters: { period: string; sort: string; regionKey: string };
 }
 
-export function ReactionBar({ postId, reactions, isLoggedIn, onUpdate }: Props) {
-  async function toggle(emoji: string) {
+export function ReactionBar({ postId, reactions, isLoggedIn, feedFilters }: Props) {
+  const { mutate } = useReactionMutation();
+
+  function toggle(emoji: string) {
     if (!isLoggedIn) return;
-
-    const res = await fetch(API_PATHS.COMMUNITY_REACTIONS(postId), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ emoji }),
-    });
-    if (!res.ok) return;
-
-    const { added } = await res.json() as { added: boolean };
-    onUpdate(
-      reactions.map((r) =>
-        r.emoji === emoji
-          ? { ...r, count: r.count + (added ? 1 : -1), myReaction: added }
-          : r,
-      ),
-    );
+    mutate({ postId, emoji, feedFilters });
   }
 
   return (
@@ -43,7 +30,7 @@ export function ReactionBar({ postId, reactions, isLoggedIn, onUpdate }: Props) 
           <button
             key={emoji}
             type="button"
-            onClick={() => void toggle(emoji)}
+            onClick={() => toggle(emoji)}
             disabled={!isLoggedIn}
             className={`flex items-center gap-xs px-sm py-xs font-mono text-label border transition-colors
               ${active
