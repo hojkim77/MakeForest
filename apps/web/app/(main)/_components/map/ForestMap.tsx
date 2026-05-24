@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { usePixelMapData } from '@/shared/hooks/usePixelMapData';
-import { useActivityStore } from '@/shared/store';
+import { usePixelMapQuery } from '@/shared/hooks/queries/usePixelMapQuery';
+import { useMapSnapshotQuery } from '@/shared/hooks/queries/useMapSnapshotQuery';
 import { UserOverlay } from './UserOverlay';
 import { CollectionCreatureOverlay } from './CollectionCreatureOverlay';
 import { regionOf } from '@makeforest/types';
@@ -39,9 +39,10 @@ interface ForestMapProps {
 
 export function ForestMap({ regionCode, active, scale = 1 }: ForestMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { data: pixelMap } = usePixelMapData();
-  const activity = useActivityStore((s) => s.activity);
-  const activeUsers = useActivityStore((s) => s.activeUsers);
+  const { data: pixelMap } = usePixelMapQuery();
+  const { data: snapshot } = useMapSnapshotQuery();
+  const activity = snapshot?.heatmap ?? {};
+  const activeUsers = snapshot?.users ?? [];
 
   const visibleCells = useMemo(
     () =>

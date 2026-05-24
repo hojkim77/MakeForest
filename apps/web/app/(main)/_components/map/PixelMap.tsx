@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { usePixelMapData } from '@/shared/hooks/usePixelMapData';
-import { useActivityStore } from '@/shared/store';
+import { usePixelMapQuery } from '@/shared/hooks/queries/usePixelMapQuery';
+import { useMapSnapshotQuery } from '@/shared/hooks/queries/useMapSnapshotQuery';
 import { useCanvasHighlight } from '@/shared/hooks/useCanvasHighlight';
 import { useRegionHover } from '@/shared/hooks/useRegionHover';
 import { PixelMapTooltip } from './PixelMapTooltip';
@@ -35,8 +35,9 @@ interface PixelMapProps {
 
 export function PixelMap({ onRegionClick, onBoundsReady }: PixelMapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { data: pixelMap, loading } = usePixelMapData();
-  const activity = useActivityStore((s) => s.activity);
+  const { data: pixelMap, loading } = usePixelMapQuery();
+  const { data: snapshot } = useMapSnapshotQuery();
+  const activity = snapshot?.heatmap ?? {};
 
   const regionMeta = useMemo(() => {
     const cells = new Map<string, typeof pixelMap.cells>();
