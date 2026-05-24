@@ -3,6 +3,7 @@ import { IBM_Plex_Mono, Inter } from 'next/font/google';
 import { SessionProvider } from 'next-auth/react';
 import { PushSubscriber } from '@/shared/components/PushSubscriber';
 import { ToastContainer } from '@/shared/components/ui/ToastContainer';
+import { Providers } from './providers';
 import './globals.css';
 
 const monoFont = IBM_Plex_Mono({
@@ -48,9 +49,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-background text-on-background font-sans selection:bg-primary-fixed selection:text-on-primary-fixed min-h-screen">
         <SessionProvider>
-          <PushSubscriber />
-          {children}
-          <ToastContainer />
+          <Providers>
+            <PushSubscriber />
+            {children}
+            <ToastContainer />
+          </Providers>
         </SessionProvider>
       </body>
     </html>
