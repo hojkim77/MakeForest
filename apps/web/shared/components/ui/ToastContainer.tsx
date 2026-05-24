@@ -60,13 +60,17 @@ function ToastItem({ toast }: { toast: Toast }) {
   );
 }
 
-export function ToastContainer() {
+export function ToastContainer({
+  className = 'fixed top-4 right-4 z-[70] pointer-events-none',
+}: {
+  className?: string;
+}) {
   const toasts = useToastStore((s) => s.toasts);
 
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-[70] flex flex-col gap-xs pointer-events-none">
+    <div className={`flex flex-col gap-xs ${className}`}>
       {toasts.map((t) => (
         <div key={t.id} className="pointer-events-auto">
           <ToastItem toast={t} />
