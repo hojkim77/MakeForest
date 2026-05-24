@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
-import { useMapStore, useTimerStore, useWaterStore, useTodoStore } from '@/shared/store';
+import { useMapStore, useTimerStore, useTodoStore } from '@/shared/store';
 import { CYCLE_MS, CYCLE_SEC } from '@/shared/store/timerStore';
 import { Icon } from '@/shared/components/ui/Icon';
 import { formatDuration } from '@/shared/utils/format';
@@ -10,7 +10,12 @@ import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 import { toast } from '@/shared/lib/toast';
 import { handleApiError } from '@/shared/lib/handleApiError';
-import type { CreateSessionResType, WaterResType } from '@makeforest/types';
+import { useWaterQuery, type WaterQueryData } from '@/shared/hooks/queries/useWaterQuery';
+import { useSessionQuery } from '@/shared/hooks/queries/useSessionQuery';
+import { useWaterMutation } from '@/shared/hooks/mutations/useWaterMutation';
+import { useCreateSessionMutation } from '@/shared/hooks/mutations/useSessionMutation';
+import { useKstDateStore } from '@/shared/store/kstDateStore';
+import type { CreateSessionResType } from '@makeforest/types';
 
 const TOTAL_SEGMENTS = 12;
 const DAILY_MAX_SEC = TOTAL_SEGMENTS * CYCLE_SEC;
@@ -21,9 +26,24 @@ function formatTimer(sec: number) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | null }) {
+interface TodaySession {
+  id: string;
+  startedAt: string;
+  status: string;
+  todos: { id: string; text: string; done: boolean }[];
+}
+
+interface Props {
+  myRegionCode: string | null;
+  userId: string | null;
+  initialWater: WaterQueryData;
+  initialSession: TodaySession | null;
+}
+
+export function TimerWaterSection({ myRegionCode, userId, initialWater, initialSession }: Props) {
   const { data: session, status } = useSession();
   const isLoggedIn = status === 'authenticated' && !!session?.user?.id;
+  const kstDate = useKstDateStore((s) => s.kstDate);
 
   const focusedRegionCode = useMapStore((s) => s.focusedRegionCode);
   const isPeeking = focusedRegionCode !== null && focusedRegionCode !== myRegionCode;
@@ -31,7 +51,11 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
   const { sessionId, startedAt, status: timerStatus, cycleCount, startSession, complete, reset } = useTimerStore();
   const todos = useTodoStore((s) => s.todos);
   const setTodoOpen = useTodoStore((s) => s.setOpen);
-  const { waterCount, isWatering, setIsWatering, applyWaterResponse } = useWaterStore();
+
+  const { waterCount } = useWaterQuery({ userId, initialData: initialWater });
+  useSessionQuery({ userId, initialData: initialSession });
+  const { mutateAsync: waterMutate, isPending: isWatering } = useWaterMutation();
+  const { mutateAsync: createSessionMutate } = useCreateSessionMutation();
 
   // 30분 완료 시 서버 세션 complete + 푸시 알림
   const completeCalledRef = useRef(false);
@@ -65,34 +89,30 @@ export function TimerWaterSection({ myRegionCode }: { myRegionCode: string | nul
   const totalSec = Math.min(waterCount * CYCLE_SEC + elapsedSec, DAILY_MAX_SEC);
 
   async function handleStart() {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn || !userId) return;
     if (todos.length === 0) {
       toast.error('오늘 집중 할 일을 하나 이상 추가해 주세요');
       setTodoOpen(true);
       return;
     }
     try {
-      const data = await api.post<CreateSessionResType>(API_PATHS.SESSIONS(), { todos });
+      const data = await createSessionMutate({ todos, userId, kstDate });
       startSession(data.sessionId, Date.parse(data.startedAt));
-      if (data.isNewSession) {
+      if ((data as CreateSessionResType).isNewSession) {
         toast.success('커뮤니티에 오늘의 집중이 공유됐어요!', { label: '보러 가기', href: '/community' });
       }
     } catch (err) { handleApiError(err, { fallback: '타이머 구동에 실패했어요. 잠시 후 다시 시도해주세요.' }); }
   }
 
   async function handleWater() {
-    if (isWatering) return;
-    setIsWatering(true);
+    if (isWatering || !userId) return;
     try {
-      const data = await api.post<WaterResType>(API_PATHS.WATER());
-      applyWaterResponse(data);
-      if (data.myWaterCount >= TOTAL_SEGMENTS) {
+      await waterMutate({ userId, kstDate });
+      if (waterCount + 1 >= TOTAL_SEGMENTS) {
         toast.success('오늘 집중 고생하셨어요! 🌱');
       }
       reset();
-
     } catch (err) { handleApiError(err, { conflict: '오늘 물주기를 이미 완료했어요.', fallback: '물주기에 실패했어요. 잠시 후 다시 시도해주세요.' }); }
-    finally { setIsWatering(false); }
   }
 
   const isDailyDone = waterCount >= TOTAL_SEGMENTS;

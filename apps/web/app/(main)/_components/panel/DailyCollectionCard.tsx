@@ -1,10 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import { CollectionCreatureSprite } from '@/shared/components/ui/CollectionCreatureSprite';
-import type { CollectionProgress, SessionToastPayload } from '@makeforest/types';
-import { useSseEvent } from '@/shared/hooks/useSseEvent';
-import { API_PATHS } from '@/shared/lib/apiPaths';
+import type { CollectionProgress } from '@makeforest/types';
+import { useCollectionQuery } from '@/shared/hooks/queries/useCollectionQuery';
 
 export type CollectionData = CollectionProgress;
 
@@ -15,15 +13,7 @@ interface Props {
 }
 
 export function DailyCollectionCard({ dongCode, regionCode, initialCollection }: Props) {
-  const [collection, setCollection] = useState<CollectionData | null>(initialCollection);
-
-  const sseUrl = regionCode && dongCode ? API_PATHS.SERVER_SSE_REGION(regionCode) : null;
-
-  useSseEvent(sseUrl, 'session:toast', (raw) => {
-    const payload = JSON.parse(raw) as SessionToastPayload;
-    if (!payload.collectionProgress) return;
-    setCollection((prev) => prev ? { ...prev, ...payload.collectionProgress! } : prev);
-  });
+  const { data: collection } = useCollectionQuery({ regionCode, initialData: initialCollection });
 
   if (!dongCode || !collection) return null;
 

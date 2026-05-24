@@ -1,10 +1,14 @@
 'use client';
 
-import { useWaterStore } from '@/shared/store';
+import { useWaterQuery, type WaterQueryData } from '@/shared/hooks/queries/useWaterQuery';
 
+interface Props {
+  userId: string | null;
+  initialWater: WaterQueryData;
+}
 
-export function NeighborhoodStats() {
-  const growthPercent = useWaterStore((s) => s.growthPercent);
+export function NeighborhoodStats({ userId, initialWater }: Props) {
+  const { growthPercent } = useWaterQuery({ userId, initialData: initialWater });
   const clamped = Math.max(0, Math.min(100, growthPercent));
 
   return (

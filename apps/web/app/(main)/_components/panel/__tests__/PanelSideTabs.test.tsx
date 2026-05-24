@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CollectionTab } from '../CollectionTab';
 import { RankingTab } from '../RankingTab';
 import { usePanelStore } from '@/shared/store';
@@ -28,6 +29,19 @@ class MockEventSource {
 
 const defaultRanking = { period: 'today' as const, rankings: [], myRegionKey: null };
 
+// ── Mock: kstDateStore ───────────────────────────────────────────────────────
+jest.mock('@/shared/store/kstDateStore', () => ({
+  useKstDateStore: () => '2026-05-24',
+}));
+
+function makeQueryClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+}
+
+function wrapper({ children }: { children: React.ReactNode }) {
+  return React.createElement(QueryClientProvider, { client: makeQueryClient() }, children);
+}
+
 function makeCollection(overrides = {}) {
   return {
     creatureType: 'MUSHROOM',
@@ -51,6 +65,7 @@ describe('PanelSideTabs — 탭 버튼 렌더링', () => {
         <CollectionTab dongCode={null} regionCode={null} initialCollection={null} />
         <RankingTab myRegionKey={null} initialRanking={defaultRanking} />
       </>,
+      { wrapper },
     );
     expect(screen.getByRole('button', { name: /공통 미션/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /지역 랭킹/i })).toBeInTheDocument();
@@ -65,6 +80,7 @@ describe('PanelSideTabs — 드로어 토글', () => {
         regionCode="11"
         initialCollection={makeCollection()}
       />,
+      { wrapper },
     );
     fireEvent.click(screen.getByRole('button', { name: /공통 미션/i }));
     expect(usePanelStore.getState().activeTab).toBe('collection');
@@ -78,6 +94,7 @@ describe('PanelSideTabs — 드로어 토글', () => {
         regionCode="11"
         initialCollection={makeCollection()}
       />,
+      { wrapper },
     );
     fireEvent.click(screen.getByRole('button', { name: /공통 미션/i }));
     expect(usePanelStore.getState().activeTab).toBeNull();
@@ -93,6 +110,7 @@ describe('PanelSideTabs — 드로어 내용', () => {
         regionCode="11"
         initialCollection={makeCollection()}
       />,
+      { wrapper },
     );
     expect(screen.getByText('MUSHROOM')).toBeInTheDocument();
   });
@@ -105,6 +123,7 @@ describe('PanelSideTabs — 드로어 내용', () => {
         regionCode="11"
         initialCollection={makeCollection()}
       />,
+      { wrapper },
     );
     expect(screen.queryByText('MUSHROOM')).not.toBeVisible();
   });
