@@ -68,7 +68,11 @@ sseRouter.get('/activity-stream/regionCode/:regionCode', async (req: Request, re
 
   req.on('close', () => {
     clearInterval(pingInterval);
-    clients.get(regionCode)?.delete(res);
+    const room = clients.get(regionCode);
+    if (room) {
+      room.delete(res);
+      if (room.size === 0) clients.delete(regionCode);
+    }
   });
 });
 

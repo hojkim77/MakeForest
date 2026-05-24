@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { CollectionCreatureSprite } from '@/shared/components/ui/CollectionCreatureSprite';
 import type { CollectionProgress, SessionToastPayload } from '@makeforest/types';
+import { useSseEvent } from '@/shared/hooks/useSseEvent';
+import { API_PATHS } from '@/shared/lib/apiPaths';
 
 export type CollectionData = CollectionProgress;
 
@@ -12,31 +14,16 @@ interface Props {
   initialCollection: CollectionData | null;
 }
 
-const SERVER_URL =
-  typeof window !== 'undefined'
-    ? (process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:4000')
-    : 'http://localhost:4000';
-
 export function DailyCollectionCard({ dongCode, regionCode, initialCollection }: Props) {
   const [collection, setCollection] = useState<CollectionData | null>(initialCollection);
 
-  useEffect(() => {
-    if (!regionCode || !dongCode) return;
+  const sseUrl = regionCode && dongCode ? API_PATHS.SERVER_SSE_REGION(regionCode) : null;
 
-    const es = new EventSource(
-      `${SERVER_URL}/sse/activity-stream/regionCode/${encodeURIComponent(regionCode)}`,
-    );
-
-    es.addEventListener('session:toast', (e) => {
-      const payload = JSON.parse((e as MessageEvent<string>).data) as SessionToastPayload;
-      if (!payload.collectionProgress) return;
-      setCollection((prev) =>
-        prev ? { ...prev, ...payload.collectionProgress! } : prev,
-      );
-    });
-
-    return () => es.close();
-  }, [regionCode, dongCode]);
+  useSseEvent(sseUrl, 'session:toast', (raw) => {
+    const payload = JSON.parse(raw) as SessionToastPayload;
+    if (!payload.collectionProgress) return;
+    setCollection((prev) => prev ? { ...prev, ...payload.collectionProgress! } : prev);
+  });
 
   if (!dongCode || !collection) return null;
 
