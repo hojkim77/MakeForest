@@ -2,7 +2,6 @@ import { Suspense } from 'react';
 import { auth } from '@/auth';
 import { PeekingBanner } from './PeekingBanner';
 import { SloganSection } from './SloganSection';
-import { ActivityToastFeed } from './ActivityToastFeed';
 import { PanelMainContents } from './PanelMainContents';
 import { PanelSideTabs } from './PanelSideTabs';
 
@@ -18,7 +17,6 @@ export async function Panel() {
       <div className="flex flex-col gap-xl p-lg flex-1">
         <PeekingBanner myRegionCode={myRegionCode} />
         <SloganSection myRegionCode={myRegionCode} />
-        <ActivityToastFeed myRegionCode={myRegionCode} />
         <Suspense fallback={isLoggedIn ? <PanelMainContentsSkeleton /> : null}>
           <PanelMainContents userId={userId} isLoggedIn={isLoggedIn} myRegionCode={myRegionCode} />
         </Suspense>
