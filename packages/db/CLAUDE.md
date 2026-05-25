@@ -17,15 +17,8 @@
 - Evolution thresholds: `[0, 12, 36, 72, 132, 216, 336, 504, 744, 1080]` (hardcoded in `water.logic.ts`)
 - Daily water limit (12/day) is tracked separately via `DailySession.waterCount`
 
-**Fossil** (preserved creature) — daily snapshot created on each day the user waters
-- `@@unique([userId, date])` — one per user per day
-- `userId` identifies the owner; `dongCode` records the location
-- `stage`: snapshot of UserCreature.stage at fossil creation time
-- `fossilX`, `fossilY`: national 250×290 grid pixel coordinates + ±3px jitter
-- `creatureType`: one of 14 CREATURE_TYPES, cycled by (day-of-year + userId hash) % 14
-
 **WateringLog** — watering history (per user, dong, date)
-- Used by `createUserFossils` to detect "users who watered today"
+- Used by midnight batch auto-water step to detect "users who watered today"
 
 **PushSubscription** — web push subscription data
 
@@ -33,7 +26,6 @@
 
 - All timestamp columns stored in UTC; KST conversion done in business logic
 - Date columns (`date`) stored as KST "YYYY-MM-DD" strings
-- Fossil is a separate, append-only table independent from UserCreature
 - Evolution thresholds hardcoded in `water.logic.ts` (Config table not implemented)
 - `Creature` table removed — region-shared creature concept abolished, replaced by personal `UserCreature`
 
