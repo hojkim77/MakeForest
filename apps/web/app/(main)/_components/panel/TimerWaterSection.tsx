@@ -15,6 +15,7 @@ import { useSessionQuery } from '@/shared/hooks/queries/useSessionQuery';
 import { useWaterMutation } from '@/shared/hooks/mutations/useWaterMutation';
 import { useCreateSessionMutation } from '@/shared/hooks/mutations/useSessionMutation';
 import { useKstDateStore } from '@/shared/store/kstDateStore';
+import { useMidnightReset } from '@/shared/hooks/useMidnightReset';
 import type { CreateSessionResType } from '@makeforest/types';
 
 const TOTAL_SEGMENTS = 12;
@@ -51,6 +52,8 @@ export function TimerWaterSection({ myRegionCode, userId, initialWater, initialS
   const { sessionId, startedAt, status: timerStatus, cycleCount, startSession, complete, reset } = useTimerStore();
   const todos = useTodoStore((s) => s.todos);
   const setTodoOpen = useTodoStore((s) => s.setOpen);
+
+  useMidnightReset();
 
   const { waterCount } = useWaterQuery({ userId, initialData: initialWater });
   useSessionQuery({ userId, initialData: initialSession });
