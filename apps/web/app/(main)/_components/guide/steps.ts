@@ -79,14 +79,13 @@ export function buildDailyStepConfig(
       };
     }
     case 'daily.neighborhoodDelta': {
-      const { newTreesYesterday } = payload.neighborhood;
+      const { missionCompleted } = payload.neighborhood;
       return {
         targetSelector: '[data-guide="map.modeToggle"]',
-        title: '동네 변화',
-        description:
-          newTreesYesterday > 0
-            ? `어제 우리 동네에 나무가 ${newTreesYesterday}그루 새로 심어졌어요!`
-            : '어제는 우리 동네에 새 나무가 없었어요. 오늘 집중해서 첫 번째 나무를 심어 보세요!',
+        title: '동네 미션',
+        description: missionCompleted
+          ? '어제 우리 동네가 함께 미션을 완료했어요!'
+          : '어제는 미션이 완료되지 않았어요. 오늘 집중해서 함께 완성해 보세요!',
       };
     }
   }
