@@ -19,20 +19,3 @@ export type CreatureType =
   | 'CHERRY'
   | 'RARE_ANIMAL';
 
-export type ForestBaseLevel = 'BARREN' | 'SPROUT' | 'MEADOW' | 'FOREST' | 'DENSE_FOREST';
-
-export interface Fossil {
-  id: string;
-  dongCode: string;
-  date: string; // "YYYY-MM-DD" KST
-  creatureType: CreatureType;
-  stage: number;
-  fossilX: number;
-  fossilY: number;
-  createdAt: Date;
-}
-
-export interface ForestData {
-  fossils: Fossil[];
-  baseLevel: ForestBaseLevel;
-}
