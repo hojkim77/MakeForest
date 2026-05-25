@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import type { CommunityPost, CommunityFeedResponse } from '@makeforest/types';
-import { API_PATHS } from '@/shared/lib/apiPaths';
-import { api } from '@/shared/lib/api';
+import { useCommunityFeedQuery } from '@/shared/hooks/queries/useCommunityFeedQuery';
+import { useMyReactionsQuery } from '@/shared/hooks/queries/useMyReactionsQuery';
 import { PostCard } from './PostCard';
 import { RegionAccordion } from './RegionAccordion';
 
@@ -32,84 +31,35 @@ const TAB_CLASS = (active: boolean) =>
 export function CommunityFeedSection() {
   const { data: session } = useSession();
   const isLoggedIn = !!session?.user?.id;
-  const [posts, setPosts] = useState<CommunityPost[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [myReactions, setMyReactions] = useState<Record<string, string[]>>({});
-  const [loading, setLoading] = useState(false);
   const [period, setPeriod] = useState<Period>('all');
   const [sort, setSort] = useState<Sort>('recent');
   const [selectedRegion, setSelectedRegion] = useState<{ key: string; name: string } | null>(null);
 
-  const fetchMyReactions = useCallback(async (items: CommunityPost[]) => {
-    if (!session?.user?.id || items.length === 0) return;
-    const postIds = items.map((p) => p.id).join(',');
-    try {
-      const data = await api.get<Record<string, string[]>>(
-        `${API_PATHS.COMMUNITY_MY_REACTIONS()}?postIds=${encodeURIComponent(postIds)}`,
-      );
-      setMyReactions((prev) => ({ ...prev, ...data }));
-    } catch { }
-  }, [session?.user?.id]);
+  const filters = { period, sort, regionKey: selectedRegion?.key ?? '' };
 
-  const fetchFeed = useCallback(async (params: { period: Period; sort: Sort; regionKey: string; cursor?: string }) => {
-    const urlParams = new URLSearchParams({ limit: '20', period: params.period, sort: params.sort });
-    if (params.cursor) urlParams.set('cursor', params.cursor);
-    if (params.regionKey.trim()) urlParams.set('regionKey', params.regionKey.trim());
-    return api.get<CommunityFeedResponse>(`${API_PATHS.COMMUNITY_FEED()}?${urlParams}`).catch(() => null);
-  }, []);
+  const {
+    data,
+    isPending,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useCommunityFeedQuery(filters);
 
-  const resetFeed = useCallback(async (nextPeriod: Period, nextSort: Sort, regionKey: string) => {
-    setLoading(true);
-    const data = await fetchFeed({ period: nextPeriod, sort: nextSort, regionKey });
-    if (data) {
-      setPosts(data.items);
-      setNextCursor(data.nextCursor);
-      void fetchMyReactions(data.items);
-    }
-    setLoading(false);
-  }, [fetchFeed, fetchMyReactions]);
+  const posts = data?.items ?? [];
+  const postIds = posts.map((p) => p.id);
 
-  useEffect(() => {
-    void resetFeed('all', 'recent', '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const { data: myReactions = {} } = useMyReactionsQuery(postIds, isLoggedIn);
 
-  useEffect(() => {
-    void fetchMyReactions(posts);
-
-  }, [session?.user?.id]);
-
-  const handlePeriodChange = useCallback((next: Period) => {
-    setPeriod(next);
-    void resetFeed(next, sort, selectedRegion?.key ?? '');
-  }, [sort, selectedRegion, resetFeed]);
-
-  const handleSortChange = useCallback((next: Sort) => {
-    setSort(next);
-    void resetFeed(period, next, selectedRegion?.key ?? '');
-  }, [period, selectedRegion, resetFeed]);
+  const handlePeriodChange = useCallback((next: Period) => setPeriod(next), []);
+  const handleSortChange = useCallback((next: Sort) => setSort(next), []);
 
   const handleRegionSelect = useCallback((regionKey: string, regionName: string) => {
     setSelectedRegion({ key: regionKey, name: regionName });
-    void resetFeed(period, sort, regionKey);
-  }, [period, sort, resetFeed]);
+  }, []);
 
-  const handleRegionReset = useCallback(() => {
-    setSelectedRegion(null);
-    void resetFeed(period, sort, '');
-  }, [period, sort, resetFeed]);
+  const handleRegionReset = useCallback(() => setSelectedRegion(null), []);
 
-  const loadMore = useCallback(async () => {
-    if (!nextCursor || loading) return;
-    setLoading(true);
-    const data = await fetchFeed({ period, sort, regionKey: selectedRegion?.key ?? '', cursor: nextCursor });
-    if (data) {
-      setPosts((prev) => [...prev, ...data.items]);
-      setNextCursor(data.nextCursor);
-      void fetchMyReactions(data.items);
-    }
-    setLoading(false);
-  }, [nextCursor, loading, period, sort, selectedRegion, fetchFeed, fetchMyReactions]);
+  const loading = isPending;
 
   return (
     <section className="flex flex-col gap-md">
@@ -150,17 +100,23 @@ export function CommunityFeedSection() {
       )}
 
       {posts.map((post) => (
-        <PostCard key={post.id} post={post} isLoggedIn={isLoggedIn} myReactionEmojis={myReactions[post.id] ?? []} />
+        <PostCard
+          key={post.id}
+          post={post}
+          isLoggedIn={isLoggedIn}
+          myReactionEmojis={myReactions[post.id] ?? []}
+          feedFilters={filters}
+        />
       ))}
 
-      {sort === 'recent' && nextCursor && (
+      {sort === 'recent' && hasNextPage && (
         <button
           type="button"
-          onClick={() => void loadMore()}
-          disabled={loading}
+          onClick={() => void fetchNextPage()}
+          disabled={isFetchingNextPage}
           className="font-mono text-label text-on-surface-variant hover:text-on-surface disabled:opacity-50 py-sm"
         >
-          {loading ? '불러오는 중...' : '더 보기'}
+          {isFetchingNextPage ? '불러오는 중...' : '더 보기'}
         </button>
       )}
 

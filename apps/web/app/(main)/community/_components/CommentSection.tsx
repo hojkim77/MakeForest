@@ -14,8 +14,8 @@ function formatCommentTime(isoString: string): string {
   const diffD = Math.floor(diffH / 24);
   return `${diffD}일 전`;
 }
-import type { CommunityComment } from '@makeforest/types';
-import { API_PATHS } from '@/shared/lib/apiPaths';
+import { useCommentsQuery } from '@/shared/hooks/queries/useCommentsQuery';
+import { useAddCommentMutation, useDeleteCommentMutation } from '@/shared/hooks/mutations/useCommentMutation';
 
 interface Props {
   postId: string;
@@ -23,50 +23,34 @@ interface Props {
   isLoggedIn: boolean;
 }
 
-export function CommentSection({ postId, initialCount, isLoggedIn, }: Props) {
+export function CommentSection({ postId, initialCount, isLoggedIn }: Props) {
   const [open, setOpen] = useState(false);
-  const [comments, setComments] = useState<CommunityComment[]>([]);
-  const [loaded, setLoaded] = useState(false);
   const [input, setInput] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [count, setCount] = useState(initialCount);
 
-  async function load() {
-    if (loaded) { setOpen(true); return; }
-    const res = await fetch(API_PATHS.COMMUNITY_COMMENTS(postId));
-    if (!res.ok) return;
-    const data = await res.json() as CommunityComment[];
-    setComments(data);
-    setLoaded(true);
-    setOpen(true);
-  }
+  const { data: comments = [], isFetching, isFetched } = useCommentsQuery(postId, open);
+  const count = open && isFetched ? comments.length : initialCount;
+  const { mutate: addComment, isPending: submitting } = useAddCommentMutation();
+  const { mutate: deleteComment } = useDeleteCommentMutation();
 
   function toggle() {
-    if (!open) { void load(); } else { setOpen(false); }
+    setOpen((v) => !v);
   }
 
-  async function submit(e: React.FormEvent) {
+  function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!input.trim() || submitting) return;
-    setSubmitting(true);
-    const res = await fetch(API_PATHS.COMMUNITY_COMMENTS(postId), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: input.trim() }),
-    });
-    setSubmitting(false);
-    if (!res.ok) return;
-    const comment = await res.json() as CommunityComment;
-    setComments((prev) => [...prev, { ...comment, isMyComment: true }]);
-    setCount((c) => c + 1);
-    setInput('');
+    addComment(
+      { postId, content: input.trim() },
+      {
+        onSuccess: () => {
+          setInput('');
+        },
+      },
+    );
   }
 
-  async function deleteComment(commentId: string) {
-    const res = await fetch(`/api/community/${postId}/comments/${commentId}`, { method: 'DELETE' });
-    if (!res.ok) return;
-    setComments((prev) => prev.filter((c) => c.id !== commentId));
-    setCount((c) => c - 1);
+  function handleDelete(commentId: string) {
+    deleteComment({ postId, commentId });
   }
 
   return (
@@ -81,6 +65,9 @@ export function CommentSection({ postId, initialCount, isLoggedIn, }: Props) {
 
       {open && (
         <div className="flex flex-col gap-sm pl-sm border-l border-outline-variant">
+          {isFetching && comments.length === 0 && (
+            <p className="font-mono text-label text-outline">불러오는 중...</p>
+          )}
           {comments.map((c) => (
             <div key={c.id} className="flex flex-col gap-xs">
               <div className="flex items-center gap-sm">
@@ -89,7 +76,7 @@ export function CommentSection({ postId, initialCount, isLoggedIn, }: Props) {
                 {c.isMyComment && (
                   <button
                     type="button"
-                    onClick={() => void deleteComment(c.id)}
+                    onClick={() => handleDelete(c.id)}
                     className="font-mono text-label text-outline hover:text-error ml-auto shrink-0"
                   >
                     삭제
@@ -101,7 +88,7 @@ export function CommentSection({ postId, initialCount, isLoggedIn, }: Props) {
           ))}
 
           {isLoggedIn && (
-            <form onSubmit={(e) => void submit(e)} className="flex gap-xs mt-xs">
+            <form onSubmit={(e) => submit(e)} className="flex gap-xs mt-xs">
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}

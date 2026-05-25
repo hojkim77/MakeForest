@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { CreatureSprite } from '@/shared/components/ui/CreatureSprite';
-import { usePixelMapData } from '@/shared/hooks/usePixelMapData';
+import { usePixelMapQuery } from '@/shared/hooks/queries/usePixelMapQuery';
 
 export function SeoulMap() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [treePos, setTreePos] = useState<{ x: number; y: number } | null>(null);
-  const { data } = usePixelMapData();
+  const { data } = usePixelMapQuery();
 
   useEffect(() => {
     const canvas = canvasRef.current;

@@ -1,22 +1,27 @@
 import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
-import { WaterStoreInitializer } from './WaterStoreInitializer';
-import { SessionStoreInitializer } from './SessionStoreInitializer';
-import type { TodaySession } from './SessionStoreInitializer';
+import { getKstDateString } from '@/shared/utils/date';
+import type { WaterQueryData } from '@/shared/hooks/queries/useWaterQuery';
 import { CreatureSection } from './CreatureSection';
 import { TimerWaterSection } from './TimerWaterSection';
 import { NeighborhoodStats } from './NeighborhoodStats';
 import { LoginPrompt } from './LoginPrompt';
-import { getKstDateString } from '@/shared/utils/date';
 
-interface Props {
-  userId: string | null;
-  isLoggedIn: boolean;
-  myRegionCode: string | null;
+interface TodaySession {
+  id: string;
+  startedAt: string;
+  status: string;
+  todos: { id: string; text: string; done: boolean }[];
 }
 
-export async function PanelMainContents({ userId, isLoggedIn, myRegionCode }: Props) {
-  let initialWater = { waterCount: 0, creatureStage: 0, totalWaterCount: 0 };
+interface Props {
+  myRegionCode: string | null;
+  userId: string | null;
+  isLoggedIn: boolean;
+}
+
+export async function PanelMainContents({ myRegionCode, userId, isLoggedIn }: Props) {
+  let initialWater: WaterQueryData = { waterCount: 0, creatureStage: 0, totalWaterCount: 0, growthPercent: 0 };
   let todaySession: TodaySession | null = null;
 
   if (isLoggedIn && userId) {
@@ -26,23 +31,21 @@ export async function PanelMainContents({ userId, isLoggedIn, myRegionCode }: Pr
       api.get<{ userCreature: { stage: number; totalWaterCount: number } | null }>(API_PATHS.SERVER_USER_ME(userId)),
       api.get<TodaySession>(API_PATHS.SERVER_SESSION_TODAY(userId)).catch(() => null),
     ]);
-
     initialWater = {
       waterCount: waterData.waterCount ?? 0,
       creatureStage: userData.userCreature?.stage ?? 0,
       totalWaterCount: userData.userCreature?.totalWaterCount ?? 0,
+      growthPercent: 0,
     };
     todaySession = sessionData;
   }
 
   return (
     <>
-      <WaterStoreInitializer {...initialWater} />
-      <SessionStoreInitializer session={todaySession} />
-      {isLoggedIn && <CreatureSection />}
-      {isLoggedIn && <NeighborhoodStats />}
+      {isLoggedIn && <CreatureSection userId={userId} initialWater={initialWater} />}
+      {isLoggedIn && <NeighborhoodStats userId={userId} initialWater={initialWater} />}
       {isLoggedIn ? (
-        <TimerWaterSection myRegionCode={myRegionCode} />
+        <TimerWaterSection myRegionCode={myRegionCode} userId={userId} initialWater={initialWater} initialSession={todaySession} />
       ) : (
         <LoginPrompt />
       )}

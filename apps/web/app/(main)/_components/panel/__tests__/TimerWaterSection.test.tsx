@@ -1,7 +1,8 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TimerWaterSection } from '../TimerWaterSection';
-import { useTimerStore, useWaterStore, useTodoStore } from '@/shared/store';
+import { useTimerStore, useTodoStore } from '@/shared/store';
 
 // ── Mock: next-auth ──────────────────────────────────────────────────────────
 jest.mock('next-auth/react', () => ({ useSession: jest.fn() }));
@@ -19,50 +20,67 @@ jest.mock('@/shared/components/ui/Icon', () => ({
   Icon: ({ name }: { name: string }) => <span data-testid={`icon-${name}`} />,
 }));
 
+// ── Mock: useWaterQuery ──────────────────────────────────────────────────────
+const mockWaterQuery = { waterCount: 0, creatureStage: 0, totalWaterCount: 0, growthPercent: 0 };
+jest.mock('@/shared/hooks/queries/useWaterQuery', () => ({
+  useWaterQuery: () => mockWaterQuery,
+}));
+
+// ── Mock: useWaterMutation ───────────────────────────────────────────────────
+const mockWaterMutate = jest.fn();
+jest.mock('@/shared/hooks/mutations/useWaterMutation', () => ({
+  useWaterMutation: () => ({ mutateAsync: mockWaterMutate, isPending: false }),
+}));
+
+// ── Mock: useCreateSessionMutation ──────────────────────────────────────────
+const mockCreateSession = jest.fn();
+jest.mock('@/shared/hooks/mutations/useSessionMutation', () => ({
+  useCreateSessionMutation: () => ({ mutateAsync: mockCreateSession }),
+}));
+
+// ── Mock: kstDateStore ───────────────────────────────────────────────────────
+jest.mock('@/shared/store/kstDateStore', () => ({
+  useKstDateStore: () => '2026-05-24',
+}));
+
 // ── Mock: fetch ──────────────────────────────────────────────────────────────
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
-function loginSession() {
+function makeQueryClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+}
+
+function wrapper({ children }: { children: React.ReactNode }) {
+  return <QueryClientProvider client={makeQueryClient()}>{children}</QueryClientProvider>;
+}
+
+function loginSession(userId = 'user1') {
   mockUseSession.mockReturnValue({
-    data: { user: { id: 'user1', name: '테스트', regionCode: '11' }, expires: '' },
+    data: { user: { id: userId, name: '테스트', regionCode: '11' }, expires: '' },
     status: 'authenticated',
     update: jest.fn(),
   });
 }
 
-function setupDefaultFetch() {
-  mockFetch.mockImplementation((url: string, opts?: RequestInit) => {
-    if (url === '/api/sessions' && opts?.method === 'POST')
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ sessionId: 'sess-1', startedAt: new Date().toISOString() }),
-      });
-    if (url.includes('/api/sessions/') && opts?.method === 'PATCH')
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-    if (url === '/api/water' && opts?.method === 'POST')
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ myWaterCount: 1, userCreature: { stage: 1, waterCount: 12 } }),
-      });
-    if (url === '/api/push/notify' && opts?.method === 'POST')
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ sent: 1 }) });
-    return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-  });
-}
+const defaultInitialWater = { waterCount: 0, creatureStage: 0, totalWaterCount: 0, growthPercent: 0 };
 
-function renderSection(myRegionCode = '11') {
-  return render(<TimerWaterSection myRegionCode={myRegionCode} />);
+function renderSection(myRegionCode = '11', userId = 'user1') {
+  return render(
+    <TimerWaterSection myRegionCode={myRegionCode} userId={userId} initialWater={defaultInitialWater} initialSession={null} />,
+    { wrapper },
+  );
 }
 
 beforeEach(() => {
   mockMapState = { focusedRegionCode: null, focusRegion: jest.fn() };
   mockFetch.mockReset();
   mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
+  mockWaterMutate.mockReset();
+  mockCreateSession.mockReset();
   useTimerStore.setState({
     sessionId: null, startedAt: null, status: 'idle', cycleCount: 0,
   });
-  useWaterStore.setState({ waterCount: 0, creatureStage: 0, growthPercent: 0, isWatering: false });
   useTodoStore.setState({ todos: [{ id: 'todo-1', text: '테스트 할 일', done: false }], savedTodos: [], open: false });
   jest.useFakeTimers();
 });
@@ -113,38 +131,36 @@ describe('버튼 레이블 상태 전환', () => {
 });
 
 describe('시작 버튼 클릭', () => {
-  it('POST /api/sessions → startSession 호출', async () => {
+  it('createSession mutation 호출 → startSession 호출', async () => {
     loginSession();
-    setupDefaultFetch();
+    mockCreateSession.mockResolvedValue({ sessionId: 'sess-1', startedAt: new Date().toISOString(), isNewSession: false });
     renderSection();
 
     await waitFor(() => screen.getByTestId('timer-btn'));
     await act(async () => { fireEvent.click(screen.getByTestId('timer-btn')); });
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      '/api/sessions',
-      expect.objectContaining({ method: 'POST' }),
-    );
-    expect(useTimerStore.getState().sessionId).toBe('sess-1');
-    expect(useTimerStore.getState().status).toBe('running');
+    expect(mockCreateSession).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(useTimerStore.getState().sessionId).toBe('sess-1');
+      expect(useTimerStore.getState().status).toBe('running');
+    });
   });
 });
 
 describe('물주기 성공', () => {
-  it('POST /api/water 호출 후 reset + waterStore 갱신', async () => {
+  it('waterMutate 호출 후 reset', async () => {
     loginSession();
-    setupDefaultFetch();
+    mockWaterMutate.mockResolvedValue({ myWaterCount: 1, userCreature: { stage: 1, totalWaterCount: 12 } });
     useTimerStore.setState({ status: 'complete', sessionId: 'sess-1', startedAt: Date.now() - 1800000 });
     renderSection();
 
     await waitFor(() => expect(screen.getByTestId('timer-btn')).toHaveTextContent('물주기'));
     await act(async () => { fireEvent.click(screen.getByTestId('timer-btn')); });
 
-    expect(mockFetch).toHaveBeenCalledWith('/api/water', expect.objectContaining({ method: 'POST' }));
+    expect(mockWaterMutate).toHaveBeenCalled();
     await waitFor(() => {
       expect(useTimerStore.getState().status).toBe('idle');
       expect(useTimerStore.getState().cycleCount).toBe(1);
-      expect(useWaterStore.getState().waterCount).toBe(1);
     });
   });
 });
@@ -152,7 +168,6 @@ describe('물주기 성공', () => {
 describe('30분 완료 시 서버 PATCH + 푸시 알림', () => {
   it('status=complete 전환 시 PATCH /api/sessions/:id + POST /api/push/notify', async () => {
     loginSession();
-    setupDefaultFetch();
     useTimerStore.setState({ status: 'complete', sessionId: 'sess-1' });
     renderSection();
 

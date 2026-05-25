@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useGuideState } from './useGuideState';
+import { useGuideStateQuery } from '@/shared/hooks/queries/useGuideStateQuery';
 import { FullTourOverlay } from './FullTourOverlay';
 import { DailyGuideBubbles } from './DailyGuideBubbles';
 import type { FullTourStepIdType, DailyGuideStepIdType, GuideStateResType } from '@makeforest/types';
@@ -9,7 +9,8 @@ import type { FullTourStepIdType, DailyGuideStepIdType, GuideStateResType } from
 type DailyPayload = Extract<GuideStateResType, { kind: 'daily' }>['payload'];
 
 export function GuideController() {
-  const { loading, data } = useGuideState();
+  const { isPending, data } = useGuideStateQuery();
+  const loading = isPending;
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 

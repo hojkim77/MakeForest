@@ -1,16 +1,17 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useActivityStore } from '@/shared/store';
-import { usePixelMapData } from '@/shared/hooks/usePixelMapData';
+import { useMapSnapshotQuery } from '@/shared/hooks/queries/useMapSnapshotQuery';
+import { usePixelMapQuery } from '@/shared/hooks/queries/usePixelMapQuery';
 import { useMapStore } from '@/shared/store';
 import { regionDisplayName, regionOf } from '@makeforest/types';
 
 export function MapOverlay() {
-  const activity = useActivityStore((s) => s.activity);
+  const { data: snapshot } = useMapSnapshotQuery();
+  const activity = snapshot?.heatmap ?? {};
   const globalActiveUsers = Object.values(activity).reduce((sum, n) => sum + n, 0);
   const { mapMode, focusedRegionCode } = useMapStore();
-  const { data: pixelMap } = usePixelMapData();
+  const { data: pixelMap } = usePixelMapQuery();
 
   // 현재 집중 중인 유저 수 — activity stream 기반 (real-time)
   const focusingCount = useMemo(() => {

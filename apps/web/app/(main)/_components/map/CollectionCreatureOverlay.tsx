@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { usePixelMapData } from '@/shared/hooks/usePixelMapData';
+import { usePixelMapQuery } from '@/shared/hooks/queries/usePixelMapQuery';
 import { CollectionCreatureSprite } from '@/shared/components/ui/CollectionCreatureSprite';
 import { regionOf } from '@makeforest/types';
 
@@ -28,7 +28,7 @@ interface Props {
 }
 
 export function CollectionCreatureOverlay({ mapW, mapH, scale, regionCode }: Props) {
-  const { data: pixelMap } = usePixelMapData();
+  const { data: pixelMap } = usePixelMapQuery();
   const [completed, setCompleted] = useState<CompletedCollection[]>([]);
 
   useEffect(() => {

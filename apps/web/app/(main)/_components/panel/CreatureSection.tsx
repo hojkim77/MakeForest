@@ -1,10 +1,16 @@
 'use client';
 
-import { useWaterStore } from '@/shared/store';
+import { useWaterQuery, type WaterQueryData } from '@/shared/hooks/queries/useWaterQuery';
 import { CreatureSprite, STAGE_LABELS } from '@/shared/components/ui/CreatureSprite';
 
-export function CreatureSection() {
-  const stage = useWaterStore((s) => s.creatureStage);
+interface Props {
+  userId: string | null;
+  initialWater: WaterQueryData;
+}
+
+export function CreatureSection({ userId, initialWater }: Props) {
+  const { creatureStage } = useWaterQuery({ userId, initialData: initialWater });
+  const stage = Math.min(creatureStage, 9) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
   return (
     <div className="flex flex-col items-center gap-md py-lg">
