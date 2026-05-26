@@ -90,5 +90,4 @@ shared/
 - Stage progress badges (current stage highlighted)
 
 **Unimplemented**
-- Creature collection: Fossil calendar/grid for days the user watered (Fossil table exists, UI not built)
 - Per-stage tree list

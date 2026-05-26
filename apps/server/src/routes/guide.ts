@@ -37,7 +37,7 @@ guideRouter.get('/state', async (req: Request, res: Response) => {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { dongCode: true },
+      select: { dongCode: true, regionCode: true },
     });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
@@ -62,7 +62,7 @@ guideRouter.get('/state', async (req: Request, res: Response) => {
     const yesterdayKst = getKstDateStringWithOffset(-1);
     const dongCode = user.dongCode;
 
-    const [sessions, creature, todaySession, newTreesYesterday] = await Promise.all([
+    const [sessions, creature, todaySession, yesterdayCollection] = await Promise.all([
       prisma.focusSession.findMany({
         where: { userId },
         select: { date: true, waterCount: true },
@@ -75,9 +75,12 @@ guideRouter.get('/state', async (req: Request, res: Response) => {
         where: { userId_date: { userId, date: todayKst } },
         select: { waterCount: true },
       }),
-      prisma.fossil.count({
-        where: { dongCode, date: yesterdayKst },
-      }),
+      user.regionCode
+        ? prisma.dailyCollection.findUnique({
+            where: { regionCode_date: { regionCode: user.regionCode, date: yesterdayKst } },
+            select: { isCompleted: true },
+          })
+        : Promise.resolve(null),
     ]);
 
     const waterDates = sessions.filter((s) => s.waterCount > 0).map((s) => s.date);
@@ -110,7 +113,7 @@ guideRouter.get('/state', async (req: Request, res: Response) => {
         },
         neighborhood: {
           dongCode,
-          newTreesYesterday,
+          missionCompleted: yesterdayCollection?.isCompleted ?? false,
         },
       },
     });

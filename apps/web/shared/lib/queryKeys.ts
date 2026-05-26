@@ -2,7 +2,6 @@ export const qk = {
   map: {
     snapshot: () => ['map', 'snapshot'] as const,
     pixel: () => ['map', 'pixel'] as const,
-    fossils: (dongCode: string) => ['map', 'fossils', dongCode] as const,
   },
   water: {
     me: (userId: string, kstDate: string) => ['water', 'me', userId, kstDate] as const,

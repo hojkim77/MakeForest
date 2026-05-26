@@ -3,14 +3,6 @@ import { prisma } from '@makeforest/db';
 import { redis, RedisKeys, removeActiveDong } from '@makeforest/redis';
 import { broadcastHeatmap } from '../routes/sse';
 import { calcPersonalStage, getKstDateString } from '../routes/water.logic';
-import { toPixel, GRID_W, GRID_H } from '../routes/map.logic';
-import { getDongCoords } from '../dongCache';
-
-const CREATURE_TYPES = [
-  'SEED', 'SPROUT', 'GRASS', 'FLOWER_A', 'FLOWER_B',
-  'SAPLING', 'MUSHROOM', 'ROCK', 'OAK', 'PINE',
-  'BAMBOO', 'BIG_OAK', 'CHERRY', 'RARE_ANIMAL',
-] as const;
 
 export function registerCronJobs(): void {
   // 매일 자정 (KST = UTC+9, 즉 UTC 15:00)
@@ -49,8 +41,6 @@ export async function runMidnightBatch(): Promise<void> {
   // ③ Redis 활성 세션 정리
   await clearRedisActiveSessions(runningSessions.map((s) => ({ id: s.id, dongCode: s.dongCode })));
 
-  // ④ Fossil 생성 (전날 물주기 기록 있는 유저)
-  await createUserFossils(yesterday);
 }
 
 async function autoWaterUnwatered(date: string): Promise<void> {
@@ -116,46 +106,3 @@ async function clearRedisActiveSessions(
   broadcastHeatmap({});
 }
 
-async function createUserFossils(date: string): Promise<void> {
-  const wateredToday = await prisma.wateringLog.findMany({
-    where: { date },
-    select: { userId: true, dongCode: true },
-    distinct: ['userId'],
-  });
-
-  if (wateredToday.length === 0) return;
-
-  const userIds = wateredToday.map((w) => w.userId);
-
-  const creatures = await prisma.userCreature.findMany({
-    where: { userId: { in: userIds } },
-    select: { userId: true, stage: true },
-  });
-  const creatureMap = new Map(creatures.map((c) => [c.userId, c.stage]));
-
-  const [y, m, day] = date.split('-').map(Number);
-  const dayOfYear = Math.floor(
-    (new Date(y!, m! - 1, day!).getTime() - new Date(y!, 0, 0).getTime()) / 86400000,
-  );
-
-  for (const { userId, dongCode } of wateredToday) {
-    const stage = creatureMap.get(userId) ?? 0;
-    const coord = await getDongCoords(dongCode);
-    if (!coord) continue;
-
-    const { pixelX, pixelY } = toPixel(coord.lat, coord.lng);
-    const jx = Math.floor(Math.random() * 7) - 3;
-    const jy = Math.floor(Math.random() * 7) - 3;
-    const fossilX = Math.max(0, Math.min(GRID_W - 1, pixelX + jx));
-    const fossilY = Math.max(0, Math.min(GRID_H - 1, pixelY + jy));
-
-    const userHash = userId.split('').reduce((acc: number, c: string) => acc + c.charCodeAt(0), 0);
-    const creatureType = CREATURE_TYPES[(dayOfYear + userHash) % CREATURE_TYPES.length]!;
-
-    await prisma.fossil.upsert({
-      where: { userId_date: { userId, date } },
-      update: { stage },
-      create: { userId, dongCode, date, creatureType, stage, fossilX, fossilY },
-    });
-  }
-}

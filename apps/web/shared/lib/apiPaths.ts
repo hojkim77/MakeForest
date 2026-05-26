@@ -21,7 +21,6 @@ export const API_PATHS = {
   USER_ME: () => '/api/user/me',
   LOCATION_SEARCH: (q: string) => `/api/location/search?q=${encodeURIComponent(q)}`,
   LOCATION_DETECT: (lat: number, lng: number) => `/api/location/detect?lat=${lat}&lng=${lng}`,
-  MAP_FOSSILS: (dongCode: string) => `/api/map/${dongCode}`,
   PUSH_NOTIFY: () => '/api/push/notify',
   SERVER_COLLECTION_TODAY: (regionCode: string) => `${S}/collection/today?regionCode=${encodeURIComponent(regionCode)}`,
   SERVER_COLLECTION_COMPLETED: (regionCode: string) => `${S}/collection/completed?regionCode=${encodeURIComponent(regionCode)}`,

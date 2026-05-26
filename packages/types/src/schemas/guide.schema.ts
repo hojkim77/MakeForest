@@ -41,7 +41,7 @@ export const GuideStateRes = z.discriminatedUnion('kind', [
       }),
       neighborhood: z.object({
         dongCode: z.string(),
-        newTreesYesterday: z.number().int().min(0),
+        missionCompleted: z.boolean(),
       }),
     }),
   }),
