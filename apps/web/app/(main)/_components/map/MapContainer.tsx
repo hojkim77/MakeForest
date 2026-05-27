@@ -8,6 +8,7 @@ import { usePixelPanZoom } from '@/shared/hooks/usePixelPanZoom';
 import { PixelMap, type RegionBounds } from './PixelMap';
 import { ForestMap } from './ForestMap';
 import { GcMonitorOverlay } from './GcMonitorOverlay';
+import { MyLocationButton } from './MyLocationButton';
 
 const CANVAS_W = 250 * 4;
 const CANVAS_H = 290 * 4;
@@ -172,7 +173,7 @@ export function MapContainer() {
       />
 
       {process.env.NODE_ENV === 'development' && (
-        <div className="absolute bottom-2 left-2 z-20 bg-black/50 px-2 py-0.5 font-mono text-label text-gray-400">
+        <div className="absolute bottom-2 left-2 z-map-ui bg-black/50 px-2 py-0.5 font-mono text-label text-gray-400">
           scale {t.scale.toFixed(2)} · {isForest ? `forest:${forestState?.regionCode}` : 'pixel'}
         </div>
       )}
@@ -181,32 +182,3 @@ export function MapContainer() {
   );
 }
 
-function MyLocationButton({
-  onReset,
-  isForest,
-  onGoHome,
-}: {
-  onReset: () => void;
-  isForest: boolean;
-  onGoHome?: () => void;
-}) {
-  const handleClick = isForest ? onReset : (onGoHome ?? onReset);
-  return (
-    <button
-      data-guide="map.modeToggle"
-      onClick={handleClick}
-      className="absolute bottom-4 right-4 z-20 flex h-10 w-10 items-center justify-center bg-surface border border-outline-variant hover:bg-surface-container-high active:scale-95 transition-transform"
-      title={isForest ? '전체 보기로 돌아가기' : onGoHome ? '내 지역 숲으로' : '전체 보기'}
-    >
-      {isForest ? (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" />
-        </svg>
-      ) : (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" />
-        </svg>
-      )}
-    </button>
-  );
-}

@@ -16,7 +16,7 @@ import { useWaterMutation } from '@/shared/hooks/mutations/useWaterMutation';
 import { useCreateSessionMutation } from '@/shared/hooks/mutations/useSessionMutation';
 import { useKstDateStore } from '@/shared/store/kstDateStore';
 import { useMidnightReset } from '@/shared/hooks/useMidnightReset';
-import type { CreateSessionResType } from '@makeforest/types';
+import type { CreateSessionResType, TodaySession } from '@makeforest/types';
 
 const TOTAL_SEGMENTS = 12;
 const DAILY_MAX_SEC = TOTAL_SEGMENTS * CYCLE_SEC;
@@ -25,13 +25,6 @@ function formatTimer(sec: number) {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-interface TodaySession {
-  id: string;
-  startedAt: string;
-  status: string;
-  todos: { id: string; text: string; done: boolean }[];
 }
 
 interface Props {
@@ -132,21 +125,6 @@ export function TimerWaterSection({ myRegionCode, userId, initialWater, initialS
 
   return (
     <div data-guide="timer.start" className="flex flex-col gap-sm border-t border-outline-variant pt-md">
-      <style>{`
-        @keyframes water-flow {
-          0%   { background-position: 0% 50%; }
-          100% { background-position: 200% 50%; }
-        }
-        @keyframes dot-blink {
-          0%, 20%  { opacity: 0.2; }
-          50%      { opacity: 1; }
-          100%     { opacity: 0.2; }
-        }
-        .dot-1 { animation: dot-blink 1.4s infinite 0s; }
-        .dot-2 { animation: dot-blink 1.4s infinite 0.2s; }
-        .dot-3 { animation: dot-blink 1.4s infinite 0.4s; }
-      `}</style>
-
       {/* 12-segment water gauge */}
       <div className="flex gap-px w-full h-3">
         {Array.from({ length: TOTAL_SEGMENTS }, (_, i) => {
@@ -158,13 +136,8 @@ export function TimerWaterSection({ myRegionCode, userId, initialWater, initialS
             <div key={i} className="flex-1 relative bg-surface-variant overflow-hidden">
               {(isFilled || (isCurrent && fillPct > 0)) && (
                 <div
-                  className="absolute inset-y-0 left-0"
-                  style={{
-                    width: isFilled ? '100%' : `${fillPct}%`,
-                    background: 'linear-gradient(90deg, #0ea5e9, #38bdf8, #22d3ee, #0ea5e9)',
-                    backgroundSize: '200% 100%',
-                    animation: 'water-flow 2s linear infinite',
-                  }}
+                  className="absolute inset-y-0 left-0 animate-water-flow"
+                  style={{ width: isFilled ? '100%' : `${fillPct}%` }}
                 />
               )}
             </div>

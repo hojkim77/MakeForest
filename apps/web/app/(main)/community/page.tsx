@@ -20,12 +20,12 @@ export default async function CommunityPage() {
   return (
     <>
       <TopAppBar />
-      <main className="pt-[49px] min-h-screen bg-background">
-        <div className="max-w-5xl mx-auto px-lg py-xl flex gap-xl items-start">
-          <div className="flex-1 min-w-0">
+      <main className="pt-topbar min-h-screen bg-background">
+        <div className="max-w-5xl mx-auto px-lg py-xl flex flex-col md:flex-row gap-xl items-start">
+          <div className="flex-1 min-w-0 w-full">
             <CommunityFeedSection />
           </div>
-          <div className="w-64 flex-shrink-0">
+          <div className="hidden md:block md:w-64 md:flex-shrink-0">
             <RankingSidebar initialRanking={rankingData} fetchedAt={fetchedAt} />
           </div>
         </div>

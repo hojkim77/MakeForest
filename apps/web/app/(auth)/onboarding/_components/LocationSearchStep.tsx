@@ -58,8 +58,8 @@ export function LocationSearchStep({ onSelect }: LocationSearchStepProps) {
       </div>
 
       {/* Results panel */}
-      <div className="w-full max-w-2xl bg-[#F5F3EF] border border-[#E8E4DC] overflow-hidden">
-        <div className="px-md py-sm border-b border-[#E8E4DC] bg-surface-container-high flex justify-between items-center">
+      <div className="w-full max-w-2xl bg-surface-container-low border border-border-subtle overflow-hidden">
+        <div className="px-md py-sm border-b border-border-subtle bg-surface-container-high flex justify-between items-center">
           <span className="font-mono text-label text-outline uppercase">Search Results</span>
           {query && !loading && (
             <span className="font-mono text-label text-primary">
@@ -69,7 +69,7 @@ export function LocationSearchStep({ onSelect }: LocationSearchStepProps) {
         </div>
 
         {results.length > 0 && (
-          <div className="divide-y divide-[#E8E4DC]">
+          <div className="divide-y divide-border-subtle">
             {results.map((dong) => {
               const isSelected = selected?.code === dong.code;
               return (
@@ -78,14 +78,14 @@ export function LocationSearchStep({ onSelect }: LocationSearchStepProps) {
                   onClick={() => setSelected(dong)}
                   className={[
                     'w-full flex items-center justify-between p-md group cursor-pointer transition-colors duration-0',
-                    isSelected ? 'bg-emerald-100' : 'hover:bg-[#E8E4DC]',
+                    isSelected ? 'bg-emerald-100' : 'hover:bg-border-subtle',
                   ].join(' ')}
                 >
                   <div className="flex items-center gap-md">
                     <span
                       className={[
                         'material-symbols-outlined',
-                        isSelected ? 'text-[#3D7A5A]' : 'text-outline group-hover:text-primary',
+                        isSelected ? 'text-primary-container' : 'text-outline group-hover:text-primary',
                       ].join(' ')}
                       style={isSelected ? { fontVariationSettings: "'FILL' 1" } : undefined}
                     >
@@ -95,14 +95,14 @@ export function LocationSearchStep({ onSelect }: LocationSearchStepProps) {
                       <span
                         className={[
                           'font-mono text-headline block',
-                          isSelected ? 'text-[#3D7A5A]' : 'text-on-surface',
+                          isSelected ? 'text-primary-container' : 'text-on-surface',
                         ].join(' ')}
                       >
                         {dong.name}
                       </span>
                       <div className="flex items-center gap-xs mt-1">
                         {isSelected && (
-                          <span className="bg-[#3D7A5A] text-white text-[10px] font-mono px-1">
+                          <span className="bg-primary-container text-white text-[10px] font-mono px-1">
                             SELECTED
                           </span>
                         )}
@@ -113,7 +113,7 @@ export function LocationSearchStep({ onSelect }: LocationSearchStepProps) {
                   <span
                     className={[
                       'material-symbols-outlined',
-                      isSelected ? 'text-[#3D7A5A]' : 'text-outline group-hover:text-primary',
+                      isSelected ? 'text-primary-container' : 'text-outline group-hover:text-primary',
                     ].join(' ')}
                   >
                     chevron_right
@@ -125,7 +125,7 @@ export function LocationSearchStep({ onSelect }: LocationSearchStepProps) {
         )}
 
         {/* Empty / hint state */}
-        <div className="p-xl text-center border-t border-[#E8E4DC]">
+        <div className="p-xl text-center border-t border-border-subtle">
           <div className="flex flex-col items-center gap-sm">
             <span className="material-symbols-outlined text-outline-variant text-4xl">forest</span>
             <p className="font-sans text-body-md text-outline">
@@ -144,7 +144,7 @@ export function LocationSearchStep({ onSelect }: LocationSearchStepProps) {
         <div className="w-full max-w-2xl">
           <button
             onClick={() => onSelect({ code: selected.code, name: selected.name })}
-            className="w-full h-14 bg-[#3D7A5A] text-white font-mono text-label tracking-wider border border-[#3D7A5A] hover:bg-[#2C6A4B] transition-colors flex items-center justify-center gap-sm"
+            className="w-full h-14 bg-primary-container text-white font-mono text-label tracking-wider border border-primary-container hover:bg-surface-tint transition-colors flex items-center justify-center gap-sm"
           >
             {selected.name} 선택하기
             <span className="material-symbols-outlined text-[18px]">arrow_forward</span>

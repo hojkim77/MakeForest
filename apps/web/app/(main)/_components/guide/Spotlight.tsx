@@ -32,7 +32,7 @@ export function Spotlight({ stepId, onRect }: SpotlightProps) {
   const PADDING = 8;
 
   return (
-    <div className="fixed inset-0 z-[190] pointer-events-auto" aria-hidden>
+    <div className="fixed inset-0 z-spotlight pointer-events-auto" aria-hidden>
       {rect ? (
         <svg
           className="absolute inset-0 w-full h-full"

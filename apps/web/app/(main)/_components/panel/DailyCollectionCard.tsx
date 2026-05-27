@@ -4,12 +4,10 @@ import { CollectionCreatureSprite } from '@/shared/components/ui/CollectionCreat
 import type { CollectionProgress } from '@makeforest/types';
 import { useCollectionQuery } from '@/shared/hooks/queries/useCollectionQuery';
 
-export type CollectionData = CollectionProgress;
-
 interface Props {
   dongCode: string | null;
   regionCode: string | null;
-  initialCollection: CollectionData | null;
+  initialCollection: CollectionProgress | null;
 }
 
 export function DailyCollectionCard({ dongCode, regionCode, initialCollection }: Props) {

@@ -2,13 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .font-h1 {
+    @apply font-mono text-display;
+  }
+  .font-h2 {
+    @apply font-mono text-headline;
+  }
+  .font-label-mono {
+    @apply font-mono text-label;
+  }
+  .font-pixel-stat {
+    @apply font-mono text-pixel-stat;
+  }
+}
+
+:root {
+  --topbar-h: 49px;
+  --tabbar-h: 49px;
+  --panel-w: 420px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --color-border-subtle: #E8E4DC;
+  --color-kakao-bg: #FEE500;
+  --color-kakao-fg: #191919;
+  --color-water-start: #0ea5e9;
+  --color-water-mid: #38bdf8;
+  --color-water-end: #22d3ee;
+  --panel-tab-max-h: calc(100dvh - var(--topbar-h) - var(--safe-top) - var(--tabbar-h) - var(--safe-bottom) - 4rem);
+  --panel-tab-max-h-md: calc(100dvh - var(--topbar-h) - var(--safe-top) - 4rem);
+}
+
 @layer base {
   /* Material Symbols default variation settings */
   .material-symbols-outlined {
     font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
     user-select: none;
   }
+}
 
+@layer utilities {
   /* Pixel-art image rendering */
   .image-pixelated {
     image-rendering: pixelated;
@@ -39,4 +72,31 @@
   .animate-fade-out {
     animation: fade-out 0.3s ease-in forwards;
   }
+
+  /* Water flow animation */
+  @keyframes water-flow {
+    0%   { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+  }
+  .animate-water-flow {
+    background: linear-gradient(
+      90deg,
+      var(--color-water-start),
+      var(--color-water-mid),
+      var(--color-water-end),
+      var(--color-water-start)
+    );
+    background-size: 200% 100%;
+    animation: water-flow 2s linear infinite;
+  }
+
+  /* Dot blink animation */
+  @keyframes dot-blink {
+    0%, 20%  { opacity: 0.2; }
+    50%      { opacity: 1; }
+    100%     { opacity: 0.2; }
+  }
+  .dot-1 { animation: dot-blink 1.4s infinite 0s; }
+  .dot-2 { animation: dot-blink 1.4s infinite 0.2s; }
+  .dot-3 { animation: dot-blink 1.4s infinite 0.4s; }
 }

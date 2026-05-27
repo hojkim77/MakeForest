@@ -2,17 +2,11 @@ import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 import { getKstDateString } from '@/shared/utils/date';
 import type { WaterQueryData } from '@/shared/hooks/queries/useWaterQuery';
+import type { TodaySession } from '@makeforest/types';
 import { CreatureSection } from './CreatureSection';
 import { TimerWaterSection } from './TimerWaterSection';
 import { NeighborhoodStats } from './NeighborhoodStats';
 import { LoginPrompt } from './LoginPrompt';
-
-interface TodaySession {
-  id: string;
-  startedAt: string;
-  status: string;
-  todos: { id: string; text: string; done: boolean }[];
-}
 
 interface Props {
   myRegionCode: string | null;

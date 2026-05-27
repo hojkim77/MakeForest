@@ -21,7 +21,7 @@ export function GcMonitorOverlay() {
         : 'text-green-400';
 
   return (
-    <div className="pointer-events-none absolute bottom-2 right-2 z-[9999] w-60 space-y-0.5 border border-white/10 bg-black/75 px-2 py-1.5 font-mono text-[10px] text-white/80">
+    <div className="pointer-events-none absolute bottom-2 right-2 z-tooltip w-60 space-y-0.5 border border-white/10 bg-black/75 px-2 py-1.5 font-mono text-[10px] text-white/80">
       <p className="text-[9px] uppercase tracking-wider text-white/40">GC Monitor</p>
       {!mem ? (
         <p className="text-white/40">performance.memory unavailable</p>

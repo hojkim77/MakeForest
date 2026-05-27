@@ -1,3 +1,5 @@
+export type Period = 'today' | 'week' | 'all';
+
 export interface CommunityReaction {
   emoji: string;
   count: number;

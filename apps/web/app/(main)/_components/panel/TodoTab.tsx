@@ -3,6 +3,7 @@
 import { useTodoStore, selectIsDirty } from '@/shared/store';
 import { TodoCardContent } from './TodoCard';
 import { TabButton } from './TabButton';
+import { TabPopup } from './TabPopup';
 
 export function TodoTab() {
   const todoOpen = useTodoStore((s) => s.open);
@@ -19,9 +20,9 @@ export function TodoTab() {
         {...(isTodoDirty ? { badge: '●' } : todoCount > 0 ? { badge: String(todoCount) } : {})}
       />
       {todoOpen && (
-        <div className="absolute left-7 bottom-0 w-64 bg-surface-container border border-outline-variant overflow-hidden">
+        <TabPopup anchor="bottom">
           <TodoCardContent />
-        </div>
+        </TabPopup>
       )}
     </div>
   );

@@ -16,8 +16,8 @@ export default async function MypagePage() {
   return (
     <>
       <TopAppBar />
-      <main className="pt-[49px]">
-        <div className="max-w-[1000px] mx-auto py-8 px-6 space-y-6">
+      <main className="pt-topbar">
+        <div className="max-w-[1000px] mx-auto py-4 px-4 md:py-8 md:px-6 space-y-6">
           <Suspense fallback={<ProfileHeaderSkeleton />}>
             <ProfileHeader userId={userId} />
           </Suspense>

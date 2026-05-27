@@ -13,7 +13,7 @@ export async function Panel() {
   const myDongCode = session?.user?.dongCode ?? null;
 
   return (
-    <aside className="w-[420px] flex-shrink-0 bg-surface-container border-r border-outline-variant flex flex-col h-full overflow-y-auto">
+    <div className="bg-surface-container md:border-r border-outline-variant flex flex-col h-full overflow-y-auto">
       <div className="flex flex-col gap-xl p-lg flex-1">
         <PeekingBanner myRegionCode={myRegionCode} />
         <SloganSection myRegionCode={myRegionCode} />
@@ -24,7 +24,7 @@ export async function Panel() {
       <Suspense fallback={null}>
         <PanelSideTabs myDongCode={myDongCode} myRegionCode={myRegionCode} isLoggedIn={isLoggedIn} />
       </Suspense>
-    </aside>
+    </div>
   );
 }
 

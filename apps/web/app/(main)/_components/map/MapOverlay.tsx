@@ -45,7 +45,7 @@ export function MapOverlay() {
   return (
     <>
       {/* Title card — top right */}
-      <div className="absolute top-6 right-6 z-10 p-md bg-background border border-outline text-right">
+      <div className="absolute top-6 right-6 z-map-content p-md bg-background border border-outline text-right">
         <p className="font-mono text-pixel-stat text-primary-container uppercase tracking-wider">
           {isForest && focusedRegionCode
             ? regionDisplayName(focusedRegionCode)

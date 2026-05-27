@@ -30,3 +30,10 @@ export type UpdateTodosBodyType = z.infer<typeof UpdateTodosBody>;
 export type UpdateSessionBodyType = z.infer<typeof UpdateSessionBody>;
 export type GetSessionQueryType = z.infer<typeof GetSessionQuery>;
 export type CreateSessionResType = z.infer<typeof CreateSessionRes>;
+
+export interface TodaySession {
+  id: string;
+  startedAt: string;
+  status: string;
+  todos: { id: string; text: string; done: boolean }[];
+}
