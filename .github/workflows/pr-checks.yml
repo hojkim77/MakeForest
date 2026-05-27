@@ -317,5 +317,8 @@ jobs:
           PYEOF
           )
           gh pr comment ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} \
             --body "$BODY" --edit-last 2>/dev/null || \
-            gh pr comment ${{ github.event.pull_request.number }} --body "$BODY"
+            gh pr comment ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} \
+            --body "$BODY"
