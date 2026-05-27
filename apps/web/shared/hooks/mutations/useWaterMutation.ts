@@ -38,6 +38,7 @@ export function useWaterMutation() {
 
     onSettled: (_data, _err, { userId, kstDate }) => {
       void queryClient.invalidateQueries({ queryKey: qk.water.me(userId, kstDate) });
+      void queryClient.invalidateQueries({ queryKey: qk.points.me(userId) });
     },
   });
 }

@@ -21,6 +21,7 @@
       "Bash(find . *)",
       "Bash(find /Users/skylar/Desktop/MakeForest*)",
       "Bash(grep*)",
+      "Bash(mkdir*)",
       "Bash(ls*)",
       "Bash(cat *)",
       "Bash(head *)",

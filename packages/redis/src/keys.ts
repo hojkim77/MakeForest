@@ -9,6 +9,7 @@ export const RedisKeys = {
   heatmapDong: () => `heatmap:dong`,
   overlayDailySessions: (date: string) => `overlay:sessions:${date}`,
   collection: (dongCode: string, date: string) => `collection:${dongCode}:${date}`,
+  userSession: (userId: string) => `user:${userId}:session`,
 } as const;
 
 export const SESSION_TTL_SECONDS = 25 * 60 * 60; // 25시간

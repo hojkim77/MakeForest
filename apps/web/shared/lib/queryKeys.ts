@@ -28,4 +28,15 @@ export const qk = {
   },
   guide: { state: () => ['guide', 'state'] as const },
   location: { regions: () => ['location', 'regions'] as const },
+  friends: {
+    list: (userId: string) => ['friends', 'list', userId] as const,
+    incoming: (userId: string) => ['friends', 'incoming', userId] as const,
+    search: (nickname: string) => ['friends', 'search', nickname] as const,
+  },
+  pokes: {
+    inbox: (userId: string) => ['pokes', 'inbox', userId] as const,
+  },
+  points: {
+    me: (userId: string) => ['points', 'me', userId] as const,
+  },
 } as const;

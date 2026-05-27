@@ -33,4 +33,18 @@ export const API_PATHS = {
   COMMUNITY_MY_REACTIONS: () => '/api/community/my-reactions',
   COMMUNITY_REACTIONS: (postId: string) => `/api/community/${postId}/reactions`,
   COMMUNITY_COMMENTS: (postId: string) => `/api/community/${postId}/comments`,
+  // Friends
+  FRIENDS: () => '/api/friends',
+  FRIENDS_SEARCH: (nickname: string) => `/api/friends/search?nickname=${encodeURIComponent(nickname)}`,
+  FRIENDS_REQUESTS: () => '/api/friends/requests',
+  FRIENDS_REQUEST: (friendshipId: string) => `/api/friends/requests/${friendshipId}`,
+  FRIEND: (userId: string) => `/api/friends/${userId}`,
+  // Pokes
+  POKES: () => '/api/pokes',
+  POKES_INBOX: () => '/api/pokes/inbox',
+  POKES_INBOX_READ: () => '/api/pokes/inbox/read',
+  // Points
+  POINTS_ME: () => '/api/points/me',
+  // SSE user stream
+  SSE_USER_STREAM: () => '/api/sse/user-stream',
 } as const;

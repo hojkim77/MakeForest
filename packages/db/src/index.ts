@@ -21,5 +21,8 @@ export type {
   WateringLog,
   PushSubscription,
   SessionStatus,
+  Friendship,
+  FriendshipStatus,
+  Poke,
   Prisma,
 } from '@prisma/client';

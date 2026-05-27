@@ -1,7 +1,7 @@
 import type { Todo } from './session';
 
 // SSE 이벤트 타입 (Express → Client)
-export type SSEEventType = 'dong:users' | 'heatmap:update' | 'water:toast' | 'session:toast' | 'users:overlay' | 'ping';
+export type SSEEventType = 'dong:users' | 'heatmap:update' | 'water:toast' | 'session:toast' | 'users:overlay' | 'ping' | 'poke:received' | 'friend:request:incoming' | 'friend:accepted' | 'friend:status:changed';
 
 export interface ActiveUser {
   nickname: string;
@@ -52,12 +52,39 @@ export interface MapUser {
 
 export type UsersOverlayPayload = MapUser[];
 
+export interface PokeReceivedSSEPayload {
+  pokeId: string;
+  fromUserId: string;
+  fromNickname: string;
+  createdAt: string;
+  unreadCount: number;
+}
+
+export interface FriendRequestIncomingSSEPayload {
+  friendshipId: string;
+  requester: { userId: string; nickname: string; dongName: string | null };
+}
+
+export interface FriendAcceptedSSEPayload {
+  friendshipId: string;
+  friend: { userId: string; nickname: string; dongName: string | null };
+}
+
+export interface FriendStatusChangedPayload {
+  userId: string;
+  status: 'RUNNING' | 'IDLE' | 'OFFLINE';
+}
+
 export type SSEPayload =
   | DongUsersPayload
   | HeatmapUpdatePayload
   | WaterToastPayload
   | SessionToastPayload
-  | UsersOverlayPayload;
+  | UsersOverlayPayload
+  | PokeReceivedSSEPayload
+  | FriendRequestIncomingSSEPayload
+  | FriendAcceptedSSEPayload
+  | FriendStatusChangedPayload;
 
 export interface SSEEvent {
   type: SSEEventType;

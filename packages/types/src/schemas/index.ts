@@ -8,3 +8,6 @@ export * from './community.schema';
 export * from './ranking.schema';
 export * from './collection.schema';
 export * from './guide.schema';
+export * from './friend.schema';
+export * from './poke.schema';
+export * from './point.schema';

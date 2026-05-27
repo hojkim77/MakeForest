@@ -12,6 +12,9 @@ import { collectionRouter } from './routes/collection';
 import { communityRouter } from './routes/community';
 import { rankingRouter } from './routes/ranking';
 import { guideRouter } from './routes/guide';
+import { friendsRouter } from './routes/friends';
+import { pokesRouter } from './routes/pokes';
+import { pointsRouter } from './routes/points';
 import { registerCronJobs } from './cron/midnight';
 import { requireInternalAuth } from './middleware/auth';
 import { testRouter } from './routes/test';
@@ -38,6 +41,9 @@ app.use('/ranking', rankingRouter);
 app.use('/sessions', requireInternalAuth, sessionsRouter);
 app.use('/water', requireInternalAuth, waterRouter);
 app.use('/guide', requireInternalAuth, guideRouter);
+app.use('/friends', requireInternalAuth, friendsRouter);
+app.use('/pokes', requireInternalAuth, pokesRouter);
+app.use('/points', requireInternalAuth, pointsRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true, ts: new Date().toISOString() });

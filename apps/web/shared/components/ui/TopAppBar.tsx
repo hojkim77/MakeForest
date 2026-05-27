@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
 import { Icon } from './Icon';
+import { NotificationBell } from './NotificationBell';
 
 const NAV_ITEMS = [
   { label: 'Map', href: '/' },
@@ -86,6 +87,7 @@ export function TopAppBar() {
           >
             <Icon name={mobileNavOpen ? 'close' : 'menu'} />
           </button>
+          {session && <NotificationBell />}
           {session ? (
             <div ref={menuRef} className="relative">
               <button

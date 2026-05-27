@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
-import { redis, RedisKeys, setSession, getSession, addActiveDong, getDongActiveCount, addDailyOverlaySession } from '@makeforest/redis';
-import { broadcastHeatmap, broadcastToRegion, broadcastUsersOverlay } from './sse';
+import { redis, RedisKeys, SESSION_TTL_SECONDS, setSession, getSession, addActiveDong, getDongActiveCount, addDailyOverlaySession } from '@makeforest/redis';
+import { broadcastHeatmap, broadcastToRegion, broadcastUsersOverlay, broadcastToUser } from './sse';
 import { getKstDateString } from './water.logic';
 import { regionOf, CreateSessionBody, UpdateTodosBody, UpdateSessionBody, GetSessionQuery } from '@makeforest/types';
 import { incrementCollection } from './collection';
@@ -78,6 +78,7 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
           });
         }
 
+        await redis.set(RedisKeys.userSession(userId), session.id, 'EX', SESSION_TTL_SECONDS);
         await addActiveDong(dongCode, session.id);
         await addDailyOverlaySession(today, session.id);
 
@@ -88,6 +89,23 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
         for (const [code, cnt] of Object.entries(heatmapRaw)) activity[code] = Number(cnt);
         broadcastHeatmap(activity);
         broadcastUsersOverlay();
+
+        void (async () => {
+          try {
+            const friendships = await prisma.friendship.findMany({
+              where: { status: 'ACCEPTED', OR: [{ requesterId: userId }, { addresseeId: userId }] },
+              select: { requesterId: true, addresseeId: true },
+            });
+            const friendIds = friendships.map((f) =>
+              f.requesterId === userId ? f.addresseeId : f.requesterId,
+            );
+            friendIds.forEach((fid) =>
+              broadcastToUser(fid, { type: 'friend:status:changed', data: { userId, status: 'RUNNING' } }),
+            );
+          } catch (err) {
+            console.error('[sessions] friend status broadcast error:', err);
+          }
+        })();
 
         // 첫 세션 시작 → 미션 기여 + session:toast 브로드캐스트 + 커뮤니티 포스트 자동 생성
         if (isNewSession) {
@@ -187,8 +205,26 @@ sessionsRouter.patch('/:id', async (req: Request, res: Response) => {
           } else {
             await setSession(id, { ...cached, status: 'ABANDONED' });
           }
+          await redis.del(RedisKeys.userSession(session.userId));
         }
         broadcastUsersOverlay();
+
+        void (async () => {
+          try {
+            const friendships = await prisma.friendship.findMany({
+              where: { status: 'ACCEPTED', OR: [{ requesterId: session.userId }, { addresseeId: session.userId }] },
+              select: { requesterId: true, addresseeId: true },
+            });
+            const friendIds = friendships.map((f) =>
+              f.requesterId === session.userId ? f.addresseeId : f.requesterId,
+            );
+            friendIds.forEach((fid) =>
+              broadcastToUser(fid, { type: 'friend:status:changed', data: { userId: session.userId, status: 'IDLE' } }),
+            );
+          } catch (err) {
+            console.error('[sessions] friend status broadcast error:', err);
+          }
+        })();
       } catch (err) {
         console.error('[sessions] Redis/SSE sync error:', err);
       }

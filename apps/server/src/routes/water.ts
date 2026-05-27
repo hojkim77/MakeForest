@@ -46,6 +46,11 @@ waterRouter.post('/', async (req: Request, res: Response) => {
         create: { userId, totalWaterCount: lifetimeCount, stage: newStage },
       });
 
+      await tx.user.update({
+        where: { id: userId },
+        data: { points: { increment: 6 } },
+      });
+
       // FocusSession waterCount 증가 + totalElapsedSec 갱신
       const statusReset = focusSession?.status === 'COMPLETED' ? ({ status: 'IDLE' } as const) : {};
       await tx.focusSession.upsert({
