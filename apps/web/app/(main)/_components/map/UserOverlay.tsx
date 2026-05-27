@@ -108,7 +108,7 @@ export function UserOverlay({ users, mapW, mapH, scale }: UserOverlayProps) {
       {/* 팝오버: transform 밖에 렌더링해 scale 영향 없음 */}
       {hovered && typeof document !== 'undefined' && createPortal(
         <div
-          className="pointer-events-none fixed z-[9999] w-max max-w-[140px] border border-white/20 bg-black/85 px-2 py-1.5 text-[11px] leading-snug text-white shadow-lg"
+          className="pointer-events-none fixed z-tooltip w-max max-w-[140px] border border-white/20 bg-black/85 px-2 py-1.5 text-[11px] leading-snug text-white shadow-lg"
           style={{ left: hovered.screenX, top: hovered.screenY + 6, transform: 'translateX(-50%)' }}
         >
           {/* 닉네임 + 동네 순위 */}

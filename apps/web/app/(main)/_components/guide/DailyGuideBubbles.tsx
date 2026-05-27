@@ -25,7 +25,7 @@ export function DailyGuideBubbles({ steps, payload, onDone }: DailyGuideBubblesP
   const handleComplete = useCallback(() => onDone('completed'), [onDone]);
 
   return (
-    <div style={{ pointerEvents: 'none' }} className="fixed inset-0 z-[150]">
+    <div style={{ pointerEvents: 'none' }} className="fixed inset-0 z-guide-passive">
       <div style={{ pointerEvents: 'auto' }} className="absolute bottom-6 right-6">
         <TooltipBubble
           stepIndex={currentIndex}

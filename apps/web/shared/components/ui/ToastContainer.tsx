@@ -61,7 +61,7 @@ function ToastItem({ toast }: { toast: Toast }) {
 }
 
 export function ToastContainer({
-  className = 'fixed top-4 right-4 z-[70] pointer-events-none',
+  className = 'fixed top-4 right-4 z-toast pointer-events-none',
 }: {
   className?: string;
 }) {

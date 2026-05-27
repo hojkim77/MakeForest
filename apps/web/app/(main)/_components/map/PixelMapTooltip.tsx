@@ -14,7 +14,7 @@ export function PixelMapTooltip({ hoverLabel, tooltipStats }: PixelMapTooltipPro
   return createPortal(
     <div
       key={hoverLabel.regionCode}
-      className="pointer-events-none fixed z-[9999] animate-fade-in-up bg-inverse-surface px-2 py-1.5 font-mono text-label text-inverse-on-surface border border-outline"
+      className="pointer-events-none fixed z-tooltip animate-fade-in-up bg-inverse-surface px-2 py-1.5 font-mono text-label text-inverse-on-surface border border-outline"
       style={{ left: hoverLabel.x + 14, top: hoverLabel.y - 10 }}
     >
       <div className="font-medium">{hoverLabel.displayName}</div>

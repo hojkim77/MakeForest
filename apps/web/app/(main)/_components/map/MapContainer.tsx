@@ -172,7 +172,7 @@ export function MapContainer() {
       />
 
       {process.env.NODE_ENV === 'development' && (
-        <div className="absolute bottom-2 left-2 z-20 bg-black/50 px-2 py-0.5 font-mono text-label text-gray-400">
+        <div className="absolute bottom-2 left-2 z-map-ui bg-black/50 px-2 py-0.5 font-mono text-label text-gray-400">
           scale {t.scale.toFixed(2)} · {isForest ? `forest:${forestState?.regionCode}` : 'pixel'}
         </div>
       )}
@@ -195,7 +195,7 @@ function MyLocationButton({
     <button
       data-guide="map.modeToggle"
       onClick={handleClick}
-      className="absolute bottom-4 right-4 z-20 flex h-10 w-10 items-center justify-center bg-surface border border-outline-variant hover:bg-surface-container-high active:scale-95 transition-transform"
+      className="absolute bottom-4 right-4 z-map-ui flex h-10 w-10 items-center justify-center bg-surface border border-outline-variant hover:bg-surface-container-high active:scale-95 transition-transform"
       title={isForest ? '전체 보기로 돌아가기' : onGoHome ? '내 지역 숲으로' : '전체 보기'}
     >
       {isForest ? (
