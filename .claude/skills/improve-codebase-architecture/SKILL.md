@@ -22,33 +22,6 @@ Surface architectural friction and propose **deepening opportunities** — refac
 
 Also check `docs/adr/` if ADRs exist.
 
-## MakeForest-Specific Friction Targets
-
-Explicitly check for these patterns during Explore:
-
-### Dual Write
-Prisma write immediately followed by a Redis write with no rollback if either fails. Logic scattered across both stores with no atomicity guarantee.
-
-### SSE Timing
-Broadcast ordering relative to mutations is not guaranteed. Clients that connect immediately after a mutation may miss the event.
-
-### Client-side Time
-`new Date()` or time calculations happening outside the server (client components, util functions). Project invariant: **time is server-authoritative**.
-
-### KST Boundary Handling
-KST 00:00 reset logic computed outside the server, or KST conversion duplicated across multiple files.
-
-### Evolution Threshold Scatter
-Creature evolution stage (0–9) thresholds or logic spread across files other than `water.logic.ts`.
-
-### Auth Boundary Leak
-Unauthenticated user blocking enforced only in the UI, not on the server.
-
-### Shallow Modules
-Pass-throughs where the interface is nearly as complex as the implementation. Apply the deletion test: if removing the module scatters complexity across callers, it earned its place. If complexity vanishes, it was shallow.
-
----
-
 ## Glossary
 
 Use these terms exactly in every suggestion. Don't drift into "component," "service," "API," or "boundary."
