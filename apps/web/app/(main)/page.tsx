@@ -1,6 +1,6 @@
 import { TopAppBar } from '@/shared/components/ui/TopAppBar';
-import { MobileTabBar } from '@/shared/components/ui/MobileTabBar';
-import { MainLayout } from '@/shared/components/ui/MainLayout';
+import { MobileTabBar } from '@/app/(main)/_components/MobileTabBar';
+import { MainLayout } from '@/app/(main)/_components/MainLayout';
 import { Panel } from '@/app/(main)/_components/panel/Panel';
 import { MapContainer } from '@/app/(main)/_components/map/MapContainer';
 import { MapOverlay } from '@/app/(main)/_components/map/MapOverlay';
