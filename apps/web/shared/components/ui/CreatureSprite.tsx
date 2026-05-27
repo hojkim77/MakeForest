@@ -1,5 +1,7 @@
 'use client';
 
+import { PixelArtSvg } from './PixelArtSvg';
+
 // 16x16 픽셀 아트 생명체 — stage 0~9 (씨앗/새싹/나무1/나무2/나무3/고목/노거수/정령수/신수/세계수)
 // 팔레트 인덱스: 0=투명, 1=갈색(흙), 2=연갈색(씨앗), 3=연두, 4=초록, 5=진초록,
 //               6=나무줄기, 7=밝은초록, 8=매우진한숲초록, 9=황금, 10=발광연두, 11=고목껍질
@@ -219,33 +221,7 @@ interface CreatureSpriteProps {
 }
 
 export function CreatureSprite({ stage, size = 128 }: CreatureSpriteProps) {
-  const grid = SPRITES[stage]!;
-
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 16 16"
-      style={{ imageRendering: 'pixelated' }}
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      {grid.map((colorIdx, i) => {
-        if (colorIdx === 0) return null;
-        const x = i % 16;
-        const y = Math.floor(i / 16);
-        return (
-          <rect
-            key={i}
-            x={x}
-            y={y}
-            width={1}
-            height={1}
-            fill={PALETTE[colorIdx] ?? 'transparent'}
-          />
-        );
-      })}
-    </svg>
-  );
+  return <PixelArtSvg pixels={SPRITES[stage]!} palette={PALETTE} size={size} />;
 }
 
 export const STAGE_LABELS = ['씨앗', '새싹', '나무1', '나무2', '나무3', '고목', '노거수', '정령수', '신수', '세계수'] as const;

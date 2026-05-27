@@ -1,4 +1,4 @@
-import React from 'react';
+import { PixelArtSvg } from './PixelArtSvg';
 
 // Palette
 // 0: transparent   8: #909090 (gray)
@@ -207,27 +207,5 @@ interface Props {
 
 export function CollectionCreatureSprite({ creatureType, size = 32 }: Props) {
   const grid = SPRITES[creatureType] ?? SPRITES['GRASS']!;
-  const cells: React.ReactNode[] = [];
-
-  for (let i = 0; i < 256; i++) {
-    const color = PALETTE[grid[i]!];
-    if (!color || color === 'transparent') continue;
-    const x = i % 16;
-    const y = Math.floor(i / 16);
-    cells.push(
-      <rect key={i} x={x} y={y} width={1} height={1} fill={color} />,
-    );
-  }
-
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 16 16"
-      style={{ imageRendering: 'pixelated' }}
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      {cells}
-    </svg>
-  );
+  return <PixelArtSvg pixels={grid} palette={PALETTE} size={size} />;
 }
