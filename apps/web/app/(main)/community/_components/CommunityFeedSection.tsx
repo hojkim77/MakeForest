@@ -4,10 +4,10 @@ import { useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useCommunityFeedQuery } from '@/shared/hooks/queries/useCommunityFeedQuery';
 import { useMyReactionsQuery } from '@/shared/hooks/queries/useMyReactionsQuery';
+import type { Period } from '@makeforest/types';
+import { TabButton } from '@/app/(main)/_components/panel/TabButton';
 import { PostCard } from './PostCard';
 import { RegionAccordion } from './RegionAccordion';
-
-type Period = 'all' | 'today' | 'week';
 type Sort = 'recent' | 'popular' | 'water';
 
 const PERIOD_TABS: { key: Period; label: string }[] = [
@@ -21,12 +21,6 @@ const SORT_OPTIONS: { key: Sort; label: string }[] = [
   { key: 'popular', label: '인기순' },
   { key: 'water', label: '물주기 많은 순' },
 ];
-
-const TAB_CLASS = (active: boolean) =>
-  `px-sm py-xs font-mono text-label border transition-colors ${active
-    ? 'border-primary bg-primary-container text-on-primary-container'
-    : 'border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-variant'
-  }`;
 
 export function CommunityFeedSection() {
   const { data: session } = useSession();
@@ -70,18 +64,14 @@ export function CommunityFeedSection() {
         {/* Period tabs */}
         <div className="flex gap-xs">
           {PERIOD_TABS.map(({ key, label }) => (
-            <button key={key} type="button" onClick={() => handlePeriodChange(key)} className={TAB_CLASS(period === key)}>
-              {label}
-            </button>
+            <TabButton key={key} label={label} active={period === key} onClick={() => handlePeriodChange(key)} orientation="horizontal" />
           ))}
         </div>
 
         {/* Sort buttons */}
         <div className="flex gap-xs">
           {SORT_OPTIONS.map(({ key, label }) => (
-            <button key={key} type="button" onClick={() => handleSortChange(key)} className={TAB_CLASS(sort === key)}>
-              {label}
-            </button>
+            <TabButton key={key} label={label} active={sort === key} onClick={() => handleSortChange(key)} orientation="horizontal" />
           ))}
         </div>
       </div>
