@@ -18,7 +18,13 @@ export function RankingTab({ myRegionKey, initialRanking }: Props) {
     <div className="relative mt-xs">
       <TabButton label="지역 랭킹" active={activeTab === 'ranking'} onClick={() => toggleTab('ranking')} />
       {activeTab === 'ranking' && (
-        <div className="absolute left-7 top-0 w-64 max-h-[calc(100vh-49px-4rem)] bg-surface-container border border-outline-variant overflow-y-auto">
+        <div
+          className="absolute top-0 w-64
+                     right-7 md:left-7 md:right-auto
+                     max-h-[calc(100dvh-var(--topbar-h)-var(--safe-top)-var(--tabbar-h)-var(--safe-bottom)-4rem)]
+                     md:max-h-[calc(100dvh-var(--topbar-h)-var(--safe-top)-4rem)]
+                     bg-surface-container border border-outline-variant overflow-y-auto"
+        >
           <div className="p-md">
             <RegionalRankingCard myRegionKey={myRegionKey} initialRanking={initialRanking} />
           </div>

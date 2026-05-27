@@ -19,7 +19,13 @@ export function TodoTab() {
         {...(isTodoDirty ? { badge: '●' } : todoCount > 0 ? { badge: String(todoCount) } : {})}
       />
       {todoOpen && (
-        <div className="absolute left-7 bottom-0 w-64 bg-surface-container border border-outline-variant overflow-hidden">
+        <div
+          className="absolute bottom-0 w-64
+                     right-7 md:left-7 md:right-auto
+                     max-h-[calc(100dvh-var(--topbar-h)-var(--safe-top)-var(--tabbar-h)-var(--safe-bottom)-4rem)]
+                     md:max-h-[calc(100dvh-var(--topbar-h)-var(--safe-top)-4rem)]
+                     bg-surface-container border border-outline-variant overflow-y-auto"
+        >
           <TodoCardContent />
         </div>
       )}

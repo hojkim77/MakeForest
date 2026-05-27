@@ -16,17 +16,13 @@ export function TabButton({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`
-        relative w-7 px-1 py-md
-        border border-outline-variant
-        font-mono text-label
-        flex items-center justify-center
-        transition-colors
-        ${active
+      className={[
+        'relative border border-outline-variant font-mono text-label flex items-center justify-center transition-colors',
+        'w-7 px-1 py-md',
+        active
           ? 'bg-primary text-on-primary border-primary'
-          : 'bg-surface-container text-on-surface-variant hover:bg-surface-variant'
-        }
-      `}
+          : 'bg-surface-container text-on-surface-variant hover:bg-surface-variant',
+      ].join(' ')}
       style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
     >
       {label}

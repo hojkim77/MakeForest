@@ -24,8 +24,14 @@ export async function PanelSideTabs({ myDongCode, myRegionCode, isLoggedIn }: Pr
 
   return (
     <div
-      className="fixed top-[49px] h-[calc(100vh-49px)] flex flex-col pt-lg pb-lg z-30"
-      style={{ left: 420 }}
+      className={[
+        'flex flex-col fixed z-side-tabs pt-lg pb-lg',
+        'right-0 left-auto',
+        'h-[calc(100dvh-var(--topbar-h)-var(--safe-top)-var(--tabbar-h)-var(--safe-bottom))]',
+        'md:right-auto md:left-[var(--panel-w)]',
+        'md:h-[calc(100dvh-var(--topbar-h)-var(--safe-top))]',
+      ].join(' ')}
+      style={{ top: 'calc(var(--topbar-h) + var(--safe-top))' }}
     >
       <CollectionTab
         dongCode={myDongCode}
