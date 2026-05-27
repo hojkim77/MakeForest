@@ -55,14 +55,14 @@ export function LocationDetectStep({
 
       {/* Location card — only shown when found */}
       {status === 'found' && detectedDong && (
-        <div className="w-full max-w-md bg-[#F5F3EF] border border-[#E8E4DC] p-xl flex flex-col gap-lg">
+        <div className="w-full max-w-md bg-surface-container-low border border-border-subtle p-xl flex flex-col gap-lg">
           <div className="flex flex-col gap-xs">
             <span className="font-mono text-label text-primary uppercase">Current Detection</span>
             <h2 className="font-mono text-[28px] font-bold text-on-surface leading-none tracking-tighter">
               {detectedDong.name}
             </h2>
           </div>
-          <div className="h-20 w-full bg-surface border border-[#E8E4DC] relative overflow-hidden flex items-center justify-center">
+          <div className="h-20 w-full bg-surface border border-border-subtle relative overflow-hidden flex items-center justify-center">
             <div className="absolute inset-0 pixel-grid opacity-40" />
             <span className="relative z-10 material-symbols-outlined text-primary text-[36px]"
               style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -74,10 +74,10 @@ export function LocationDetectStep({
 
       {/* Detecting skeleton */}
       {status === 'detecting' && (
-        <div className="w-full max-w-md bg-[#F5F3EF] border border-[#E8E4DC] p-xl flex flex-col gap-lg animate-pulse">
+        <div className="w-full max-w-md bg-surface-container-low border border-border-subtle p-xl flex flex-col gap-lg animate-pulse">
           <div className="h-4 bg-outline-variant w-24 rounded" />
           <div className="h-8 bg-outline-variant w-48 rounded" />
-          <div className="h-20 bg-surface-container border border-[#E8E4DC]" />
+          <div className="h-20 bg-surface-container border border-border-subtle" />
         </div>
       )}
 
@@ -86,7 +86,7 @@ export function LocationDetectStep({
         {status === 'found' && (
           <button
             onClick={onConfirm}
-            className="w-full h-14 bg-[#3D7A5A] text-white font-mono text-label tracking-wider border border-[#3D7A5A] hover:bg-[#2C6A4B] transition-colors flex items-center justify-center gap-sm"
+            className="w-full h-14 bg-primary-container text-white font-mono text-label tracking-wider border border-primary-container hover:bg-surface-tint transition-colors flex items-center justify-center gap-sm"
           >
             네, 맞아요
             <span className="material-symbols-outlined text-[18px]">check_circle</span>
@@ -100,7 +100,7 @@ export function LocationDetectStep({
             'w-full h-14 font-mono text-label tracking-wider border transition-colors flex items-center justify-center gap-sm',
             status === 'detecting'
               ? 'bg-surface-container text-outline border-outline-variant cursor-not-allowed'
-              : 'bg-transparent text-outline border-[#E8E4DC] hover:bg-[#E8E4DC]',
+              : 'bg-transparent text-outline border-border-subtle hover:bg-border-subtle',
           ].join(' ')}
         >
           직접 검색하기
