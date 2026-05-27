@@ -70,6 +70,12 @@ jest.mock('@/shared/lib/toast', () => ({
   toast: { info: jest.fn(), error: jest.fn(), success: jest.fn() },
 }));
 
+jest.mock('@/shared/store/kstDateStore', () => ({
+  useKstDateStore: jest.fn((selector: (s: { kstDate: string }) => unknown) =>
+    selector({ kstDate: '2026-05-25' }),
+  ),
+}));
+
 function setupFetch() {
   mockFetch.mockImplementation(() =>
     Promise.resolve({
