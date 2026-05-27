@@ -1,8 +1,10 @@
 import { render, act, waitFor } from '@testing-library/react';
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useSession } from 'next-auth/react';
 import { MainSseHandler } from '../MainSseHandler';
 import { qk } from '@/shared/lib/queryKeys';
+import type { PokeInboxResType, FriendListItemType } from '@makeforest/types';
 
 // ── MockEventSource ──────────────────────────────────────────────────────────
 // MainSseHandler opens 2 SSE connections (activityUrl + regionUrl),
@@ -22,6 +24,12 @@ class MockEventSource {
     return [...MockEventSource.instances]
       .reverse()
       .find((i) => i.url.includes('regionCode'));
+  }
+
+  static latestUserStream(): MockEventSource | undefined {
+    return [...MockEventSource.instances]
+      .reverse()
+      .find((i) => i.url.includes('user-stream'));
   }
 
   url: string;
@@ -256,5 +264,106 @@ describe('오류 및 재연결 (지수 백오프)', () => {
 
     act(() => { jest.advanceTimersByTime(1); });
     expect(MockEventSource.instances.length).toBe(initialCount + 2);
+  });
+});
+
+describe('poke:received (user-stream)', () => {
+  const userId = 'user-1';
+
+  beforeEach(() => {
+    (useSession as jest.Mock).mockReturnValue({
+      data: { user: { id: userId, regionCode: '11' } },
+      status: 'authenticated',
+    });
+  });
+
+  afterEach(() => {
+    (useSession as jest.Mock).mockReturnValue({
+      data: { user: { regionCode: '11' } },
+      status: 'authenticated',
+    });
+  });
+
+  it('poke:received 수신 시 pokes.inbox 캐시의 unreadCount가 증가한다', async () => {
+    jest.useRealTimers();
+    setupFetch();
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    const initialInbox: PokeInboxResType = { unreadCount: 2, items: [] };
+    queryClient.setQueryData(qk.pokes.inbox(userId), initialInbox);
+
+    render(<MainSseHandler />, { wrapper: makeWrapper(queryClient) });
+
+    await act(async () => {
+      MockEventSource.latestUserStream()!.triggerEvent('poke:received', {
+        pokeId: 'poke-1',
+        fromUserId: 'friend-1',
+        fromNickname: '테스터',
+        createdAt: new Date().toISOString(),
+        unreadCount: 3,
+      });
+    });
+
+    await waitFor(() => {
+      const cached = queryClient.getQueryData<PokeInboxResType>(qk.pokes.inbox(userId));
+      return cached?.unreadCount === 3;
+    });
+
+    const cached = queryClient.getQueryData<PokeInboxResType>(qk.pokes.inbox(userId));
+    expect(cached?.unreadCount).toBe(3);
+    jest.useFakeTimers();
+  });
+});
+
+describe('friend:status:changed (user-stream)', () => {
+  const userId = 'user-1';
+
+  beforeEach(() => {
+    (useSession as jest.Mock).mockReturnValue({
+      data: { user: { id: userId, regionCode: '11' } },
+      status: 'authenticated',
+    });
+  });
+
+  afterEach(() => {
+    (useSession as jest.Mock).mockReturnValue({
+      data: { user: { regionCode: '11' } },
+      status: 'authenticated',
+    });
+  });
+
+  it('friend:status:changed 수신 시 friends.list 캐시의 해당 친구 status가 업데이트된다', async () => {
+    jest.useRealTimers();
+    setupFetch();
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    const initialFriend: FriendListItemType = {
+      userId: 'friend-1',
+      nickname: '친구',
+      dongName: null,
+      creatureStage: 0,
+      status: 'OFFLINE',
+      pokeCooldownEndsAt: null,
+      friendStatus: 'ACCEPTED',
+    };
+    queryClient.setQueryData(qk.friends.list(userId), { friends: [initialFriend] });
+
+    render(<MainSseHandler />, { wrapper: makeWrapper(queryClient) });
+
+    await act(async () => {
+      MockEventSource.latestUserStream()!.triggerEvent('friend:status:changed', {
+        userId: 'friend-1',
+        status: 'RUNNING',
+      });
+    });
+
+    await waitFor(() => {
+      const cached = queryClient.getQueryData<{ friends: FriendListItemType[] }>(qk.friends.list(userId));
+      return cached?.friends[0]?.status === 'RUNNING';
+    });
+
+    const cached = queryClient.getQueryData<{ friends: FriendListItemType[] }>(qk.friends.list(userId));
+    expect(cached?.friends[0]?.status).toBe('RUNNING');
+    jest.useFakeTimers();
   });
 });
