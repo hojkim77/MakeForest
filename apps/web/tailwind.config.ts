@@ -59,6 +59,9 @@ const config: Config = {
         'inverse-on-surface': '#f4f0e8',
         outline: '#707972',
         'outline-variant': '#c0c9c0',
+        'border-subtle': 'var(--color-border-subtle)',
+        'kakao-bg': 'var(--color-kakao-bg)',
+        'kakao-fg': 'var(--color-kakao-fg)',
         // Pixel map density colors
         forest: {
           barren: '#9ca3af',
@@ -97,6 +100,12 @@ const config: Config = {
       // Layout width tokens
       width: {
         panel: 'var(--panel-w)',
+      },
+
+      // Panel tab popup max-height tokens
+      maxHeight: {
+        'panel-tab': 'var(--panel-tab-max-h)',
+        'panel-tab-md': 'var(--panel-tab-max-h-md)',
       },
 
       // Z-index semantic scale
