@@ -1,6 +1,7 @@
 'use client';
 
 import type { RegionRankingResponse } from '@makeforest/types';
+import { RankingRow } from './RankingRow';
 
 interface Props {
   myRegionKey: string | null | undefined;
@@ -24,25 +25,15 @@ export function RegionalRankingCard({ myRegionKey, initialRanking }: Props) {
       </div>
 
       <div className="flex flex-col gap-xs">
-        {rankings.slice(0, 10).map((r) => {
-          const isMyRegion = myRegionKey && r.regionKey === myRegionKey;
-          return (
-            <div
-              key={r.regionKey}
-              className={`flex items-center gap-sm px-sm py-xs border font-mono text-label ${
-                isMyRegion
-                  ? 'bg-primary-container border-primary'
-                  : 'bg-surface-container border-outline-variant'
-              }`}
-            >
-              <span className={`w-5 text-center shrink-0 ${r.rank <= 3 ? 'text-primary' : 'text-outline'}`}>
-                {r.rank}
-              </span>
-              <span className="flex-1 truncate text-on-surface">{r.regionName}</span>
-              <span className="text-on-surface-variant shrink-0">💧 {r.totalWater}</span>
-            </div>
-          );
-        })}
+        {rankings.slice(0, 10).map((r) => (
+          <RankingRow
+            key={r.regionKey}
+            rank={r.rank}
+            name={r.regionName}
+            water={r.totalWater}
+            isHighlighted={!!(myRegionKey && r.regionKey === myRegionKey)}
+          />
+        ))}
         {rankings.length === 0 && (
           <p className="font-mono text-label text-outline">데이터가 없어요.</p>
         )}

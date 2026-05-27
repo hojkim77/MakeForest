@@ -1,7 +1,6 @@
 import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
-import type { CollectionData } from './DailyCollectionCard';
-import type { RegionRankingResponse } from '@makeforest/types';
+import type { CollectionProgress, RegionRankingResponse } from '@makeforest/types';
 import { CollectionTab } from './CollectionTab';
 import { RankingTab } from './RankingTab';
 import { TodoTab } from './TodoTab';
@@ -15,7 +14,7 @@ interface Props {
 export async function PanelSideTabs({ myDongCode, myRegionCode, isLoggedIn }: Props) {
   const [initialCollection, rankingData] = await Promise.all([
     myRegionCode
-      ? api.get<CollectionData>(API_PATHS.SERVER_COLLECTION_TODAY(myRegionCode)).catch(() => null)
+      ? api.get<CollectionProgress>(API_PATHS.SERVER_COLLECTION_TODAY(myRegionCode)).catch(() => null)
       : Promise.resolve(null),
     api
       .get<RegionRankingResponse>(API_PATHS.SERVER_RANKING_REGION('today', myDongCode ?? undefined))

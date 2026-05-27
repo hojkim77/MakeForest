@@ -5,12 +5,32 @@ export function TabButton({
   active,
   onClick,
   badge,
+  orientation = 'vertical',
 }: {
   label: string;
   active: boolean;
   onClick: () => void;
   badge?: string;
+  orientation?: 'vertical' | 'horizontal';
 }) {
+  if (orientation === 'horizontal') {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={active}
+        className={[
+          'px-sm py-xs font-mono text-label border transition-colors',
+          active
+            ? 'border-primary bg-primary-container text-on-primary-container'
+            : 'border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-variant',
+        ].join(' ')}
+      >
+        {label}
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"

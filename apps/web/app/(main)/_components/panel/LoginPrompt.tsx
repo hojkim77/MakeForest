@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Icon } from '@/shared/components/ui/Icon';
 
 export function LoginPrompt() {
   return (
@@ -13,7 +14,7 @@ export function LoginPrompt() {
         href="/login"
         className="w-full h-10 bg-primary text-on-primary font-mono text-label tracking-wider flex items-center justify-center gap-xs hover:bg-primary/90 transition-colors active:scale-[0.98]"
       >
-        <span className="material-symbols-outlined text-[16px]">login</span>
+        <Icon name="login" size={16} />
         로그인하기
       </Link>
     </div>
