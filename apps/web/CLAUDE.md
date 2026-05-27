@@ -32,22 +32,66 @@ shared/
 - `shared/types/` — cross-route TypeScript types
 - `shared/constants/` — cross-route constants
 
-## API 타입 규칙
+## Design System
 
-- 서버 API 요청/응답 타입은 `@makeforest/types` 에서 import (`z.infer<>` 기반 타입)
-- 컴포넌트 내부에 로컬 `interface`/`type` 로 API 응답 shape 재선언 금지
-- 패턴: `import type { FocusStatsResType } from '@makeforest/types'` → `api.get<FocusStatsResType>(...)`
-- 새 엔드포인트 추가 시 `packages/types/src/schemas/` 에 스키마를 먼저 정의하고 import
+**tailwind.config.ts** — token registry only. No `@keyframes`, `@apply`, or CSS rules.
 
-## G. Toast & Error Handling
+**globals.css** — CSS that Tailwind cannot generate, structured in 4 zones:
+- `:root` — CSS variables (dynamic/computed values, `env()`)
+- `@layer base` — HTML resets and third-party class overrides only
+- `@layer components` — `@apply`-based multi-property abstractions
+- `@layer utilities` — `@keyframes` + single-purpose custom utilities
 
-**범용 Toast** (`shared/lib/toast.ts`): `toast.error(msg)` / `toast.success(msg)` / `toast.info(msg)` 한 줄로 어디서든 사용. 내부적으로 `toastStore` (Zustand)에 push하고 `ToastContainer`가 우상단(`top-4 right-4 z-[70]`)에 렌더링.
+**Token rules**
+- No hardcoded hex. Use semantic tokens (`bg-primary`, `text-on-surface`, etc.)
+- Brand colors (e.g. Kakao `#FEE500`): declare in `:root`, register in tailwind.config.ts
+- z-index: semantic tokens only (`z-header`, `z-toast`, `z-guide-active`)
+- Layout dimensions: reference CSS vars (`pt-topbar`, not `pt-[49px]`)
+- Third-party lib props (e.g. recharts `fill`): extract as file-level constants
 
-**WaterToast** (`shared/components/ui/WaterToast.tsx`): SSE `water:toast` 이벤트 전용 도메인 컴포넌트. 범용 toast와 별개로 유지할 것.
+**Typography**
+- `font-mono` — numbers, labels, buttons, nav
+- `font-sans` — body copy, descriptions
 
-**의도적 silent catch 패턴**: 서버 통신 실패해도 로컬 UX가 끊기지 않아야 하는 곳은 `catch {}` 유지 (예: 세션 생성 실패 후 로컬 타이머 계속 동작, `api.patch(complete).catch(() => {})`). 사용자 액션이 실패한 경우에는 `toast.error()`로 피드백.
+**Component placement**
+- `shared/components/ui/` — used by 2+ routes only; single-route components go in that route's `_components/`
+- Icons: always use the `Icon` component, never inline SVG or bare `material-symbols-outlined` span
+- Extract a shared component when the same UI pattern appears in 2+ places
 
-**error.tsx 위치**: `app/error.tsx` (root), `app/(auth)/error.tsx`, `app/(main)/error.tsx` — 예상치 못한 에러를 각 라우트 영역에서 격리. "다시 시도" 버튼은 Next.js `reset()` 호출.
+## API Types
+
+- All request/response types come from `@makeforest/types` — never redeclare API shapes as local `interface`/`type`
+- Pattern: `import type { FocusStatsResType } from '@makeforest/types'` → `api.get<FocusStatsResType>(...)`
+- When adding a new endpoint: define the schema in `packages/types/src/schemas/` first, then import
+
+## Toast & Error Handling
+
+**Toast** — use `toast.info(msg)` / `toast.success(msg)` / `toast.error(msg)` from `shared/lib/toast.ts` anywhere in the app.
+- User-initiated actions that fail → always call `toast.error()`
+- Background/SSE events → `toast.info()`
+- Never show a toast for errors the user didn't trigger and can't act on
+
+**Error handling**
+
+Three patterns — pick the right one:
+
+1. **User-initiated API call fails** → catch explicitly, call `toast.error()`, keep UI state intact
+   ```ts
+   try {
+     await api.post(...)
+   } catch {
+     toast.error('...')
+   }
+   ```
+
+2. **Background/fire-and-forget** → silent catch when failure must not interrupt local UX
+   ```ts
+   api.patch(complete).catch(() => {}) // timer keeps running regardless
+   ```
+
+3. **Unexpected render error** → `error.tsx` boundary per route (`app/error.tsx`, `app/(auth)/error.tsx`, `app/(main)/error.tsx`) — retry via Next.js `reset()`
+
+Never swallow errors from user actions silently. Never show error toasts for background failures the user can't act on.
 
 ## B. Main Layout
 

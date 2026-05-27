@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import type { SSEEvent } from '@makeforest/types';
 import { buildUsersOverlay } from './map';
+import { requireInternalAuth } from '../middleware/auth';
 
 export const sseRouter = Router();
 
@@ -9,6 +10,16 @@ const clients = new Map<string, Set<Response>>();
 
 // activity-stream 구독 클라이언트
 const activityClients = new Set<Response>();
+
+// userId 기반 private 클라이언트 맵: userId → Set<Response>
+const userClients = new Map<string, Set<Response>>();
+
+export function broadcastToUser(userId: string, event: SSEEvent): void {
+  const room = userClients.get(userId);
+  if (!room) return;
+  const payload = `event: ${event.type}\ndata: ${JSON.stringify(event.data)}\n\n`;
+  room.forEach((res) => res.write(payload));
+}
 
 export function broadcastToRegion(regionCode: string, event: SSEEvent): void {
   const room = clients.get(regionCode);
@@ -49,6 +60,30 @@ sseRouter.get('/activity-stream', (req: Request, res: Response) => {
   req.on('close', () => {
     clearInterval(ping);
     activityClients.delete(res);
+  });
+});
+
+// GET /sse/user-stream/:userId — private per-user SSE (requireInternalAuth)
+sseRouter.get('/user-stream/:userId', requireInternalAuth, (req: Request, res: Response) => {
+  const userId = String(req.params['userId']);
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  if (!userClients.has(userId)) userClients.set(userId, new Set());
+  userClients.get(userId)!.add(res);
+
+  const pingInterval = setInterval(() => res.write(': ping\n\n'), 30_000);
+
+  req.on('close', () => {
+    clearInterval(pingInterval);
+    const room = userClients.get(userId);
+    if (room) {
+      room.delete(res);
+      if (room.size === 0) userClients.delete(userId);
+    }
   });
 });
 

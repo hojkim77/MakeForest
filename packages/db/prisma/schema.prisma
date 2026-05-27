@@ -17,6 +17,7 @@ model User {
   dongCode     String?
   regionCode   String?
   todosPublic  Boolean   @default(true)
+  points       Int       @default(0)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -28,6 +29,11 @@ model User {
   communityReactions CommunityReaction[]
   communityComments  CommunityComment[]
   userGuideState     UserGuideState?
+
+  sentFriendRequests     Friendship[]  @relation("FriendshipRequester")
+  receivedFriendRequests Friendship[]  @relation("FriendshipAddressee")
+  sentPokes              Poke[]        @relation("PokeFromUser")
+  receivedPokes          Poke[]        @relation("PokeToUser")
 
   @@unique([provider, providerId])
   @@index([dongCode])
@@ -185,4 +191,40 @@ enum SessionStatus {
   COMPLETED
   ABANDONED
   IDLE
+}
+
+model Friendship {
+  id          String           @id @default(uuid())
+  requesterId String
+  addresseeId String
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  acceptedAt  DateTime?
+
+  requester User @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
+  @@index([requesterId, status])
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+}
+
+model Poke {
+  id         String    @id @default(uuid())
+  fromUserId String
+  toUserId   String
+  createdAt  DateTime  @default(now())
+  readAt     DateTime?
+
+  fromUser User @relation("PokeFromUser", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User @relation("PokeToUser",   fields: [toUserId],   references: [id], onDelete: Cascade)
+
+  @@index([toUserId, createdAt(sort: Desc)])
+  @@index([toUserId, readAt])
+  @@index([fromUserId, toUserId, createdAt])
 }
