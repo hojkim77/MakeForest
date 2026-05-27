@@ -45,12 +45,18 @@ export function FullTourOverlay({ steps, onDone }: FullTourOverlayProps) {
   }, [onDone]);
   const handleRect = useCallback((r: DOMRect | null) => setAnchorRect(r), []);
 
-  const bubbleStyle = computeBubbleStyle(derivePosition(stepId), anchorRect);
-
   return (
     <>
-      <Spotlight stepId={stepId} onRect={handleRect} />
-      <div className="fixed z-[200]" style={bubbleStyle}>
+      <div className="hidden md:block">
+        <Spotlight stepId={stepId} onRect={handleRect} />
+      </div>
+      <div
+        className="fixed z-guide-active
+                   bottom-[calc(var(--tabbar-h)+var(--safe-bottom)+8px)] right-4
+                   md:bottom-auto md:right-auto
+                   md:[top:var(--bubble-top)] md:[left:var(--bubble-left)] md:[transform:var(--bubble-transform)]"
+        style={computeBubbleVars(derivePosition(stepId), anchorRect)}
+      >
         <TooltipBubble
           stepIndex={currentIndex}
           totalSteps={steps.length}
@@ -86,13 +92,17 @@ function derivePosition(stepId: FullTourStepIdType): Position {
   }
 }
 
-function computeBubbleStyle(position: Position, anchorRect: DOMRect | null): React.CSSProperties {
+function computeBubbleVars(position: Position, anchorRect: DOMRect | null): React.CSSProperties {
   const BUBBLE_W = 288;
   const BUBBLE_H = 180;
   const GAP = 12;
 
   if (!anchorRect || position === 'center') {
-    return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
+    return {
+      '--bubble-top': '50%',
+      '--bubble-left': '50%',
+      '--bubble-transform': 'translate(-50%, -50%)',
+    } as React.CSSProperties;
   }
 
   const vw = typeof window !== 'undefined' ? window.innerWidth : 1280;
@@ -123,5 +133,9 @@ function computeBubbleStyle(position: Position, anchorRect: DOMRect | null): Rea
   left = Math.max(8, Math.min(left, vw - BUBBLE_W - 8));
   top = Math.max(8, Math.min(top, vh - BUBBLE_H - 8));
 
-  return { top, left };
+  return {
+    '--bubble-top': `${top}px`,
+    '--bubble-left': `${left}px`,
+    '--bubble-transform': 'none',
+  } as React.CSSProperties;
 }
