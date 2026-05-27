@@ -47,16 +47,16 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           build-script: 'turbo run build --filter=@makeforest/web'
-          pattern: '.next/static/**/*.{js,css}'
-          strip-hash: '\.[a-f0-9]{8,}\.'
+          pattern: 'apps/web/.next/static/**/*.{js,css}'
+          strip-hash: '[-\.][a-f0-9]{8,}'
 
-  lighthouse:
-    name: Lighthouse CI
+  wait-for-vercel:
+    name: Wait for Vercel Preview
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    outputs:
+      url: ${{ steps.vercel-preview.outputs.url }}
     steps:
-      - uses: actions/checkout@v4
-
       - name: Wait for Vercel Preview
         id: vercel-preview
         env:
@@ -85,28 +85,231 @@ jobs:
           echo "Timeout: Vercel preview not ready after 5 minutes"
           exit 1
 
+  generate-session:
+    name: Generate Test Session
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    outputs:
+      cookie: ${{ steps.gen.outputs.cookie }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - run: yarn install --frozen-lockfile
+
+      - name: Generate NextAuth v5 session token
+        id: gen
+        working-directory: apps/web
+        env:
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          LH_TEST_USER_ID: ${{ secrets.LH_TEST_USER_ID }}
+          LH_TEST_DONG_CODE: ${{ secrets.LH_TEST_DONG_CODE }}
+          LH_TEST_REGION_CODE: ${{ secrets.LH_TEST_REGION_CODE }}
+        run: |
+          TOKEN=$(node << 'JSEOF'
+          const { encode } = require('@auth/core/jwt');
+          const now = Math.floor(Date.now() / 1000);
+          encode({
+            token: {
+              sub: process.env.LH_TEST_USER_ID,
+              id: process.env.LH_TEST_USER_ID,
+              name: 'Lighthouse Test',
+              email: 'lh@test.ci',
+              dongCode: process.env.LH_TEST_DONG_CODE,
+              regionCode: process.env.LH_TEST_REGION_CODE,
+              iat: now,
+              exp: now + 86400,
+            },
+            secret: process.env.AUTH_SECRET,
+            salt: '__Secure-authjs.session-token',
+          }).then(t => process.stdout.write(t)).catch(e => { console.error(e); process.exit(1); });
+          JSEOF
+          )
+          echo "::add-mask::$TOKEN"
+          echo "cookie=__Secure-authjs.session-token=$TOKEN" >> $GITHUB_OUTPUT
+
+  lighthouse-main:
+    name: Lighthouse / Main
+    needs: wait-for-vercel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Lighthouse config
+        run: |
+          cat > .lighthouserc.json << 'EOF'
+          {
+            "ci": {
+              "collect": {
+                "numberOfRuns": 1,
+                "settings": {
+                  "extraHeaders": { "Cookie": "mf_visited=1" }
+                }
+              },
+              "upload": { "target": "temporary-public-storage" }
+            }
+          }
+          EOF
       - name: Run Lighthouse CI
         id: lighthouse
         uses: treosh/lighthouse-ci-action@v12
         with:
-          urls: ${{ steps.vercel-preview.outputs.url }}?x-vercel-protection-bypass=${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          urls: ${{ needs.wait-for-vercel.outputs.url }}/?x-vercel-protection-bypass=${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           uploadArtifacts: true
           temporaryPublicStorage: true
           configPath: .lighthouserc.json
           githubToken: ${{ secrets.GITHUB_TOKEN }}
+      - name: Save results
+        env:
+          LINKS: ${{ steps.lighthouse.outputs.links }}
+          MANIFEST: ${{ steps.lighthouse.outputs.manifest }}
+        run: |
+          echo "$LINKS" > links.json
+          echo "$MANIFEST" > manifest.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-main
+          path: |
+            links.json
+            manifest.json
 
+  lighthouse-community:
+    name: Lighthouse / Community
+    needs: wait-for-vercel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Lighthouse CI
+        id: lighthouse
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: ${{ needs.wait-for-vercel.outputs.url }}/community?x-vercel-protection-bypass=${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          runs: 1
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+      - name: Save results
+        env:
+          LINKS: ${{ steps.lighthouse.outputs.links }}
+          MANIFEST: ${{ steps.lighthouse.outputs.manifest }}
+        run: |
+          echo "$LINKS" > links.json
+          echo "$MANIFEST" > manifest.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-community
+          path: |
+            links.json
+            manifest.json
+
+  lighthouse-mypage:
+    name: Lighthouse / Mypage
+    needs: [wait-for-vercel, generate-session]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Lighthouse config
+        env:
+          SESSION_COOKIE: ${{ needs.generate-session.outputs.cookie }}
+        run: |
+          python3 -c "
+          import json, os
+          config = {
+            'ci': {
+              'collect': {
+                'numberOfRuns': 1,
+                'settings': {'extraHeaders': {'Cookie': os.environ['SESSION_COOKIE']}}
+              },
+              'upload': {'target': 'temporary-public-storage'}
+            }
+          }
+          open('.lighthouserc.json', 'w').write(json.dumps(config))
+          "
+      - name: Run Lighthouse CI
+        id: lighthouse
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: ${{ needs.wait-for-vercel.outputs.url }}/mypage?x-vercel-protection-bypass=${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+          configPath: .lighthouserc.json
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+      - name: Save results
+        env:
+          LINKS: ${{ steps.lighthouse.outputs.links }}
+          MANIFEST: ${{ steps.lighthouse.outputs.manifest }}
+        run: |
+          echo "$LINKS" > links.json
+          echo "$MANIFEST" > manifest.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-mypage
+          path: |
+            links.json
+            manifest.json
+
+  lighthouse-comment:
+    name: Lighthouse / Comment
+    needs: [wait-for-vercel, lighthouse-main, lighthouse-community, lighthouse-mypage]
+    if: always() && needs.wait-for-vercel.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: lighthouse-main
+          path: lh-main
+        continue-on-error: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: lighthouse-community
+          path: lh-community
+        continue-on-error: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: lighthouse-mypage
+          path: lh-mypage
+        continue-on-error: true
       - name: Post Lighthouse results comment
-        if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_URL: ${{ needs.wait-for-vercel.outputs.url }}
         run: |
-          LINKS='${{ steps.lighthouse.outputs.links }}'
-          REPORT_URL=$(echo "$LINKS" | jq -r 'to_entries[0].value // empty')
-          if [ -n "$REPORT_URL" ]; then
-            BODY="🔦 **Lighthouse CI** — [결과 보기]($REPORT_URL)"
-          else
-            BODY="🔦 **Lighthouse CI** — 결과를 가져오지 못했습니다."
-          fi
+          BODY=$(python3 << 'PYEOF'
+          import json, os
+
+          base_url = (os.environ.get('BASE_URL') or '').rstrip('/')
+
+          def icon(s):
+              return '🟢' if s >= 0.9 else ('🟡' if s >= 0.5 else '🔴')
+
+          def fmt(s):
+              return f"{icon(s)} {int(round(s * 100))}"
+
+          rows = []
+          for dir_name in ['lh-main', 'lh-community', 'lh-mypage']:
+              links_path = f'{dir_name}/links.json'
+              manifest_path = f'{dir_name}/manifest.json'
+              if not os.path.exists(links_path):
+                  continue
+              links = json.loads(open(links_path).read() or '{}')
+              manifest = json.loads(open(manifest_path).read() or '[]')
+              if not manifest:
+                  continue
+              item = manifest[0]
+              url = item['url']
+              s = item.get('summary', {})
+              path = url.replace(base_url, '').split('?')[0] or '/'
+              link = next((v for k, v in links.items() if k.split('?')[0] == url.split('?')[0]), '')
+              report = f'[보기]({link})' if link else 'N/A'
+              rows.append(f'| `{path}` | {fmt(s.get("performance", 0))} | {fmt(s.get("accessibility", 0))} | {fmt(s.get("best-practices", 0))} | {fmt(s.get("seo", 0))} | {report} |')
+
+          if rows:
+              header = '## 🔦 Lighthouse CI\n\n| 페이지 | Performance | Accessibility | Best Practices | SEO | 리포트 |\n|---|---|---|---|---|---|\n'
+              print(header + '\n'.join(rows))
+          else:
+              print('🔦 **Lighthouse CI** — 결과를 가져오지 못했습니다.')
+          PYEOF
+          )
           gh pr comment ${{ github.event.pull_request.number }} \
             --body "$BODY" --edit-last 2>/dev/null || \
-          gh pr comment ${{ github.event.pull_request.number }} --body "$BODY"
+            gh pr comment ${{ github.event.pull_request.number }} --body "$BODY"
