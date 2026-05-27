@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss';
+import plugin from 'tailwindcss/plugin';
 
 const config: Config = {
   content: [
@@ -89,6 +90,27 @@ const config: Config = {
         md: '16px',
         lg: '24px',
         xl: '48px',
+        topbar: 'var(--topbar-h)',
+        tabbar: 'var(--tabbar-h)',
+      },
+
+      // Layout width tokens
+      width: {
+        panel: 'var(--panel-w)',
+      },
+
+      // Z-index semantic scale
+      zIndex: {
+        'map-content': '10',
+        'map-ui': '20',
+        'side-tabs': '30',
+        'tab-bar': '40',
+        header: '50',
+        toast: '70',
+        'guide-passive': '150',
+        spotlight: '190',
+        'guide-active': '200',
+        tooltip: '9999',
       },
 
       // Sharp pixel-art radius scale
@@ -100,7 +122,12 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    plugin(({ addVariant }) => {
+      addVariant('panel-view', '[data-view="panel"] &');
+      addVariant('map-view', '[data-view="map"] &');
+    }),
+  ],
 };
 
 export default config;

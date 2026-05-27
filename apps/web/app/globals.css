@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --topbar-h: 49px;
+  --tabbar-h: 49px;
+  --panel-w: 420px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 @layer base {
   /* Material Symbols default variation settings */
   .material-symbols-outlined {
