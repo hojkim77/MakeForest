@@ -1,5 +1,3 @@
-'use client';
-
 import { PixelArtSvg } from './PixelArtSvg';
 
 // 16x16 픽셀 아트 생명체 — stage 0~9 (씨앗/새싹/나무1/나무2/나무3/고목/노거수/정령수/신수/세계수)
