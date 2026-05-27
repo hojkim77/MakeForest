@@ -138,27 +138,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Create Lighthouse config
+        env:
+          VERCEL_BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
-          cat > .lighthouserc.json << 'EOF'
-          {
-            "ci": {
-              "collect": {
-                "numberOfRuns": 1,
-                "settings": {
-                  "extraHeaders": { "Cookie": "mf_visited=1" }
+          python3 -c "
+          import json, os
+          config = {
+            'ci': {
+              'collect': {
+                'numberOfRuns': 1,
+                'settings': {
+                  'preset': 'desktop',
+                  'extraHeaders': {
+                    'Cookie': 'mf_visited=1',
+                    'x-vercel-protection-bypass': os.environ['VERCEL_BYPASS']
+                  }
                 }
               },
-              "upload": { "target": "temporary-public-storage" }
+              'upload': {'target': 'temporary-public-storage'}
             }
           }
-          EOF
+          open('.lighthouserc.json', 'w').write(json.dumps(config))
+          "
       - name: Run Lighthouse CI
         id: lighthouse
         uses: treosh/lighthouse-ci-action@v12
         env:
           LHCI_BUILD_CONTEXT__CURRENT_HASH: ${{ github.event.pull_request.head.sha }}
         with:
-          urls: ${{ needs.wait-for-vercel.outputs.url }}/?x-vercel-protection-bypass=${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          urls: ${{ needs.wait-for-vercel.outputs.url }}/
           uploadArtifacts: true
           temporaryPublicStorage: true
           configPath: .lighthouserc.json
@@ -182,16 +190,36 @@ jobs:
     needs: wait-for-vercel
     runs-on: ubuntu-latest
     steps:
+      - name: Create Lighthouse config
+        env:
+          VERCEL_BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          python3 -c "
+          import json, os
+          config = {
+            'ci': {
+              'collect': {
+                'numberOfRuns': 1,
+                'settings': {
+                  'preset': 'desktop',
+                  'extraHeaders': {'x-vercel-protection-bypass': os.environ['VERCEL_BYPASS']}
+                }
+              },
+              'upload': {'target': 'temporary-public-storage'}
+            }
+          }
+          open('.lighthouserc.json', 'w').write(json.dumps(config))
+          "
       - name: Run Lighthouse CI
         id: lighthouse
         uses: treosh/lighthouse-ci-action@v12
         env:
           LHCI_BUILD_CONTEXT__CURRENT_HASH: ${{ github.event.pull_request.head.sha }}
         with:
-          urls: ${{ needs.wait-for-vercel.outputs.url }}/community?x-vercel-protection-bypass=${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
-          runs: 1
+          urls: ${{ needs.wait-for-vercel.outputs.url }}/community
           uploadArtifacts: true
           temporaryPublicStorage: true
+          configPath: .lighthouserc.json
           githubToken: ${{ secrets.GITHUB_TOKEN }}
       - name: Save results
         env:
@@ -215,6 +243,7 @@ jobs:
       - name: Create Lighthouse config
         env:
           SESSION_COOKIE: ${{ needs.generate-session.outputs.cookie }}
+          VERCEL_BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
           python3 -c "
           import json, os
@@ -222,7 +251,13 @@ jobs:
             'ci': {
               'collect': {
                 'numberOfRuns': 1,
-                'settings': {'extraHeaders': {'Cookie': os.environ['SESSION_COOKIE']}}
+                'settings': {
+                  'preset': 'desktop',
+                  'extraHeaders': {
+                    'Cookie': os.environ['SESSION_COOKIE'],
+                    'x-vercel-protection-bypass': os.environ['VERCEL_BYPASS']
+                  }
+                }
               },
               'upload': {'target': 'temporary-public-storage'}
             }
@@ -235,7 +270,7 @@ jobs:
         env:
           LHCI_BUILD_CONTEXT__CURRENT_HASH: ${{ github.event.pull_request.head.sha }}
         with:
-          urls: ${{ needs.wait-for-vercel.outputs.url }}/mypage?x-vercel-protection-bypass=${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          urls: ${{ needs.wait-for-vercel.outputs.url }}/mypage
           uploadArtifacts: true
           temporaryPublicStorage: true
           configPath: .lighthouserc.json
