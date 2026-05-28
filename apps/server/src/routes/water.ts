@@ -3,7 +3,7 @@ import { prisma } from '@makeforest/db';
 import { broadcastToRegion, broadcastUsersOverlay } from './sse';
 import { calcPersonalStage, getKstDateString } from './water.logic';
 import { regionOf, WaterBody, WaterMeQuery } from '@makeforest/types';
-import { getSession, setSession, getActiveDongSessions } from '@makeforest/redis';
+import { redis, RedisKeys, getSession, setSession } from '@makeforest/redis';
 import { getDongFullName } from '../dongCache';
 
 export const waterRouter = Router();
@@ -76,19 +76,17 @@ waterRouter.post('/', async (req: Request, res: Response) => {
     // Redis 캐시 waterCount/creatureStage 업데이트 + collection increment + SSE broadcast
     void (async () => {
       try {
-        const sessionIds = await getActiveDongSessions(dongCode);
-
-        for (const sid of sessionIds) {
-          const cached = await getSession(sid);
-          if (cached?.userId === userId) {
-            await setSession(sid, {
+        const userSessionId = await redis.get(RedisKeys.userSession(userId));
+        if (userSessionId) {
+          const cached = await getSession(userSessionId);
+          if (cached) {
+            await setSession(userSessionId, {
               ...cached,
               totalWaterCount: userCreature.totalWaterCount,
               todayWaterCount: newWaterCount,
               creatureStage: userCreature.stage,
               status: 'IDLE',
             });
-            break;
           }
         }
         broadcastUsersOverlay();

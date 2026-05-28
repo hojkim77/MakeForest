@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { redis, RedisKeys, getSession, getDailyOverlaySessions } from '@makeforest/redis';
+import { redis, RedisKeys, getSessions, getDailyOverlaySessions } from '@makeforest/redis';
 import { getAllDongs } from '../dongCache';
 import { toPixel, GRID_W, GRID_H, LAT_MIN, LAT_MAX, LNG_MIN, LNG_MAX } from './map.logic';
 import { getKstDateString } from './water.logic';
@@ -15,7 +15,7 @@ export async function buildUsersOverlay(): Promise<MapUser[]> {
   const sessionIds = await getDailyOverlaySessions(today);
   if (sessionIds.length === 0) return [];
 
-  const caches = (await Promise.all(sessionIds.map((sid) => getSession(sid)))).filter(
+  const caches = (await getSessions(sessionIds)).filter(
     (s): s is NonNullable<typeof s> => s !== null && (s.status === 'RUNNING' || s.status === 'COMPLETED' || s.status === 'IDLE'),
   );
   if (caches.length === 0) return [];

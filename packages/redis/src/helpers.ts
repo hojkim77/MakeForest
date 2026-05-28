@@ -12,6 +12,12 @@ export async function getSession(sessionId: string): Promise<ActiveSessionCache 
   return JSON.parse(raw) as ActiveSessionCache;
 }
 
+export async function getSessions(sessionIds: string[]): Promise<(ActiveSessionCache | null)[]> {
+  if (sessionIds.length === 0) return [];
+  const raws = await redis.mget(...sessionIds.map((id) => RedisKeys.session(id)));
+  return raws.map((raw) => (raw ? (JSON.parse(raw) as ActiveSessionCache) : null));
+}
+
 export async function deleteSession(sessionId: string): Promise<void> {
   await redis.del(RedisKeys.session(sessionId));
 }
