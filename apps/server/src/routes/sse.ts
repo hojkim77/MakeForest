@@ -17,19 +17,19 @@ const userClients = new Map<string, Set<Response>>();
 export function broadcastToUser(userId: string, event: SSEEvent): void {
   const room = userClients.get(userId);
   if (!room) return;
-  const payload = `event: ${event.type}\ndata: ${JSON.stringify(event.data)}\n\n`;
+  const payload = `event: ${event.type}\ndata: ${JSON.stringify({ ...event.data, serverTs: Date.now() })}\n\n`;
   room.forEach((res) => res.write(payload));
 }
 
 export function broadcastToRegion(regionCode: string, event: SSEEvent): void {
   const room = clients.get(regionCode);
   if (!room) return;
-  const payload = `event: ${event.type}\ndata: ${JSON.stringify(event.data)}\n\n`;
+  const payload = `event: ${event.type}\ndata: ${JSON.stringify({ ...event.data, serverTs: Date.now() })}\n\n`;
   room.forEach((res) => res.write(payload));
 }
 
 export function broadcastToAll(event: SSEEvent): void {
-  const payload = `event: ${event.type}\ndata: ${JSON.stringify(event.data)}\n\n`;
+  const payload = `event: ${event.type}\ndata: ${JSON.stringify({ ...event.data, serverTs: Date.now() })}\n\n`;
   clients.forEach((room) => room.forEach((res) => res.write(payload)));
 }
 
