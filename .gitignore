@@ -42,6 +42,8 @@ yarn-error.log*
 # Load test generated files
 load-test/users.json
 load-test/result.json
+load-test/results/*.json
+load-test/.env.load-test
 load-test/README.md
 
 # README files
