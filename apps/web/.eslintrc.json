@@ -1,6 +1,21 @@
 {
   "extends": ["next/core-web-vitals", "next/typescript"],
   "rules": {
-    "@typescript-eslint/no-explicit-any": "off"
+    "@typescript-eslint/no-explicit-any": "off",
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "JSXAttribute[name.name='className'] Literal[value=/\\b(?:bg|text|border|ring|from|via|to|fill|stroke|outline|accent|caret|decoration|divide|placeholder|shadow)-(?:red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|slate|gray|zinc|neutral|stone)-\\d+\\b/]",
+        "message": "Raw Tailwind palette colors are not allowed in className. Use semantic tokens (primary, surface, on-surface, etc.) defined in tailwind.config.ts."
+      },
+      {
+        "selector": "JSXAttribute[name.name='className'] Literal[value=/\\[#[0-9a-fA-F]{3,8}\\]/]",
+        "message": "Hex arbitrary values (bg-[#xxx]) are not allowed in className. Register the color in tailwind.config.ts or as a CSS variable in globals.css."
+      },
+      {
+        "selector": "JSXAttribute[name.name='style'] Literal[value=/^#[0-9a-fA-F]{3,8}$/]",
+        "message": "Inline hex colors in style prop are not allowed. Use Tailwind classes with semantic tokens, or extract the value to a CSS variable / file-level constant (for third-party lib props like recharts)."
+      }
+    ]
   }
 }
