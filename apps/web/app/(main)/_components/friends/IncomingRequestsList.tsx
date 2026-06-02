@@ -4,6 +4,7 @@ import type { IncomingRequestsResType } from '@makeforest/types';
 import { Icon } from '@/shared/components/ui/Icon';
 import { useFriendAcceptMutation } from '@/shared/hooks/mutations/useFriendAcceptMutation';
 import { useFriendRejectMutation } from '@/shared/hooks/mutations/useFriendRejectMutation';
+import { Button } from '@/shared/components/ui/Button';
 
 interface IncomingRequestsListProps {
   data: IncomingRequestsResType;
@@ -39,22 +40,22 @@ export function IncomingRequestsList({ data, userId }: IncomingRequestsListProps
             )}
           </div>
           <div className="flex gap-1 ml-2">
-            <button
-              onClick={() => acceptMutation.mutate({ friendshipId: req.friendshipId, userId })}
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="check"
               disabled={acceptMutation.isPending}
-              className="p-1 text-green-600 hover:bg-surface-container-high transition-none"
               aria-label="수락"
-            >
-              <Icon name="check" size={18} />
-            </button>
-            <button
-              onClick={() => rejectMutation.mutate({ friendshipId: req.friendshipId, userId })}
+              onClick={() => acceptMutation.mutate({ friendshipId: req.friendshipId, userId })}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="close"
               disabled={rejectMutation.isPending}
-              className="p-1 text-error hover:bg-surface-container-high transition-none"
               aria-label="거절"
-            >
-              <Icon name="close" size={18} />
-            </button>
+              onClick={() => rejectMutation.mutate({ friendshipId: req.friendshipId, userId })}
+            />
           </div>
         </div>
       ))}

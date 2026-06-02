@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useLocationSearchQuery } from '@/shared/hooks/queries/useLocationSearchQuery';
+import { Input } from '@/shared/components/ui/Input';
+import { Badge } from '@/shared/components/ui/Badge';
+import { Button } from '@/shared/components/ui/Button';
 
 interface DongResult {
   code: string;
@@ -40,21 +43,15 @@ export function LocationSearchStep({ onSelect }: LocationSearchStepProps) {
         </p>
 
         {/* Search input */}
-        <div className="relative w-full group">
-          <div className="absolute inset-y-0 left-md flex items-center pointer-events-none">
-            <span className="material-symbols-outlined text-outline group-focus-within:text-primary transition-colors">
-              {loading ? 'sync' : 'search'}
-            </span>
-          </div>
-          <input
-            type="text"
-            autoFocus
-            value={query}
-            onChange={(e) => { setQuery(e.target.value); setSelected(null); }}
-            placeholder="동네 이름(동, 읍, 면)으로 검색"
-            className="w-full h-16 pl-xl pr-md bg-surface-container-lowest border border-outline-variant focus:border-primary-container focus:outline-none font-mono text-pixel-stat text-sm transition-all placeholder:font-sans placeholder:text-outline/50"
-          />
-        </div>
+        <Input
+          type="text"
+          autoFocus
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setSelected(null); }}
+          leadingIcon={loading ? 'progress_activity' : 'search'}
+          className="h-16 bg-surface-container-lowest"
+          placeholder="동 이름으로 검색"
+        />
       </div>
 
       {/* Results panel */}
@@ -78,7 +75,7 @@ export function LocationSearchStep({ onSelect }: LocationSearchStepProps) {
                   onClick={() => setSelected(dong)}
                   className={[
                     'w-full flex items-center justify-between p-md group cursor-pointer transition-colors duration-0',
-                    isSelected ? 'bg-emerald-100' : 'hover:bg-border-subtle',
+                    isSelected ? 'bg-primary-container/20' : 'hover:bg-border-subtle',
                   ].join(' ')}
                 >
                   <div className="flex items-center gap-md">
@@ -102,9 +99,7 @@ export function LocationSearchStep({ onSelect }: LocationSearchStepProps) {
                       </span>
                       <div className="flex items-center gap-xs mt-1">
                         {isSelected && (
-                          <span className="bg-primary-container text-white text-[10px] font-mono px-1">
-                            SELECTED
-                          </span>
+                          <Badge variant="primary" size="sm">SELECTED</Badge>
                         )}
                         <span className="font-mono text-label text-outline">{dong.sigunguCode}</span>
                       </div>
@@ -142,13 +137,13 @@ export function LocationSearchStep({ onSelect }: LocationSearchStepProps) {
       {/* Confirm button */}
       {selected && (
         <div className="w-full max-w-2xl">
-          <button
+          <Button
+            iconAfter="arrow_forward"
+            className="w-full"
             onClick={() => onSelect({ code: selected.code, name: selected.name })}
-            className="w-full h-14 bg-primary-container text-white font-mono text-label tracking-wider border border-primary-container hover:bg-surface-tint transition-colors flex items-center justify-center gap-sm"
           >
             {selected.name} 선택하기
-            <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-          </button>
+          </Button>
         </div>
       )}
     </div>

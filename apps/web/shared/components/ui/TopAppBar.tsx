@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
 import { Icon } from './Icon';
-import { NotificationBell } from './NotificationBell';
+import { NotificationBell } from './top-app-bar/NotificationBell';
 
 const NAV_ITEMS = [
   { label: 'Map', href: '/' },

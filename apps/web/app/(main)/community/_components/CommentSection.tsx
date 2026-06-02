@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { Button } from '@/shared/components/ui/Button';
+import { Input } from '@/shared/components/ui/Input';
 
 function formatCommentTime(isoString: string): string {
   const date = new Date(isoString);
@@ -55,11 +57,7 @@ export function CommentSection({ postId, initialCount, isLoggedIn }: Props) {
 
   return (
     <div className="flex flex-col gap-sm">
-      <button
-        type="button"
-        onClick={toggle}
-        className="font-mono text-label text-on-surface-variant hover:text-on-surface text-left"
-      >
+      <button type="button" onClick={toggle} className="font-mono text-label text-on-surface-variant hover:text-on-surface text-left">
         댓글 {open ? '▴' : '▾'} {count > 0 ? `(${count})` : ''}
       </button>
 
@@ -74,13 +72,15 @@ export function CommentSection({ postId, initialCount, isLoggedIn }: Props) {
                 <span className="font-mono text-label text-primary shrink-0">{c.user.nickname}</span>
                 <span className="font-mono text-label text-outline">{formatCommentTime(c.createdAt)}</span>
                 {c.isMyComment && (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     type="button"
                     onClick={() => handleDelete(c.id)}
-                    className="font-mono text-label text-outline hover:text-error ml-auto shrink-0"
+                    className="ml-auto shrink-0"
                   >
                     삭제
-                  </button>
+                  </Button>
                 )}
               </div>
               <span className="font-mono text-label text-on-surface">{c.content}</span>
@@ -89,19 +89,20 @@ export function CommentSection({ postId, initialCount, isLoggedIn }: Props) {
 
           {isLoggedIn && (
             <form onSubmit={(e) => submit(e)} className="flex gap-xs mt-xs">
-              <input
+              <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="댓글 작성..."
-                className="flex-1 bg-surface-container border border-outline-variant px-sm py-xs font-mono text-label text-on-surface outline-none focus:border-primary"
+                className="flex-1 bg-surface-container py-xs text-label"
               />
-              <button
+              <Button
                 type="submit"
+                size="sm"
+                loading={submitting}
                 disabled={!input.trim() || submitting}
-                className="px-sm py-xs bg-primary text-on-primary font-mono text-label disabled:opacity-50"
               >
                 등록
-              </button>
+              </Button>
             </form>
           )}
         </div>

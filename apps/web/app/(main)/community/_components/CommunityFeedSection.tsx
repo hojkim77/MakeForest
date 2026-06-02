@@ -6,6 +6,7 @@ import { useCommunityFeedQuery } from '@/shared/hooks/queries/useCommunityFeedQu
 import { useMyReactionsQuery } from '@/shared/hooks/queries/useMyReactionsQuery';
 import type { Period } from '@makeforest/types';
 import { TabButton } from '@/app/(main)/_components/panel/TabButton';
+import { Button } from '@/shared/components/ui/Button';
 import { PostCard } from './PostCard';
 import { RegionAccordion } from './RegionAccordion';
 type Sort = 'recent' | 'popular' | 'water';
@@ -100,14 +101,16 @@ export function CommunityFeedSection() {
       ))}
 
       {sort === 'recent' && hasNextPage && (
-        <button
+        <Button
+          variant="ghost"
           type="button"
-          onClick={() => void fetchNextPage()}
+          loading={isFetchingNextPage}
           disabled={isFetchingNextPage}
-          className="font-mono text-label text-on-surface-variant hover:text-on-surface disabled:opacity-50 py-sm"
+          className="py-sm"
+          onClick={() => void fetchNextPage()}
         >
-          {isFetchingNextPage ? '불러오는 중...' : '더 보기'}
-        </button>
+          더 보기
+        </Button>
       )}
 
       {loading && posts.length === 0 && (

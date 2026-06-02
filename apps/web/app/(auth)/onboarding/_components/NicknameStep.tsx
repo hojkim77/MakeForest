@@ -1,6 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { Card } from '@/shared/components/ui/Card';
+import { Input } from '@/shared/components/ui/Input';
+import { Button } from '@/shared/components/ui/Button';
 
 const MAX = 20;
 
@@ -48,32 +51,27 @@ export function NicknameStep({ initialNickname, onConfirm }: NicknameStepProps) 
 
       {/* Input form */}
       <form onSubmit={handleSubmit} className="w-full max-w-md flex flex-col gap-lg">
-        <div className="bg-surface-container-low border border-border-subtle p-xl flex flex-col gap-sm">
+        <Card variant="low" border padding="lg" className="flex flex-col gap-sm">
           <div className="flex justify-between items-center">
             <span className="font-mono text-label text-primary uppercase">Nickname</span>
             <span className={`font-mono text-label ${value.length > MAX ? 'text-error' : 'text-outline'}`}>
               {value.length} / {MAX}
             </span>
           </div>
-          <input
+          <Input
             type="text"
             value={value}
-            onChange={(e) => setValue(e.target.value)}
             maxLength={MAX}
             autoFocus
             placeholder="닉네임 입력"
-            className="w-full bg-surface border border-border-subtle px-md py-sm font-mono text-body-md text-on-surface placeholder:text-outline-variant focus:outline-none focus:border-primary"
+            onChange={(e) => setValue(e.target.value)}
+            {...(value.length > MAX ? { error: '닉네임은 20자 이내로 입력해주세요' } : {})}
           />
-        </div>
+        </Card>
 
-        <button
-          type="submit"
-          disabled={!isValid}
-          className="w-full h-14 bg-primary-container text-white font-mono text-label tracking-wider border border-primary-container hover:bg-surface-tint transition-colors flex items-center justify-center gap-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+        <Button type="submit" disabled={!isValid} iconAfter="arrow_forward" className="w-full">
           다음
-          <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-        </button>
+        </Button>
       </form>
     </div>
   );

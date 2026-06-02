@@ -1,3 +1,6 @@
+import { Card } from '@/shared/components/ui/Card';
+import { Button } from '@/shared/components/ui/Button';
+
 export type DetectStatus = 'detecting' | 'found' | 'failed' | 'denied';
 
 interface LocationDetectStepProps {
@@ -55,7 +58,7 @@ export function LocationDetectStep({
 
       {/* Location card — only shown when found */}
       {status === 'found' && detectedDong && (
-        <div className="w-full max-w-md bg-surface-container-low border border-border-subtle p-xl flex flex-col gap-lg">
+        <Card variant="low" border padding="lg" className="w-full max-w-md flex flex-col gap-lg">
           <div className="flex flex-col gap-xs">
             <span className="font-mono text-label text-primary uppercase">Current Detection</span>
             <h2 className="font-mono text-[28px] font-bold text-on-surface leading-none tracking-tighter">
@@ -69,43 +72,35 @@ export function LocationDetectStep({
               location_on
             </span>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Detecting skeleton */}
       {status === 'detecting' && (
-        <div className="w-full max-w-md bg-surface-container-low border border-border-subtle p-xl flex flex-col gap-lg animate-pulse">
+        <Card variant="low" border padding="lg" className="w-full max-w-md flex flex-col gap-lg animate-pulse">
           <div className="h-4 bg-outline-variant w-24 rounded" />
           <div className="h-8 bg-outline-variant w-48 rounded" />
           <div className="h-20 bg-surface-container border border-border-subtle" />
-        </div>
+        </Card>
       )}
 
       {/* Actions */}
       <div className="w-full max-w-md flex flex-col gap-sm">
         {status === 'found' && (
-          <button
-            onClick={onConfirm}
-            className="w-full h-14 bg-primary-container text-white font-mono text-label tracking-wider border border-primary-container hover:bg-surface-tint transition-colors flex items-center justify-center gap-sm"
-          >
+          <Button iconAfter="check_circle" className="w-full" onClick={onConfirm}>
             네, 맞아요
-            <span className="material-symbols-outlined text-[18px]">check_circle</span>
-          </button>
+          </Button>
         )}
 
-        <button
-          onClick={onSearchManually}
+        <Button
+          variant="ghost"
           disabled={status === 'detecting'}
-          className={[
-            'w-full h-14 font-mono text-label tracking-wider border transition-colors flex items-center justify-center gap-sm',
-            status === 'detecting'
-              ? 'bg-surface-container text-outline border-outline-variant cursor-not-allowed'
-              : 'bg-transparent text-outline border-border-subtle hover:bg-border-subtle',
-          ].join(' ')}
+          iconAfter="search"
+          className="w-full"
+          onClick={onSearchManually}
         >
           직접 검색하기
-          <span className="material-symbols-outlined text-[18px]">search</span>
-        </button>
+        </Button>
       </div>
     </div>
   );

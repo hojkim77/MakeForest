@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
+import { Button } from '@/shared/components/ui/Button';
+import { KakaoButton } from '@/shared/components/ui/KakaoButton';
 
 type Provider = 'kakao' | 'google';
 
@@ -19,39 +21,29 @@ export function LoginButtons() {
 
   return (
     <div className="w-full flex flex-col gap-sm mb-xl">
-      <button
+      <KakaoButton
         onClick={() => handleSignIn('kakao')}
         disabled={loading !== null}
-        className="w-full h-12 bg-[#FEE500] flex items-center justify-center border border-[#FEE500] hover:brightness-95 transition-all duration-75 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+        loading={loading === 'kakao'}
+        className="h-12"
       >
-        <div className="flex items-center gap-sm">
-          {loading === 'kakao' ? (
-            <span className="material-symbols-outlined text-[20px] text-[#191919] animate-spin">sync</span>
-          ) : (
-            <img src="/images/kakao-logo.svg" alt="카카오" width={20} height={20} />
-          )}
-          <span className="font-mono text-label tracking-wider text-[#191919]">
-            {loading === 'kakao' ? '연결 중…' : '카카오로 시작하기'}
-          </span>
-        </div>
-      </button>
+        {loading === 'kakao' ? '연결 중…' : '카카오로 시작하기'}
+      </KakaoButton>
 
-      <button
+      <Button
+        variant="secondary"
         onClick={() => handleSignIn('google')}
         disabled={loading !== null}
-        className="w-full h-12 bg-white flex items-center justify-center border border-outline-variant hover:bg-surface-container-low transition-all duration-75 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+        loading={loading === 'google'}
+        className="w-full h-12"
       >
-        <div className="flex items-center gap-sm">
-          {loading === 'google' ? (
-            <span className="material-symbols-outlined text-[20px] text-on-surface animate-spin">sync</span>
-          ) : (
-            <img src="/images/google-logo.svg" alt="구글" width={20} height={20} />
-          )}
-          <span className="font-mono text-label tracking-wider text-on-surface">
-            {loading === 'google' ? '연결 중…' : '구글로 시작하기'}
-          </span>
-        </div>
-      </button>
+        {loading !== 'google' && (
+          <img src="/images/google-logo.svg" alt="" width={20} height={20} />
+        )}
+        <span className="font-mono text-label tracking-wider text-on-surface">
+          {loading === 'google' ? '연결 중…' : '구글로 시작하기'}
+        </span>
+      </Button>
     </div>
   );
 }

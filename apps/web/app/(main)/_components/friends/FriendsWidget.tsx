@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { Icon } from '@/shared/components/ui/Icon';
+import { Divider } from '@/shared/components/ui/Divider';
 import { useFriendsListQuery } from '@/shared/hooks/queries/useFriendsQuery';
 import { usePointsQuery } from '@/shared/hooks/queries/usePointsQuery';
 import { FriendsAccordion } from './FriendsAccordion';
@@ -50,7 +51,8 @@ export function FriendsWidget() {
 
       {/* Body */}
       {isOpen && (
-        <div className="border-t border-outline-variant">
+        <div>
+          <Divider />
           {/* Sub-nav */}
           <div className="flex border-b border-outline-variant">
             <button

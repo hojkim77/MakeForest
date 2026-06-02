@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Icon } from '@/shared/components/ui/Icon';
 import { useFriendSearchQuery } from '@/shared/hooks/queries/useFriendsQuery';
 import { useFriendRequestMutation } from '@/shared/hooks/mutations/useFriendRequestMutation';
+import { Button } from '@/shared/components/ui/Button';
 
 interface FriendSearchPanelProps {
   userId: string;
@@ -48,13 +49,14 @@ export function FriendSearchPanel({ userId }: FriendSearchPanelProps) {
                   )}
                 </div>
                 {user.relation === 'NONE' && (
-                  <button
+                  <Button
+                    size="sm"
+                    loading={requestMutation.isPending}
+                    className="ml-2"
                     onClick={() => requestMutation.mutate({ targetUserId: user.userId, userId })}
-                    disabled={requestMutation.isPending}
-                    className="ml-2 px-2 py-0.5 font-mono text-[11px] bg-primary-container text-on-primary-container hover:opacity-80 transition-none"
                   >
                     요청
-                  </button>
+                  </Button>
                 )}
                 {user.relation === 'PENDING_OUTGOING' && (
                   <span className="ml-2 font-mono text-[11px] text-on-surface-variant">요청 중</span>

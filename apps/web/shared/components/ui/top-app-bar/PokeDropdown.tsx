@@ -1,7 +1,7 @@
 'use client';
 
 import type { PokeInboxResType } from '@makeforest/types';
-import { Icon } from './Icon';
+import { Icon } from '../Icon';
 
 interface PokeDropdownProps {
   data: PokeInboxResType;

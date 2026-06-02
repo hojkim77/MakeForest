@@ -1,4 +1,5 @@
 import { Icon } from '@/shared/components/ui/Icon';
+import { Badge } from '@/shared/components/ui/Badge';
 import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 import type { UserMeResType } from '@makeforest/types';
@@ -15,7 +16,7 @@ export async function ProfileHeader({ userId }: { userId: string }) {
   const user = await api.get<UserMeResType>(API_PATHS.SERVER_USER_ME(userId), { next: { revalidate: 3600 } });
 
   return (
-    <section className="bg-surface-container p-6 border border-outline-variant">
+    <section className="bg-surface-container p-lg border border-outline-variant">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="text-4xl bg-surface-container-highest p-3 border border-outline-variant">
@@ -41,9 +42,7 @@ export async function ProfileHeader({ userId }: { userId: string }) {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <span className="px-2 py-1 bg-primary-container text-on-primary-container font-label-mono border border-primary-container text-[12px]">
-            SEEDLING
-          </span>
+          <Badge variant="primary">SEEDLING</Badge>
         </div>
       </div>
     </section>

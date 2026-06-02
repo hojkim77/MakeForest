@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useMapStore, useTimerStore, useTodoStore } from '@/shared/store';
 import { CYCLE_MS, CYCLE_SEC } from '@/shared/store/timerStore';
 import { Icon } from '@/shared/components/ui/Icon';
+import { Button } from '@/shared/components/ui/Button';
 import { formatDuration } from '@/shared/utils/format';
 import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
@@ -160,12 +161,12 @@ export function TimerWaterSection({ myRegionCode, userId, initialWater, initialS
       </div>
 
       {/* 단일 버튼 */}
-      <button
+      <Button
         onClick={!isDailyDone && timerStatus === 'complete' ? handleWater : handleStart}
         disabled={buttonDisabled}
         data-testid="timer-btn"
         data-guide="water.action"
-        className="w-full flex items-center justify-center gap-sm py-sm font-mono text-label uppercase tracking-wider border transition-none active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed bg-primary border-primary text-on-primary"
+        className="w-full uppercase"
       >
         {timerStatus === 'running' && !isDailyDone ? (
           <span className="flex items-center gap-[1px]">
@@ -184,7 +185,7 @@ export function TimerWaterSection({ myRegionCode, userId, initialWater, initialS
             {buttonLabel}
           </>
         )}
-      </button>
+      </Button>
     </div>
   );
 }
