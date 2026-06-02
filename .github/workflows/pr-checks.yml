@@ -310,12 +310,11 @@ jobs:
           name: lighthouse-mypage
           path: lh-mypage
         continue-on-error: true
-      - name: Post Lighthouse results comment
+      - name: Build Lighthouse comment body
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BASE_URL: ${{ needs.wait-for-vercel.outputs.url }}
         run: |
-          BODY=$(python3 << 'PYEOF'
+          python3 << 'PYEOF' > lighthouse-comment.md
           import json, os
 
           base_url = (os.environ.get('BASE_URL') or '').rstrip('/')
@@ -350,10 +349,9 @@ jobs:
           else:
               print('🔦 **Lighthouse CI** — 결과를 가져오지 못했습니다.')
           PYEOF
-          )
-          gh pr comment ${{ github.event.pull_request.number }} \
-            --repo ${{ github.repository }} \
-            --body "$BODY" --edit-last 2>/dev/null || \
-            gh pr comment ${{ github.event.pull_request.number }} \
-            --repo ${{ github.repository }} \
-            --body "$BODY"
+
+      - uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: lighthouse-ci
+          path: lighthouse-comment.md
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
