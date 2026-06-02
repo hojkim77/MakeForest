@@ -33,9 +33,9 @@ Run `git log main..HEAD --oneline` and `git diff main...HEAD --stat` to understa
 - ⭐️ 성과 is optional — leave a single `-` if nothing measurable to report
 - Do NOT add co-author tags or extra metadata
 
-After drafting the title and body, show the full PR draft to the user and ask for confirmation before running `gh pr create`.
+Draft the title and body, then create the PR immediately — do NOT ask the user for confirmation.
 
-Once confirmed, run:
+Run:
 ```
 gh pr create --base main --title "<title>" --body "$(cat <<'EOF'
 <body>
