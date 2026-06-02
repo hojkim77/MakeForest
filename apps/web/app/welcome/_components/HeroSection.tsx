@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { CreatureSprite } from '@/shared/components/ui/CreatureSprite';
+import { Badge } from '@/shared/components/ui/Badge';
 import { SeoulMap } from './SeoulMap';
 
 export function HeroSection() {
@@ -30,9 +31,7 @@ export function HeroSection() {
       <div className="container mx-auto px-6 max-w-5xl flex flex-col md:flex-row items-center gap-12 pt-14">
         {/* Left */}
         <div className="w-full md:w-1/2 space-y-4">
-          <span className="font-mono text-xs text-primary bg-primary-fixed px-2 py-1 border border-primary uppercase tracking-widest inline-block">
-            Community Focus Project
-          </span>
+          <Badge variant="primary" className="uppercase tracking-widest">Community Focus Project</Badge>
           <h1 className="font-mono text-6xl md:text-7xl text-on-surface leading-tight tracking-tighter">
             집중하면,
           </h1>
@@ -55,14 +54,14 @@ export function HeroSection() {
 
         {/* Right */}
         <div className="w-full md:w-1/2 flex justify-center">
-          <div className="relative w-full h-full border border-[#E8E4DC] overflow-hidden">
+          <div className="relative w-full h-full border border-border-subtle overflow-hidden">
             <SeoulMap />
           </div>
         </div>
       </div>
       {/* Swipe hint */}
       <div className="absolute bottom-8 left-0 right-0 flex justify-center z-30 pointer-events-none">
-        <span className="font-mono text-s" style={{ color: '#226143', opacity: 0.5 }}>
+        <span className="font-mono text-s text-primary opacity-50">
           swipe or use arrow keys ↓
         </span>
       </div>

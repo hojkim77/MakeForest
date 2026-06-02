@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { Icon } from './Icon';
+import { Icon } from '../Icon';
 import { PokeDropdown } from './PokeDropdown';
 import { usePokeInboxQuery } from '@/shared/hooks/queries/usePokeInboxQuery';
 import { usePokeReadMutation } from '@/shared/hooks/mutations/usePokeReadMutation';

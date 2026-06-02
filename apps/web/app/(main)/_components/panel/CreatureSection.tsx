@@ -2,6 +2,7 @@
 
 import { useWaterQuery, type WaterQueryData } from '@/shared/hooks/queries/useWaterQuery';
 import { CreatureSprite, STAGE_LABELS } from '@/shared/components/ui/CreatureSprite';
+import { Card } from '@/shared/components/ui/Card';
 
 interface Props {
   userId: string | null;
@@ -14,12 +15,12 @@ export function CreatureSection({ userId, initialWater }: Props) {
 
   return (
     <div className="flex flex-col items-center gap-md py-lg">
-      <div data-guide="creature.stage" className="relative flex flex-col items-center justify-center bg-surface-container-high border border-outline-variant p-md image-pixelated">
+      <Card variant="high" border data-guide="creature.stage" className="relative flex flex-col items-center justify-center image-pixelated">
         <CreatureSprite stage={stage} size={128} />
         <span className="mt-xs font-mono text-label text-outline uppercase tracking-wider">
           {STAGE_LABELS[stage]} · Lv.{stage + 1}
         </span>
-      </div>
+      </Card>
     </div>
   );
 }

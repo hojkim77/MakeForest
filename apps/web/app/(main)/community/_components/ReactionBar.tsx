@@ -2,6 +2,7 @@
 
 import type { CommunityReaction } from '@makeforest/types';
 import { useReactionMutation } from '@/shared/hooks/mutations/useReactionMutation';
+import { Button } from '@/shared/components/ui/Button';
 
 const EMOJIS = ['🔥', '💪', '👏'] as const;
 
@@ -27,21 +28,18 @@ export function ReactionBar({ postId, reactions, isLoggedIn, feedFilters }: Prop
         const active = r?.myReaction ?? false;
         const count = r?.count ?? 0;
         return (
-          <button
+          <Button
             key={emoji}
+            variant={active ? 'primary' : 'secondary'}
+            size="sm"
             type="button"
             onClick={() => toggle(emoji)}
             disabled={!isLoggedIn}
-            className={`flex items-center gap-xs px-sm py-xs font-mono text-label border transition-colors
-              ${active
-                ? 'border-primary bg-primary-container text-on-primary-container'
-                : 'border-outline-variant bg-surface-container text-on-surface-variant hover:bg-surface-variant'
-              }
-              disabled:cursor-default disabled:opacity-60`}
+            className="flex items-center gap-xs"
           >
             <span>{emoji}</span>
             {count > 0 && <span>{count}</span>}
-          </button>
+          </Button>
         );
       })}
     </div>

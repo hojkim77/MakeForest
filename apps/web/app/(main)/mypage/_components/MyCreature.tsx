@@ -1,4 +1,5 @@
 import { CreatureSprite, STAGE_LABELS } from '@/shared/components/ui/CreatureSprite';
+import { Badge } from '@/shared/components/ui/Badge';
 import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 import type { UserMeResType } from '@makeforest/types';
@@ -10,7 +11,7 @@ export async function MyCreature({ userId }: { userId: string }) {
   const waterCount = userCreature?.totalWaterCount ?? 0;
 
   return (
-    <section className="bg-surface-container p-6 border border-outline-variant">
+    <section className="bg-surface-container p-lg border border-outline-variant">
       <h2 className="font-h2 text-on-surface mb-6 flex items-center gap-2">
         <span className="material-symbols-outlined text-primary">forest</span>
         MY CREATURE
@@ -36,19 +37,13 @@ export async function MyCreature({ userId }: { userId: string }) {
           <div className="pt-2">
             <div className="flex gap-1 flex-wrap">
               {(STAGE_LABELS as readonly string[]).map((label, i) => (
-                <span
-                  key={i}
-                  className={[
-                    'px-2 py-0.5 font-label-mono text-[10px] border',
-                    i === stage
-                      ? 'bg-primary-container text-on-primary-container border-primary-container'
-                      : i < stage
-                        ? 'bg-surface-container-highest text-on-surface border-outline-variant'
-                        : 'bg-surface-container-low text-on-surface-variant border-outline-variant opacity-40',
-                  ].join(' ')}
-                >
-                  {label}
-                </span>
+                i === stage ? (
+                  <Badge key={i} variant="primary" size="sm">{label}</Badge>
+                ) : i < stage ? (
+                  <Badge key={i} variant="default" size="sm" className="opacity-60">{label}</Badge>
+                ) : (
+                  <Badge key={i} variant="default" size="sm" className="opacity-30">{label}</Badge>
+                )
               ))}
             </div>
           </div>

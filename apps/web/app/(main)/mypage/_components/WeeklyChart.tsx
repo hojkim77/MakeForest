@@ -10,6 +10,18 @@ import {
   Cell,
 } from 'recharts';
 
+const CHART_TOKENS = {
+  axisTick: '#404942', // on-surface-variant
+  axisLine: '#c0c9c0', // outline-variant
+  tooltipBorder: '#c0c9c0', // outline-variant
+  tooltipBackground: '#f2ede5', // surface-container
+  tooltipCursor: 'rgba(61,122,90,0.08)', // primary-container faded
+  barMax: '#226143', // primary
+  barMaxStroke: '#0e5134', // on-primary-fixed-variant
+  bar: '#3D7A5A', // primary-container
+  barStroke: '#226143', // primary
+} as const;
+
 interface Props {
   weeklyData: { week: number; waterCount: number }[];
   weeklyAvg: number;
@@ -19,7 +31,7 @@ export function WeeklyChart({ weeklyData, weeklyAvg }: Props) {
   const maxWeeklyWater = Math.max(...weeklyData.map(w => w.waterCount), 1);
 
   return (
-    <section className="bg-surface-container p-6 border border-outline-variant">
+    <section className="bg-surface-container p-lg border border-outline-variant">
       <div className="flex justify-between items-end mb-6">
         <h2 className="font-h2 text-on-surface flex items-center gap-2">
           <span className="material-symbols-outlined text-primary">analytics</span>
@@ -39,23 +51,23 @@ export function WeeklyChart({ weeklyData, weeklyAvg }: Props) {
           <XAxis
             dataKey="week"
             tickFormatter={(v) => `WEEK ${v}`}
-            tick={{ fontFamily: 'IBM Plex Mono', fontSize: 10, fill: '#404942' }}
-            axisLine={{ stroke: '#c0c9c0' }}
+            tick={{ fontFamily: 'IBM Plex Mono', fontSize: 10, fill: CHART_TOKENS.axisTick }}
+            axisLine={{ stroke: CHART_TOKENS.axisLine }}
             tickLine={false}
           />
           <YAxis
-            tick={{ fontFamily: 'IBM Plex Mono', fontSize: 10, fill: '#404942' }}
+            tick={{ fontFamily: 'IBM Plex Mono', fontSize: 10, fill: CHART_TOKENS.axisTick }}
             axisLine={false}
             tickLine={false}
           />
           <Tooltip
-            cursor={{ fill: 'rgba(61,122,90,0.08)' }}
+            cursor={{ fill: CHART_TOKENS.tooltipCursor }}
             contentStyle={{
               fontFamily: 'IBM Plex Mono',
               fontSize: 12,
-              border: '1px solid #c0c9c0',
+              border: `1px solid ${CHART_TOKENS.tooltipBorder}`,
               borderRadius: 0,
-              background: '#f2ede5',
+              background: CHART_TOKENS.tooltipBackground,
             }}
             formatter={(value) => [`${value}회`, '물주기']}
             labelFormatter={(label) => `WEEK ${label}`}
@@ -64,8 +76,8 @@ export function WeeklyChart({ weeklyData, weeklyAvg }: Props) {
             {weeklyData.map((entry, idx) => (
               <Cell
                 key={idx}
-                fill={entry.waterCount === maxWeeklyWater ? '#226143' : '#3D7A5A'}
-                stroke={entry.waterCount === maxWeeklyWater ? '#0e5134' : '#226143'}
+                fill={entry.waterCount === maxWeeklyWater ? CHART_TOKENS.barMax : CHART_TOKENS.bar}
+                stroke={entry.waterCount === maxWeeklyWater ? CHART_TOKENS.barMaxStroke : CHART_TOKENS.barStroke}
                 strokeWidth={1}
               />
             ))}

@@ -1,4 +1,5 @@
 import { formatDuration } from '@/shared/utils/format';
+import { Card } from '@/shared/components/ui/Card';
 import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 import type { FocusStatsResType, RankStatsResType } from '@makeforest/types';
@@ -39,13 +40,13 @@ export async function StatsGrid({ userId, dongCode }: { userId: string; dongCode
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {cards.map(({ label, value, sub }) => (
-        <div key={label} className="bg-surface-container p-4 border border-outline-variant flex flex-col justify-between min-h-[96px]">
+        <Card key={label} border className="flex flex-col justify-between min-h-[96px]">
           <span className="font-label-mono text-on-surface-variant uppercase text-[11px]">{label}</span>
           <div>
             <div className="font-pixel-stat text-2xl text-primary">{value}</div>
             <div className="font-label-mono text-[10px] text-on-surface-variant">{sub}</div>
           </div>
-        </div>
+        </Card>
       ))}
     </div>
   );

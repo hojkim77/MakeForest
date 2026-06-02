@@ -3,6 +3,7 @@
 import { CollectionCreatureSprite } from '@/shared/components/ui/CollectionCreatureSprite';
 import type { CollectionProgress } from '@makeforest/types';
 import { useCollectionQuery } from '@/shared/hooks/queries/useCollectionQuery';
+import { ProgressBar } from '@/shared/components/ui/ProgressBar';
 
 interface Props {
   dongCode: string | null;
@@ -49,12 +50,7 @@ function ActiveState({
       </div>
 
       <div className="flex flex-col gap-xs">
-        <div className="w-full h-3 bg-surface-variant overflow-hidden">
-          <div
-            className="h-full bg-primary transition-all duration-500"
-            style={{ width: `${pct}%` }}
-          />
-        </div>
+        <ProgressBar value={pct} size="md" />
         <div className="flex justify-between">
           <span
             className="font-mono text-label text-on-surface-variant"

@@ -1,5 +1,8 @@
 'use client';
 
+import { Card } from '@/shared/components/ui/Card';
+import { Button } from '@/shared/components/ui/Button';
+
 interface TooltipBubbleProps {
   stepIndex: number;
   totalSteps: number;
@@ -25,18 +28,15 @@ export function TooltipBubble({
   const isLast = stepIndex === totalSteps - 1;
 
   return (
-    <div className="w-72 bg-surface border border-outline-variant p-md flex flex-col gap-sm shadow-lg">
+    <Card border padding="md" className="w-72 bg-surface flex flex-col gap-sm shadow-lg">
       {/* Header */}
       <div className="flex items-center justify-between">
         <span className="font-mono text-label text-outline uppercase tracking-wider">
           {stepIndex + 1} / {totalSteps}
         </span>
-        <button
-          onClick={onSkip}
-          className="font-mono text-label text-outline-variant hover:text-on-surface uppercase tracking-wider"
-        >
+        <Button variant="ghost" size="sm" onClick={onSkip} className="text-outline-variant uppercase">
           건너뛰기
-        </button>
+        </Button>
       </div>
 
       {/* Content */}
@@ -50,29 +50,20 @@ export function TooltipBubble({
       {/* Navigation */}
       <div className="flex items-center gap-sm mt-xs">
         {!isFirst && onPrev && (
-          <button
-            onClick={onPrev}
-            className="flex-1 h-9 border border-outline-variant font-mono text-label uppercase tracking-wider text-on-surface-variant hover:bg-surface-container-high active:translate-y-px transition-none"
-          >
+          <Button variant="secondary" onClick={onPrev} className="flex-1 h-9 uppercase">
             이전
-          </button>
+          </Button>
         )}
         {isLast ? (
-          <button
-            onClick={onComplete ?? onNext}
-            className="flex-1 h-9 bg-primary text-on-primary font-mono text-label uppercase tracking-wider active:translate-y-px transition-none"
-          >
+          <Button onClick={onComplete ?? onNext} className="flex-1 h-9 uppercase">
             완료
-          </button>
+          </Button>
         ) : (
-          <button
-            onClick={onNext}
-            className="flex-1 h-9 bg-primary text-on-primary font-mono text-label uppercase tracking-wider active:translate-y-px transition-none"
-          >
+          <Button onClick={onNext} className="flex-1 h-9 uppercase">
             다음
-          </button>
+          </Button>
         )}
       </div>
-    </div>
+    </Card>
   );
 }

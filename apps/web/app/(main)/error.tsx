@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { Button } from '@/shared/components/ui/Button';
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -17,18 +17,8 @@ export default function MainError({ error, reset }: ErrorProps) {
         </pre>
       )}
       <div className="flex gap-sm">
-        <button
-          onClick={reset}
-          className="px-md py-sm border border-outline text-label hover:bg-surface-variant"
-        >
-          다시 시도
-        </button>
-        <Link
-          href="/"
-          className="px-md py-sm border border-outline text-label hover:bg-surface-variant"
-        >
-          홈으로
-        </Link>
+        <Button variant="ghost" onClick={reset}>다시 시도</Button>
+        <Button variant="secondary" href="/">홈으로</Button>
       </div>
     </div>
   );

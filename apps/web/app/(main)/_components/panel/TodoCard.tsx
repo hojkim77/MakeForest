@@ -5,6 +5,8 @@ import { useTodoStore, useTimerStore, selectIsDirty } from '@/shared/store';
 import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 import { toast } from '@/shared/lib/toast';
+import { Button } from '@/shared/components/ui/Button';
+import { Input } from '@/shared/components/ui/Input';
 
 export function TodoCardContent() {
   const { todos, addTodo, toggleTodo, removeTodo, markSaved } = useTodoStore();
@@ -57,34 +59,37 @@ export function TodoCardContent() {
             <span className={`font-mono text-label flex-1 ${t.done ? 'line-through text-outline' : 'text-on-surface'}`}>
               {t.text}
             </span>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               type="button"
               onClick={() => removeTodo(t.id)}
-              className="font-mono text-label text-outline hover:text-error shrink-0"
+              className="shrink-0"
             >
               삭제
-            </button>
+            </Button>
           </div>
         ))}
       </div>
 
       {/* 입력 */}
       <div className="flex gap-xs px-md py-sm border-t border-outline-variant">
-        <input
+        <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
           placeholder="할 일 추가..."
-          className="flex-1 bg-surface border border-outline-variant px-sm py-xs font-mono text-label text-on-surface outline-none focus:border-primary"
+          className="flex-1 py-xs text-label"
         />
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           type="button"
           onClick={handleAdd}
           disabled={!input.trim()}
-          className="px-sm py-xs bg-surface-variant border border-outline-variant font-mono text-label text-on-surface-variant disabled:opacity-40"
         >
           추가
-        </button>
+        </Button>
       </div>
 
       {/* 저장 */}
@@ -94,14 +99,16 @@ export function TodoCardContent() {
             세션 시작 후 서버에 저장돼요
           </span>
         )}
-        <button
+        <Button
           type="button"
-          onClick={() => void handleSave()}
+          loading={saving}
           disabled={!isDirty || saving}
-          className="ml-auto px-md py-xs bg-primary text-on-primary font-mono text-label disabled:opacity-40 disabled:cursor-not-allowed"
+          size="sm"
+          className="ml-auto"
+          onClick={() => void handleSave()}
         >
-          {saving ? '저장중...' : '저장'}
-        </button>
+          저장
+        </Button>
       </div>
     </>
   );

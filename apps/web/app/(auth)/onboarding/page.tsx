@@ -9,6 +9,7 @@ import { regionOf } from '@makeforest/types';
 import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 import { handleApiError } from '@/shared/lib/handleApiError';
+import { Button } from '@/shared/components/ui/Button';
 
 const LocationSearchStep = dynamic(
   () => import('./_components/LocationSearchStep').then((m) => ({ default: m.LocationSearchStep })),
@@ -112,13 +113,13 @@ export default function OnboardingPage() {
       <header className="fixed top-0 left-0 w-full z-50 bg-[#F5F3EF] border-b border-[#E8E4DC] flex justify-between items-center px-md h-14">
         <div className="flex items-center gap-sm">
           {(step === 'search' || step === 'detect') && (
-            <button
-              onClick={() => setStep(step === 'search' ? 'detect' : 'nickname')}
-              className="text-on-surface-variant hover:bg-surface-container-high p-xs transition-colors"
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="arrow_back"
               aria-label="뒤로"
-            >
-              <span className="material-symbols-outlined">arrow_back</span>
-            </button>
+              onClick={() => setStep(step === 'search' ? 'detect' : 'nickname')}
+            />
           )}
           <span className="font-mono text-pixel-stat text-primary uppercase">Pixel Forest</span>
         </div>
