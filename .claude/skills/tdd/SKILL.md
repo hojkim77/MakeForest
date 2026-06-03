@@ -99,9 +99,10 @@ After all tests pass:
 | Target | Location |
 |--------|----------|
 | Backend pure logic | `apps/server/src/routes/__tests__/*.logic.test.ts` |
-| Zustand stores | `apps/web/store/__tests__/*.test.ts` |
-| React components | `apps/web/components/**/__tests__/*.test.tsx` |
-| Custom hooks | `apps/web/hooks/__tests__/*.test.ts` |
+| Route integration | `apps/server/src/routes/__tests__/*.integration.test.ts` |
+| Zustand stores | `apps/web/shared/store/__tests__/*.test.ts` |
+| React components | `apps/web/**/__tests__/<Component>.test.tsx` |
+| Custom hooks | `apps/web/shared/hooks/**/__tests__/<hook>.test.ts` |
 
 ---
 
@@ -113,9 +114,27 @@ After all tests pass:
 | HTTP | `global.fetch` | Network boundary |
 | Browser SSE | `global.EventSource` | Browser API boundary |
 | Time | `jest.useFakeTimers()` | Non-deterministic |
-| Prisma | Extract to `.logic.ts` pure functions | DB boundary |
+| Prisma (unit tests) | Extract to `.logic.ts` pure functions | DB boundary — unit tests never hit DB |
 
 **Do NOT mock**: your own modules, Zustand internals, Express middleware you wrote, `*.logic.ts` functions.
+
+---
+
+## Integration Tests (Route Handlers)
+
+Use when: adding a new route, or changing a route's DB-write behavior.
+
+Real: Express `app`, Prisma + testcontainers Postgres, our middleware, our `.logic.ts` modules.
+Mock: Redis (`ioredis-mock` by default), OAuth/external APIs.
+File: `apps/server/src/routes/__tests__/<route>.integration.test.ts`
+Prerequisite: `app.ts` export split + `testApp.ts` helper (Phase A infra).
+
+Required cases per route:
+- happy path
+- auth/permission denied
+- validation failure (400)
+- domain limit / conflict (409) — if applicable
+- concurrent race — N parallel requests → exactly the limit passes
 
 ---
 
@@ -123,211 +142,106 @@ After all tests pass:
 
 Extract business logic to pure functions in `routes/foo.logic.ts`. Test those — no DB, no Redis, no HTTP.
 
-```typescript
-// apps/server/src/routes/__tests__/water.logic.test.ts
-import { calcPersonalStage, getKstDateString, checkDailyCapExceeded } from '../water.logic';
-
-describe('creature stage progression', () => {
-  it('starts at stage 0 with no waterings', () =>
-    expect(calcPersonalStage(0)).toBe(0));
-  it('advances to stage 1 at exactly 12 waterings', () =>
-    expect(calcPersonalStage(12)).toBe(1));
-  it('stays at stage 9 beyond the maximum threshold', () =>
-    expect(calcPersonalStage(9999)).toBe(9));
-});
-
-describe('KST daily reset boundary', () => {
-  it('UTC 14:59:59 is still the previous KST day', () =>
-    expect(getKstDateString(new Date('2024-01-05T14:59:59Z'))).toBe('2024-01-05'));
-  it('UTC 15:00:00 crosses into the next KST day', () =>
-    expect(getKstDateString(new Date('2024-01-05T15:00:00Z'))).toBe('2024-01-06'));
-});
-
-describe('daily focus cap', () => {
-  it('one second under 6 hours is not exceeded', () =>
-    expect(checkDailyCapExceeded(21599)).toBe(false));
-  it('exactly 6 hours triggers the cap', () =>
-    expect(checkDailyCapExceeded(21600)).toBe(true));
-});
-```
-
 Cover: boundary values (threshold ±1), upper/lower clamps, KST midnight crossings.
 
 ---
 
-## Zustand Store Tests
+## Three-Layer Decision Criteria
 
-Test through the store's public actions and state. `jest.useFakeTimers()` mocks the time boundary; `setState` is the store's public API for direct injection in tests.
+### Unit
 
-```typescript
-// apps/web/store/__tests__/timerStore.test.ts
-import { useTimerStore } from '../timerStore';
+| | |
+|---|---|
+| Purpose | Catch regressions in business rules, calculations, and validation |
+| Surface | Single pure function / Zustand public action+state / single component / single hook |
+| Real | All our own modules — `.logic.ts`, stores, components |
+| Mock | `fetch`, `EventSource`, `next-auth/react`, `next/navigation`, `jest.useFakeTimers()` |
+| File location | Server: `src/routes/__tests__/<name>.logic.test.ts` · Web store: `shared/store/__tests__/<store>.test.ts` · Web component: `**/__tests__/<Component>.test.tsx` · Web hook: `shared/hooks/**/__tests__/<hook>.test.ts` |
+| Time target | < 1s per file |
+| Breaks when | A rule changed, or the test is coupled to implementation |
 
-beforeEach(() => {
-  jest.useFakeTimers();
-  useTimerStore.getState().reset();
-});
+**Server pattern**: Extract all non-DB, non-HTTP computation from route handlers into `<name>.logic.ts`. The route itself stays a thin wrapper.
 
-afterEach(() => jest.useRealTimers());
+**Web pattern**: Zustand — inject via `setState` → call public action → read state. Components — prefer `data-testid` for non-semantic elements.
 
-describe('timer ticking', () => {
-  it('elapsed time increases each second while running', () => {
-    useTimerStore.getState().start();
-    jest.advanceTimersByTime(3000);
-    expect(useTimerStore.getState().elapsedSec).toBe(3);
-  });
-});
+### Integration
 
-describe('watering progress reset', () => {
-  it('clamps to zero when elapsed time is less than 30 minutes', () => {
-    useTimerStore.setState({ elapsedSec: 500 });
-    useTimerStore.getState().resetWaterProgress();
-    expect(useTimerStore.getState().elapsedSec).toBe(0);
-  });
-});
-```
+| | |
+|---|---|
+| Purpose | Catch regressions in the route handler + DB + middleware composition. Verify concurrency, idempotency, and transaction boundaries |
+| Surface | `supertest(app).method(path)` → assert both response and DB state |
+| Real | Express app, Prisma + testcontainers Postgres, our middleware, our `.logic.ts` modules |
+| Mock | Redis (`ioredis-mock`), OAuth and external APIs |
+| File location | `apps/server/src/routes/__tests__/<route>.integration.test.ts` |
+| Time target | < 10s per file |
+| Breaks when | Route contract, DB constraint, or concurrency guard is violated |
 
----
+### E2E
 
-## React Component Tests
+| | |
+|---|---|
+| Purpose | Catch regressions in core user journeys end-to-end: browser → Next.js → Server → DB |
+| Surface | Playwright browser automation against real Next.js, real server, real DB |
+| Real | Everything |
+| Mock | OAuth only — `/test/login` endpoint (guarded by `LOAD_TEST=1`) issues a session token and injects it as a cookie |
+| File location | `apps/web/e2e/<scenario>.spec.ts` |
+| Time target | < 60s per file, < 5min total suite |
+| Breaks when | Any layer in the user journey breaks — route, UI, auth, or DB |
 
-Mock at system boundaries (fetch, auth session). Test observable user behavior, not internal state.
+**Cover with E2E**: journeys that cross multiple domains, scenarios where auth state is decisive, mobile viewport regressions.
 
-```typescript
-// apps/web/components/panel/__tests__/TimerWaterSection.test.tsx
-import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { TimerWaterSection } from '../TimerWaterSection';
-import { useTimerStore, useWaterStore } from '@/store';
-
-// Mock declarations — hoisted before imports
-jest.mock('next-auth/react', () => ({ useSession: jest.fn() }));
-import { useSession } from 'next-auth/react';
-const mockUseSession = useSession as jest.MockedFunction<typeof useSession>;
-
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
-
-// Helpers
-function withAuthenticatedUser() {
-  mockUseSession.mockReturnValue({
-    data: { user: { id: 'user1', name: 'Test', regionCode: '11' }, expires: '' },
-    status: 'authenticated',
-    update: jest.fn(),
-  });
-}
-
-function setupFetch() {
-  mockFetch.mockImplementation((url: string, opts?: RequestInit) => {
-    if (url === '/api/sessions' && opts?.method === 'POST')
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ sessionId: 'sess-1' }) });
-    if (url === '/api/water' && opts?.method === 'POST')
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ myWaterCount: 1, userCreature: { stage: 1, waterCount: 12 } }) });
-    return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-  });
-}
-
-beforeEach(() => {
-  mockFetch.mockReset();
-  useTimerStore.getState().reset();
-  useWaterStore.setState({ waterCount: 0, creatureStage: 0, growthPercent: 0, isWatering: false });
-  jest.useFakeTimers();
-});
-
-afterEach(() => jest.useRealTimers());
-
-describe('starting a focus session', () => {
-  it('sends a session creation request when user clicks Start', async () => {
-    withAuthenticatedUser();
-    setupFetch();
-    render(<TimerWaterSection myRegionCode="11" />);
-
-    await waitFor(() => screen.getByText('Start'));
-    await act(async () => { fireEvent.click(screen.getByText('Start')); });
-
-    expect(mockFetch).toHaveBeenCalledWith('/api/sessions', expect.objectContaining({ method: 'POST' }));
-  });
-});
-```
-
-Prefer `data-testid` over element text for non-semantic elements. Use `await act(async () => {...})` for async event handlers.
+**Do NOT cover with E2E** (unit/integration responsibility): single-component renders, single-route responses, business rule branches.
 
 ---
 
-## SSE Hook Tests
+## Decision Tree — What to Write
 
-Mock `EventSource` at the browser API boundary. Test behavior: connection URL, cleanup on unmount, reconnect logic.
+```
+1) New business rule (calculation / threshold / state decision)?
+   → Unit: extract to <name>.logic.ts + write <name>.logic.test.ts
 
-```typescript
-// apps/web/hooks/__tests__/useActivityStream.test.ts
-import { renderHook, act } from '@testing-library/react';
-import { useActivityStream } from '@/hooks/useActivityStream';
+2) New HTTP route or a new DB-write branch in an existing route?
+   → Integration: <route>.integration.test.ts
+   → Cases: happy path + auth denied + validation failure (400) + concurrency/idempotency (if applicable)
 
-class MockEventSource {
-  static lastInstance: MockEventSource | null = null;
-  static callCount = 0;
+3) New UI branch or screen state?
+   → Component unit: __tests__/<Component>.test.tsx
 
-  url: string;
-  onerror: (() => void) | null = null;
-  listeners: Record<string, (e: MessageEvent) => void> = {};
-  close = jest.fn();
+4) New fork in a core user journey?
+   → E2E: apps/web/e2e/<scenario>.spec.ts (optional, one scenario)
+```
 
-  constructor(url: string) {
-    this.url = url;
-    MockEventSource.lastInstance = this;
-    MockEventSource.callCount++;
-  }
+You do not need all three layers every time. Only add tests to the layers that are touched.
 
-  addEventListener(type: string, cb: (e: MessageEvent) => void) {
-    this.listeners[type] = cb;
-  }
+---
 
-  triggerEvent(type: string, data: object) {
-    this.listeners[type]?.({ data: JSON.stringify(data) } as MessageEvent);
-  }
+## CI Execution
 
-  triggerError() { this.onerror?.(); }
-}
+| Stage | What | When |
+|---|---|---|
+| unit | `turbo run test:unit` (web + server) | every PR |
+| integration | `yarn workspace @makeforest/server test:integration` | every PR |
+| e2e | `playwright test` | `main` merge or PRs with the `e2e` label only |
 
-(global as any).EventSource = MockEventSource;
+---
 
-beforeEach(() => {
-  MockEventSource.lastInstance = null;
-  MockEventSource.callCount = 0;
-  jest.useFakeTimers();
-});
+## PR Checklist
 
-afterEach(() => jest.useRealTimers());
-
-describe('SSE connection lifecycle', () => {
-  it('connects to the activity stream endpoint on mount', () => {
-    renderHook(() => useActivityStream());
-    expect(MockEventSource.lastInstance!.url).toContain('/map/activity-stream');
-  });
-
-  it('closes the connection when the component unmounts', () => {
-    const { unmount } = renderHook(() => useActivityStream());
-    const instance = MockEventSource.lastInstance!;
-    unmount();
-    expect(instance.close).toHaveBeenCalled();
-  });
-
-  it('reconnects after 1 second on connection error', () => {
-    renderHook(() => useActivityStream());
-    act(() => { MockEventSource.lastInstance!.triggerError(); });
-    act(() => { jest.advanceTimersByTime(999); });
-    expect(MockEventSource.callCount).toBe(1);
-    act(() => { jest.advanceTimersByTime(1); });
-    expect(MockEventSource.callCount).toBe(2);
-  });
-});
+```
+- [ ] New business rule → .logic.test.ts added
+- [ ] New route or write branch → integration test added
+- [ ] New UI branch → component test added
+- [ ] New user journey fork (optional) → E2E scenario added
+- [ ] Tests for removed behavior are deleted (not skipped)
+- [ ] No own modules mocked with jest.mock()
+- [ ] Test names read as "what happens", not "what the code does"
 ```
 
 ---
 
 ## What NOT to Test
 
-- Prisma / Redis calls directly — extract to `.logic.ts` and test pure functions
-- Full route handlers (Express req/res) — test the `.logic.ts` extraction
+- Prisma / Redis calls directly in unit tests — extract to `.logic.ts` and test pure functions
+- Route handlers with mocked Express req/res — extract to `.logic.ts`; use supertest for handler-level behavior
 - Styles, layout, pixel matching
 - `console.error` output — assert the resulting error state instead
