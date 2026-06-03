@@ -4,6 +4,7 @@ import { getKstDateString } from './water.logic';
 import { addDays } from './stats.logic';
 import { getDongShortName, getDongSigunguMap, getDongRegionKey } from '../dongCache';
 import { RankingPeriodQuery, RegionRankingQuery } from '@makeforest/types';
+import { aggregateRegionRankings } from './ranking.logic';
 
 export const rankingRouter = Router();
 
@@ -65,30 +66,10 @@ rankingRouter.get('/region', async (req: Request, res: Response) => {
 
     const sigunguMap = await getDongSigunguMap(grouped.map((g) => g.dongCode));
 
-    const regionMap = new Map<string, { totalWater: number; regionName: string }>();
-    for (const g of grouped) {
-      const info = sigunguMap.get(g.dongCode);
-      if (!info) continue;
-      const existing = regionMap.get(info.regionKey);
-      if (existing) {
-        existing.totalWater += g._sum?.waterCount ?? 0;
-      } else {
-        regionMap.set(info.regionKey, {
-          totalWater: g._sum?.waterCount ?? 0,
-          regionName: info.regionName,
-        });
-      }
-    }
-
-    const rankings = [...regionMap.entries()]
-      .sort((a, b) => b[1].totalWater - a[1].totalWater)
-      .slice(0, 20)
-      .map(([regionKey, { regionName, totalWater }], i) => ({
-        rank: i + 1,
-        regionKey,
-        regionName,
-        totalWater,
-      }));
+    const rankings = aggregateRegionRankings(
+      grouped.map((g) => ({ dongCode: g.dongCode, waterCount: g._sum?.waterCount ?? 0 })),
+      sigunguMap,
+    );
 
     const myRegionKey = myDongCode ? await getDongRegionKey(myDongCode) : null;
 

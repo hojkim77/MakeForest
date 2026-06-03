@@ -10,9 +10,11 @@
     "lint": "eslint src --ext .ts",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist",
-    "test": "jest --no-coverage",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test:unit": "jest --config jest.config.js --no-coverage",
+    "test:integration": "jest --config jest.config.integration.js --runInBand --no-coverage",
+    "test": "yarn test:unit && yarn test:integration",
+    "test:watch": "jest --config jest.config.js --watch",
+    "test:coverage": "jest --config jest.config.js --coverage",
     "migrate:dong-codes": "tsx --env-file=.env src/scripts/migrateDongCodes.ts"
   },
   "dependencies": {
@@ -24,12 +26,17 @@
     "node-cron": "^3.0.3"
   },
   "devDependencies": {
+    "@testcontainers/postgresql": "^12.0.1",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.7",
     "@types/node-cron": "^3.0.11",
+    "@types/supertest": "^7.2.0",
+    "ioredis-mock": "^8.13.1",
     "jest": "^30.3.0",
+    "supertest": "^7.2.2",
+    "testcontainers": "^12.0.1",
     "ts-jest": "^29.4.9",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
