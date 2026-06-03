@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { DailyCollectionCard } from '../DailyCollectionCard';
 import { makeQueryClient } from '@/test/renderWithProviders';
 import { makeCollection } from '@/test/factories/collection';
@@ -11,7 +12,7 @@ jest.mock('@/shared/store/kstDateStore', () => ({
 
 function wrapper({ children }: { children: React.ReactNode }) {
   return React.createElement(
-    require('@tanstack/react-query').QueryClientProvider,
+    QueryClientProvider,
     { client: makeQueryClient() },
     children,
   );

@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { CollectionTab } from '../CollectionTab';
 import { RankingTab } from '../RankingTab';
 import { usePanelStore } from '@/shared/store';
@@ -17,7 +18,7 @@ jest.mock('@/shared/store/kstDateStore', () => ({
 
 function wrapper({ children }: { children: React.ReactNode }) {
   return React.createElement(
-    require('@tanstack/react-query').QueryClientProvider,
+    QueryClientProvider,
     { client: makeQueryClient() },
     children,
   );
