@@ -15,23 +15,26 @@ waterRouter.post('/', async (req: Request, res: Response) => {
 
     const today = getKstDateString();
 
-    // 오늘 세션 조회 (waterCount 확인용)
-    const focusSession = await prisma.focusSession.findUnique({
-      where: { userId_date: { userId, date: today } },
-    });
-
-    // 일일 물주기 한도 (최대 12회)
-    if ((focusSession?.waterCount ?? 0) >= 12) {
-      return res.status(409).json({ error: '오늘 물주기 횟수를 모두 사용했습니다.' });
-    }
-
     const dongName = await getDongFullName(dongCode);
     const regionCode = dongName ? regionOf(dongCode, dongName) : dongCode.substring(0, 5);
 
-    const newWaterCount = (focusSession?.waterCount ?? 0) + 1;
-
     // 물주기 기록 + UserCreature + FocusSession 업데이트 (트랜잭션)
-    const [, userCreature] = await prisma.$transaction(async (tx) => {
+    const [, userCreature, newWaterCount] = await prisma.$transaction(async (tx) => {
+      // Row-level lock: prevents concurrent requests from all passing the waterCount < 12 check
+      const rows = await tx.$queryRaw<Array<{ waterCount: number; status: string }>>`
+        SELECT "waterCount", status FROM "FocusSession"
+        WHERE "userId" = ${userId} AND "date" = ${today}
+        FOR UPDATE
+      `;
+      const locked = rows[0] ?? null;
+
+      if ((locked?.waterCount ?? 0) >= 12) {
+        throw Object.assign(new Error('daily limit'), { code: 'DAILY_LIMIT' });
+      }
+
+      const newCount = (locked?.waterCount ?? 0) + 1;
+      const statusReset = locked?.status === 'COMPLETED' ? ({ status: 'IDLE' } as const) : {};
+
       const log = await tx.wateringLog.create({
         data: { userId, dongCode, date: today },
       });
@@ -51,13 +54,11 @@ waterRouter.post('/', async (req: Request, res: Response) => {
         data: { points: { increment: 6 } },
       });
 
-      // FocusSession waterCount 증가 + totalElapsedSec 갱신
-      const statusReset = focusSession?.status === 'COMPLETED' ? ({ status: 'IDLE' } as const) : {};
       await tx.focusSession.upsert({
         where: { userId_date: { userId, date: today } },
         update: {
-          waterCount: { increment: 1 },
-          totalElapsedSec: newWaterCount * 1800,
+          waterCount: newCount,
+          totalElapsedSec: newCount * 1800,
           ...statusReset,
         },
         create: {
@@ -70,7 +71,7 @@ waterRouter.post('/', async (req: Request, res: Response) => {
         },
       });
 
-      return [log, updated];
+      return [log, updated, newCount];
     });
 
     // Redis 캐시 waterCount/creatureStage 업데이트 + collection increment + SSE broadcast
@@ -105,6 +106,9 @@ waterRouter.post('/', async (req: Request, res: Response) => {
       userCreature: { stage: userCreature.stage, totalWaterCount: userCreature.totalWaterCount },
     });
   } catch (err) {
+    if (err instanceof Error && (err as Error & { code?: string }).code === 'DAILY_LIMIT') {
+      return res.status(409).json({ error: '오늘 물주기 횟수를 모두 사용했습니다.' });
+    }
     console.error('[water] POST error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }

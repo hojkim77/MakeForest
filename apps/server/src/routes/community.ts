@@ -2,21 +2,10 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
 import { requireInternalAuth } from '../middleware/auth';
 import { CommunityFeedQuery, ReactionsQuery, ReactionBody, CommentQuery, CommentBody, DeleteCommentBody } from '@makeforest/types';
+import { getKstDateString } from './water.logic';
+import { getKstDateOffset } from './community.logic';
 
 export const communityRouter = Router();
-
-function getKstDateString(now: Date = new Date()): string {
-  return now
-    .toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' })
-    .replace(/\. /g, '-')
-    .replace(/\.$/, '');
-}
-
-function getKstDateOffset(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return getKstDateString(d);
-}
 
 // GET /community/feed?cursor=&limit=20&period=today|week|all&sort=recent|popular|water&regionKey=
 communityRouter.get('/feed', async (req: Request, res: Response) => {

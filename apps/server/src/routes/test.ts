@@ -66,6 +66,32 @@ testRouter.post('/login', async (req: Request, res: Response) => {
   }
 });
 
+// POST /test/complete-session — E2E 테스트용: 물주기 버튼 활성화 상태 세팅
+// 오늘 날짜 FocusSession을 status=RUNNING, elapsedSec=1800으로 upsert → 프론트 물주기 가드 통과
+testRouter.post('/complete-session', async (req: Request, res: Response) => {
+  const { userId } = req.body as { userId: string };
+  if (!userId) return res.status(400).json({ error: 'userId required' });
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { dongCode: true } });
+    if (!user) return res.status(404).json({ error: 'user not found' });
+
+    const today = new Date();
+    today.setHours(today.getHours() + 9); // KST
+    const date = today.toISOString().slice(0, 10);
+
+    const session = await prisma.focusSession.upsert({
+      where: { userId_date: { userId, date } },
+      update: { status: 'RUNNING', totalElapsedSec: 1800 },
+      create: { userId, dongCode: user.dongCode ?? '1168010100', date, status: 'RUNNING', totalElapsedSec: 1800 },
+    });
+    return res.json({ sessionId: session.id });
+  } catch (err) {
+    console.error('[test] complete-session error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /test/run-midnight — 자정 배치 수동 실행 (검증용)
 testRouter.post('/run-midnight', requireInternalAuth, async (_req: Request, res: Response) => {
   try {

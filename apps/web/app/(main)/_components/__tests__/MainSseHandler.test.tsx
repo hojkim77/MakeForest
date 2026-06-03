@@ -5,57 +5,9 @@ import { useSession } from 'next-auth/react';
 import { MainSseHandler } from '../MainSseHandler';
 import { qk } from '@/shared/lib/queryKeys';
 import type { PokeInboxResType, FriendListItemType } from '@makeforest/types';
+import { MockEventSource, installMockEventSource } from '@/test/MockEventSource';
 
-// ── MockEventSource ──────────────────────────────────────────────────────────
-// MainSseHandler opens 2 SSE connections (activityUrl + regionUrl),
-// so we track instances by URL prefix to reference the right one.
-class MockEventSource {
-  static instances: MockEventSource[] = [];
-
-  // activityUrl: /sse/activity-stream (regionCode 없음)
-  // regionUrl:   /sse/activity-stream/regionCode/{rc}
-  static latestActivity(): MockEventSource | undefined {
-    return [...MockEventSource.instances]
-      .reverse()
-      .find((i) => i.url.includes('activity-stream') && !i.url.includes('regionCode'));
-  }
-
-  static latestRegion(): MockEventSource | undefined {
-    return [...MockEventSource.instances]
-      .reverse()
-      .find((i) => i.url.includes('regionCode'));
-  }
-
-  static latestUserStream(): MockEventSource | undefined {
-    return [...MockEventSource.instances]
-      .reverse()
-      .find((i) => i.url.includes('user-stream'));
-  }
-
-  url: string;
-  onerror: (() => void) | null = null;
-  listeners: Record<string, (e: MessageEvent) => void> = {};
-  close = jest.fn();
-
-  constructor(url: string) {
-    this.url = url;
-    MockEventSource.instances.push(this);
-  }
-
-  addEventListener(type: string, cb: (e: MessageEvent) => void) {
-    this.listeners[type] = cb;
-  }
-
-  triggerEvent(type: string, data: object) {
-    this.listeners[type]?.({ data: JSON.stringify(data) } as MessageEvent);
-  }
-
-  triggerError() {
-    this.onerror?.();
-  }
-}
-
-(global as unknown as Record<string, unknown>).EventSource = MockEventSource;
+installMockEventSource();
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 const mockFetch = jest.fn();
@@ -102,7 +54,7 @@ function makeWrapper(queryClient: QueryClient) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
-  MockEventSource.instances = [];
+  MockEventSource.reset();
   mockFetch.mockReset();
   jest.useFakeTimers();
 });

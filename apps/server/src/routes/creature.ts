@@ -1,16 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
+import { getKstDateString } from './water.logic';
+import { aggregateCreatureStats } from './creature.logic';
 
 export const creatureRouter = Router();
-
-function getKstDateString(): string {
-  return new Date().toLocaleDateString('ko-KR', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).replace(/\. /g, '-').replace(/\.$/, '');
-}
 
 // GET /creature/:regionCode — 해당 지역 오늘 UserCreature 집계
 creatureRouter.get('/:regionCode', async (req: Request, res: Response) => {
@@ -35,8 +28,6 @@ creatureRouter.get('/:regionCode', async (req: Request, res: Response) => {
   });
 
   const activeUserIds = sessions.map((s) => s.userId);
-  const totalWaterCount = sessions.reduce((sum, s) => sum + s.waterCount, 0);
-  const userCount = activeUserIds.length;
 
   // 영구 생명체 단계 집계 (date 필터 없음)
   const creatures = await prisma.userCreature.findMany({
@@ -44,8 +35,7 @@ creatureRouter.get('/:regionCode', async (req: Request, res: Response) => {
     select: { stage: true },
   });
 
-  const avgStage = userCount > 0 ? Math.round(creatures.reduce((sum, c) => sum + c.stage, 0) / userCount) : 0;
-  const maxStage = userCount > 0 ? Math.max(...creatures.map((c) => c.stage)) : 0;
+  const stats = aggregateCreatureStats(creatures, sessions);
 
-  return res.json({ userCount, avgStage, maxStage, totalWaterCount, date: today });
+  return res.json({ ...stats, date: today });
 });

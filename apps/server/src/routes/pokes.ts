@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
 import { PokeBody } from '@makeforest/types';
 import { broadcastToUser } from './sse';
+import { isCooldownActive } from './pokes.logic';
 
 const COOLDOWN_MS = parseInt(process.env['POKE_COOLDOWN_SECONDS'] ?? '1800') * 1000;
 
@@ -50,8 +51,10 @@ pokesRouter.post('/', async (req: Request, res: Response) => {
           LIMIT 1
         `;
         if (existing.length > 0) {
-          const cooldownEndsAt = new Date(existing[0]!.createdAt.getTime() + COOLDOWN_MS);
-          throw Object.assign(new Error('COOLDOWN'), { code: 'COOLDOWN', cooldownEndsAt });
+          const cooldown = isCooldownActive(existing[0]!.createdAt, COOLDOWN_MS);
+          if (cooldown.active) {
+            throw Object.assign(new Error('COOLDOWN'), { code: 'COOLDOWN', cooldownEndsAt: cooldown.endsAt });
+          }
         }
 
         // Conditionally deduct 2 points (prevents going negative)
