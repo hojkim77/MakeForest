@@ -1,31 +1,12 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CollectionTab } from '../CollectionTab';
 import { RankingTab } from '../RankingTab';
 import { usePanelStore } from '@/shared/store';
+import { MockEventSource, installMockEventSource } from '@/test/MockEventSource';
+import { makeQueryClient } from '@/test/renderWithProviders';
 
-// ── MockEventSource ────────────────────────────────────────────────────────────
-class MockEventSource {
-  static lastInstance: MockEventSource | null = null;
-  url: string;
-  listeners: Record<string, (e: MessageEvent) => void> = {};
-  close = jest.fn();
-
-  constructor(url: string) {
-    this.url = url;
-    MockEventSource.lastInstance = this;
-  }
-
-  addEventListener(type: string, cb: (e: MessageEvent) => void) {
-    this.listeners[type] = cb;
-  }
-
-  triggerEvent(type: string, data: object) {
-    this.listeners[type]?.({ data: JSON.stringify(data) } as MessageEvent);
-  }
-}
-(global as unknown as Record<string, unknown>).EventSource = MockEventSource;
+installMockEventSource();
 
 const defaultRanking = { period: 'today' as const, rankings: [], myRegionKey: null };
 
@@ -34,12 +15,12 @@ jest.mock('@/shared/store/kstDateStore', () => ({
   useKstDateStore: () => '2026-05-24',
 }));
 
-function makeQueryClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
-}
-
 function wrapper({ children }: { children: React.ReactNode }) {
-  return React.createElement(QueryClientProvider, { client: makeQueryClient() }, children);
+  return React.createElement(
+    require('@tanstack/react-query').QueryClientProvider,
+    { client: makeQueryClient() },
+    children,
+  );
 }
 
 function makeCollection(overrides = {}) {
@@ -54,7 +35,7 @@ function makeCollection(overrides = {}) {
 }
 
 beforeEach(() => {
-  MockEventSource.lastInstance = null;
+  MockEventSource.reset();
   usePanelStore.setState({ activeTab: null });
 });
 

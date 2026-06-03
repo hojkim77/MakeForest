@@ -1,29 +1,20 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DailyCollectionCard } from '../DailyCollectionCard';
+import { makeQueryClient } from '@/test/renderWithProviders';
+import { makeCollection } from '@/test/factories/collection';
 
 // ── Mock: kstDateStore ───────────────────────────────────────────────────────
 jest.mock('@/shared/store/kstDateStore', () => ({
   useKstDateStore: () => '2026-05-24',
 }));
 
-function makeQueryClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
-}
-
 function wrapper({ children }: { children: React.ReactNode }) {
-  return <QueryClientProvider client={makeQueryClient()}>{children}</QueryClientProvider>;
-}
-
-function makeCollection(overrides = {}) {
-  return {
-    creatureType: 'MUSHROOM',
-    targetCount: 50,
-    currentCount: 38,
-    isCompleted: false,
-    ...overrides,
-  };
+  return React.createElement(
+    require('@tanstack/react-query').QueryClientProvider,
+    { client: makeQueryClient() },
+    children,
+  );
 }
 
 describe('DailyCollectionCard — 렌더링', () => {
@@ -32,7 +23,7 @@ describe('DailyCollectionCard — 렌더링', () => {
       <DailyCollectionCard
         dongCode="1111010100"
         regionCode="11"
-        initialCollection={makeCollection()}
+        initialCollection={makeCollection({ currentCount: 38, targetCount: 50 })}
       />,
       { wrapper },
     );
@@ -53,11 +44,10 @@ describe('DailyCollectionCard — 렌더링', () => {
       <DailyCollectionCard
         dongCode="1111010100"
         regionCode="11"
-        initialCollection={makeCollection({ isCompleted: true, currentCount: 50 })}
+        initialCollection={makeCollection({ isCompleted: true, currentCount: 50, targetCount: 50 })}
       />,
       { wrapper },
     );
     expect(screen.getByText(/채집 완료/)).toBeInTheDocument();
   });
 });
-
