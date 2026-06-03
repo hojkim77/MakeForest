@@ -14,6 +14,7 @@ module.exports = {
   },
   // Increase timeout for testcontainers startup
   testTimeout: 30000,
+  setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup/integrationTeardown.ts'],
   // Force exit after all tests complete — route handler void blocks may still
   // be pending when the container shuts down, causing "Cannot log after tests" noise
   forceExit: true,

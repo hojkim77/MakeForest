@@ -13,6 +13,13 @@ export function getTestPrisma(): PrismaClient {
   return _prisma;
 }
 
+export async function disconnectTestPrisma(): Promise<void> {
+  if (_prisma) {
+    await _prisma.$disconnect();
+    _prisma = null;
+  }
+}
+
 export async function truncateAll(): Promise<void> {
   const prisma = getTestPrisma();
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`
