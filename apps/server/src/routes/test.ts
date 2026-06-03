@@ -73,14 +73,17 @@ testRouter.post('/complete-session', async (req: Request, res: Response) => {
   if (!userId) return res.status(400).json({ error: 'userId required' });
 
   try {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { dongCode: true } });
+    if (!user) return res.status(404).json({ error: 'user not found' });
+
     const today = new Date();
     today.setHours(today.getHours() + 9); // KST
     const date = today.toISOString().slice(0, 10);
 
     const session = await prisma.focusSession.upsert({
       where: { userId_date: { userId, date } },
-      update: { status: 'RUNNING', elapsedSec: 1800 },
-      create: { userId, date, status: 'RUNNING', elapsedSec: 1800 },
+      update: { status: 'RUNNING', totalElapsedSec: 1800 },
+      create: { userId, dongCode: user.dongCode ?? '1168010100', date, status: 'RUNNING', totalElapsedSec: 1800 },
     });
     return res.json({ sessionId: session.id });
   } catch (err) {

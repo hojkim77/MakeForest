@@ -1,4 +1,4 @@
-import type { User, FocusSession, UserCreature, Friendship, Poke } from '@makeforest/db';
+import type { Prisma, User, FocusSession, UserCreature, Friendship, Poke } from '@makeforest/db';
 import { getTestPrisma } from './testDb';
 
 let _seq = 0;
@@ -28,9 +28,13 @@ export async function makeUser(
 
 // ── FocusSession ──────────────────────────────────────────────────────────────
 
+type FocusSessionOverrides = Partial<Omit<FocusSession, 'id' | 'createdAt' | 'todos'>> & {
+  todos?: Prisma.InputJsonValue;
+};
+
 export async function makeFocusSession(
   userId: string,
-  overrides: Partial<Omit<FocusSession, 'id' | 'createdAt'>> = {},
+  overrides: FocusSessionOverrides = {},
 ): Promise<FocusSession> {
   const prisma = getTestPrisma();
   const today = new Date().toISOString().slice(0, 10);

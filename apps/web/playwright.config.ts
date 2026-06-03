@@ -26,12 +26,12 @@ export default defineConfig({
   ],
 
   // Start Next.js dev server when running locally
-  webServer: process.env.CI
-    ? undefined
-    : {
-        command: 'yarn dev',
-        url: baseURL,
-        reuseExistingServer: true,
-        timeout: 60_000,
-      },
+  ...(process.env.CI ? {} : {
+    webServer: {
+      command: 'yarn dev',
+      url: baseURL,
+      reuseExistingServer: true,
+      timeout: 60_000,
+    },
+  }),
 });
