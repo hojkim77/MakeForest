@@ -16,6 +16,7 @@ const nextAuth = NextAuth({
   ],
   pages: {
     signIn: '/login',
+    error: '/login',
   },
   session: { strategy: 'jwt' },
   callbacks: {
