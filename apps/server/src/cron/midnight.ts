@@ -2,7 +2,8 @@ import cron from 'node-cron';
 import { prisma } from '@makeforest/db';
 import { redis, RedisKeys, removeActiveDong } from '@makeforest/redis';
 import { broadcastHeatmap } from '../routes/sse';
-import { calcPersonalStage, getKstDateString } from '../routes/water.logic';
+import { getKstDateString } from '../routes/water.logic';
+import { calcPersonalStage } from '../routes/growth.constants';
 
 export function registerCronJobs(): void {
   // 매일 자정 (KST = UTC+9, 즉 UTC 15:00)
@@ -22,7 +23,7 @@ export function registerCronJobs(): void {
 export async function runMidnightBatch(): Promise<void> {
   const yesterday = getKstDateString(new Date(Date.now() - 1000));
 
-  // ① 물주기 미입력 자동 반영: 2시간 이상 집중 & waterCount=0인 유저
+  // ① 물주기 미입력 자동 반영: 2 × focusLengthMin 분 이상 집중 & waterCount=0인 유저
   await autoWaterUnwatered(yesterday);
 
   // ② RUNNING 세션 전체 ABANDONED 처리
@@ -40,45 +41,72 @@ export async function runMidnightBatch(): Promise<void> {
 
   // ③ Redis 활성 세션 정리
   await clearRedisActiveSessions(runningSessions.map((s) => ({ id: s.id, dongCode: s.dongCode })));
-
 }
 
 async function autoWaterUnwatered(date: string): Promise<void> {
   const kstMidnightUtc = new Date(`${date}T00:00:00+09:00`);
   const nextMidnightUtc = new Date(kstMidnightUtc.getTime() + 86400000);
 
-  // 해당 날짜 FocusSession 전체 조회
   const sessions = await prisma.focusSession.findMany({
     where: { date },
-    select: { userId: true, dongCode: true, startedAt: true, totalElapsedSec: true, waterCount: true, status: true },
+    select: {
+      userId: true,
+      dongCode: true,
+      startedAt: true,
+      totalElapsedSec: true,
+      waterCount: true,
+      status: true,
+      focusLengthMin: true,
+      segmentCount: true,
+    },
   });
 
   for (const session of sessions) {
-    // waterCount가 이미 있으면 스킵
     if (session.waterCount > 0) continue;
 
-    // totalElapsedSec + 자정까지 RUNNING 중이었다면 남은 시간 추가
+    // Legacy rows (focusLengthMin NULL) fall back to 30 — preserves old behavior exactly.
+    const fLen = session.focusLengthMin ?? 30;
+    const segs = session.segmentCount ?? 12;
+    const autoWaterThreshold = 2 * fLen * 60;
+    const perUserCapSec = fLen * segs * 60;
+
     let totalSec = session.totalElapsedSec;
     if (session.status === 'RUNNING') {
       totalSec += Math.floor((nextMidnightUtc.getTime() - session.startedAt.getTime()) / 1000);
     }
 
-    if (totalSec < 7200) continue;
+    if (totalSec < autoWaterThreshold) continue;
 
     await prisma.$transaction(async (tx) => {
       const existing = await tx.userCreature.findUnique({ where: { userId: session.userId } });
-      const newWaterCount = (existing?.totalWaterCount ?? 0) + 1;
-      const newStage = calcPersonalStage(newWaterCount);
+      const prevFocusMinutes = (existing?.totalFocusMinutes ?? 0) > 0
+        ? (existing!.totalFocusMinutes)
+        : (existing?.totalWaterCount ?? 0) * 30;
+      const newTotalFocusMinutes = prevFocusMinutes + fLen;
+      const newTotalWaterCount = Math.floor(newTotalFocusMinutes / 30);
+      const newStage = calcPersonalStage(newTotalFocusMinutes);
 
       await tx.userCreature.upsert({
         where: { userId: session.userId },
-        update: { totalWaterCount: newWaterCount, stage: newStage },
-        create: { userId: session.userId, totalWaterCount: newWaterCount, stage: newStage },
+        update: {
+          totalFocusMinutes: newTotalFocusMinutes,
+          totalWaterCount: newTotalWaterCount,
+          stage: newStage,
+        },
+        create: {
+          userId: session.userId,
+          totalFocusMinutes: newTotalFocusMinutes,
+          totalWaterCount: newTotalWaterCount,
+          stage: newStage,
+        },
       });
 
       await tx.focusSession.update({
         where: { userId_date: { userId: session.userId, date } },
-        data: { waterCount: 1, totalElapsedSec: Math.min(totalSec, 21600) },
+        data: {
+          waterCount: 1,
+          totalElapsedSec: Math.min(totalSec, perUserCapSec),
+        },
       });
 
       await tx.wateringLog.create({
@@ -105,4 +133,3 @@ async function clearRedisActiveSessions(
   await redis.del(RedisKeys.heatmapDong());
   broadcastHeatmap({});
 }
-

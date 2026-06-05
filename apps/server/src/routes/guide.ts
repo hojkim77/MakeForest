@@ -7,8 +7,8 @@ import {
 } from '@makeforest/types';
 import { getKstDateString } from './water.logic';
 import { getKstDateString as getKstDateStringWithOffset, calcStreak } from './stats.logic';
+import { calcPersonalStage, minutesUntilNextStage } from './growth.constants';
 
-const PERSONAL_STAGE_THRESHOLDS = [0, 12, 36, 72, 132, 216, 336, 504, 744, 1080];
 const DAILY_GOAL = 12;
 
 const FULL_TOUR_STEPS = [
@@ -69,7 +69,7 @@ guideRouter.get('/state', async (req: Request, res: Response) => {
       }),
       prisma.userCreature.findUnique({
         where: { userId },
-        select: { stage: true, totalWaterCount: true },
+        select: { stage: true, totalWaterCount: true, totalFocusMinutes: true },
       }),
       prisma.focusSession.findUnique({
         where: { userId_date: { userId, date: todayKst } },
@@ -90,12 +90,15 @@ guideRouter.get('/state', async (req: Request, res: Response) => {
 
     const stage = creature?.stage ?? 0;
     const totalWaterCount = creature?.totalWaterCount ?? 0;
+    // Fallback for legacy rows where totalFocusMinutes may be 0 but totalWaterCount is set
+    const effectiveFocusMinutes =
+      (creature?.totalFocusMinutes ?? 0) > 0
+        ? (creature!.totalFocusMinutes)
+        : totalWaterCount * 30;
 
-    let watersUntilNextStage: number | null = null;
-    if (stage < PERSONAL_STAGE_THRESHOLDS.length - 1) {
-      const nextThreshold = PERSONAL_STAGE_THRESHOLDS[stage + 1]!;
-      watersUntilNextStage = Math.max(0, nextThreshold - totalWaterCount);
-    }
+    // stage from minutesUntilNextStage uses effectiveFocusMinutes
+    const computedStage = calcPersonalStage(effectiveFocusMinutes);
+    const stageToUse = computedStage || stage;
 
     return res.json({
       kind: 'daily',
@@ -107,9 +110,10 @@ guideRouter.get('/state', async (req: Request, res: Response) => {
           dailyGoal: DAILY_GOAL,
         },
         creature: {
-          stage,
+          stage: stageToUse,
           totalWaterCount,
-          watersUntilNextStage,
+          totalFocusMinutes: effectiveFocusMinutes,
+          minutesUntilNextStage: minutesUntilNextStage(effectiveFocusMinutes),
         },
         neighborhood: {
           dongCode,

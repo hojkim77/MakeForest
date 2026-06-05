@@ -13,17 +13,21 @@ export const WaterMeQuery = z.object({
 
 export const WaterRes = z.object({
   myWaterCount: z.number(),
+  segmentCount: z.number(),
+  focusLengthMin: z.number(),
   userCreature: z.object({
     stage: z.number(),
     totalWaterCount: z.number(),
+    totalFocusMinutes: z.number(),
+    minutesUntilNextStage: z.number().nullable(),
   }),
 });
 
 export const WaterMeRes = z.object({
   waterCount: z.number(),
   date: z.string(),
-  creatureStage: z.number(),
-  creatureWaterCount: z.number(),
+  focusLengthMin: z.number(),
+  segmentCount: z.number(),
 });
 
 export type WaterBodyType = z.infer<typeof WaterBody>;

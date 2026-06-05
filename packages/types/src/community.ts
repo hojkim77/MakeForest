@@ -16,6 +16,7 @@ export interface CommunityComment {
 
 export interface CommunityPost {
   id: string;
+  goal: string | null;
   createdAt: string;
   dongName: string | null;
   user: { nickname: string; dongCode: string | null };

@@ -37,7 +37,8 @@ export const GuideStateRes = z.discriminatedUnion('kind', [
       creature: z.object({
         stage: z.number().int().min(0).max(9),
         totalWaterCount: z.number().int().min(0),
-        watersUntilNextStage: z.number().int().min(0).nullable(),
+        totalFocusMinutes: z.number().int().min(0),
+        minutesUntilNextStage: z.number().int().min(0).nullable(),
       }),
       neighborhood: z.object({
         dongCode: z.string(),
@@ -62,3 +63,4 @@ export const GuideAckRes = z.object({ ok: z.literal(true) });
 export type GuideStateResType = z.infer<typeof GuideStateRes>;
 export type FullTourStepIdType = z.infer<typeof FullTourStepId>;
 export type DailyGuideStepIdType = z.infer<typeof DailyGuideStepId>;
+export type GuideAckResType = z.infer<typeof GuideAckRes>;

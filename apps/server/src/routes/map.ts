@@ -27,10 +27,13 @@ export async function buildUsersOverlay(): Promise<MapUser[]> {
     pixelX: s.pixelX,
     pixelY: s.pixelY,
     totalWaterCount: s.totalWaterCount,
+    totalFocusMinutes: s.totalFocusMinutes ?? 0,
     todayWaterCount: s.todayWaterCount,
     creatureStage: s.creatureStage,
     sessionStatus: s.status === 'RUNNING' ? 'RUNNING' : s.status === 'IDLE' ? 'IDLE' : 'COMPLETE',
-    todos: s.todosPublic ? s.todos : [],
+    focusLengthMin: s.focusLengthMin ?? 30,
+    segmentCount: s.segmentCount ?? 12,
+    todayGoal: s.todayGoal ?? null,
   }));
 
   // 같은 dongCode 내 오늘 물주기 기준 순위 (1-based, 동률 처리 포함)
