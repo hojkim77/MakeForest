@@ -8,6 +8,7 @@ export const qk = {
   },
   sessions: {
     today: (userId: string, kstDate: string) => ['sessions', 'today', userId, kstDate] as const,
+    todayState: (userId: string, kstDate: string) => ['sessions', 'todayState', userId, kstDate] as const,
   },
   collection: {
     today: (regionCode: string, kstDate: string) => ['collection', 'today', regionCode, kstDate] as const,

@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useTodoStore, useTimerStore, selectIsDirty } from '@/shared/store';
+import { useSession } from 'next-auth/react';
+import { useTodoStore, selectIsDirty } from '@/shared/store';
+import { useTodaySessionQuery } from '@/shared/hooks/queries/useTodaySessionQuery';
 import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 import { toast } from '@/shared/lib/toast';
@@ -11,7 +13,11 @@ import { Input } from '@/shared/components/ui/Input';
 export function TodoCardContent() {
   const { todos, addTodo, toggleTodo, removeTodo, markSaved } = useTodoStore();
   const isDirty = useTodoStore(selectIsDirty);
-  const sessionId = useTimerStore((s) => s.sessionId);
+
+  const { data: authSession } = useSession();
+  const userId = authSession?.user?.id ?? null;
+  const { data: todayState } = useTodaySessionQuery({ userId });
+  const sessionId = todayState?.sessionId ?? null;
 
   const [input, setInput] = useState('');
   const [saving, setSaving] = useState(false);

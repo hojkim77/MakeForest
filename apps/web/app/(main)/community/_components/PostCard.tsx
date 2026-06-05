@@ -44,6 +44,11 @@ export function PostCard({ post, isLoggedIn, myReactionEmojis, feedFilters }: Pr
         </div>
       </div>
 
+      {/* Goal */}
+      {post.goal && (
+        <p className="font-sans text-body text-on-surface">{post.goal}</p>
+      )}
+
       {/* Todos */}
       {post.session?.todosPublic && post.session.todos.length > 0 && (
         <ul className="flex flex-col gap-xs pl-xs">

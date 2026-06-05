@@ -18,9 +18,9 @@ const STATUS_OPACITY: Record<string, number> = {
   IDLE: 0.25,
 };
 
-const MIN_SCREEN_PX = 30;  // 화면 기준 최소 스프라이트 크기 (유저 20명 이상)
-const MAX_SCREEN_PX = 100; // 화면 기준 최대 스프라이트 크기 (유저 1명 이하)
-const MIN_SIZE_AT = 20;    // 이 유저 수 이상이면 MIN_SCREEN_PX 고정
+const MIN_SCREEN_PX = 30;
+const MAX_SCREEN_PX = 100;
+const MIN_SIZE_AT = 20;
 
 function spriteSizeForCount(count: number): number {
   if (count <= 1) return MAX_SCREEN_PX;
@@ -105,10 +105,9 @@ export function UserOverlay({ users, mapW, mapH, scale }: UserOverlayProps) {
         );
       })}
 
-      {/* 팝오버: transform 밖에 렌더링해 scale 영향 없음 */}
       {hovered && typeof document !== 'undefined' && createPortal(
         <div
-          className="pointer-events-none fixed z-tooltip w-max max-w-[140px] border border-white/20 bg-black/85 px-2 py-1.5 text-[11px] leading-snug text-white shadow-lg"
+          className="pointer-events-none fixed z-tooltip w-max max-w-[160px] border border-white/20 bg-black/85 px-2 py-1.5 text-[11px] leading-snug text-white shadow-lg"
           style={{ left: hovered.screenX, top: hovered.screenY + 6, transform: 'translateX(-50%)' }}
         >
           {/* 닉네임 + 동네 순위 */}
@@ -124,20 +123,15 @@ export function UserOverlay({ users, mapW, mapH, scale }: UserOverlayProps) {
 
           {/* 오늘 물주기 횟수 */}
           <p className="text-blue-300 text-[10px]">
-            💧 {hovered.user.todayWaterCount}/12회
+            💧 {hovered.user.todayWaterCount}/{hovered.user.segmentCount}회
           </p>
 
-          {/* 오늘의 할일 */}
-          {hovered.user.todos.length > 0 && (
-            <div className="mt-1 border-t border-white/10 pt-1 space-y-px">
-              {hovered.user.todos.filter((t) => !t.done).slice(0, 3).map((t, i) => (
-                <p key={i} className="truncate text-white/70 text-[10px]">· {t.text}</p>
-              ))}
-              {hovered.user.todos.filter((t) => !t.done).length > 3 && (
-                <p className="text-white/40 text-[10px]">+{hovered.user.todos.filter((t) => !t.done).length - 3}개</p>
-              )}
-            </div>
-          )}
+          {/* 오늘의 목표 */}
+          <div className="mt-1 border-t border-white/10 pt-1">
+            <p className="text-white/80 text-[10px] leading-snug">
+              {hovered.user.todayGoal?.trim() || '오늘의 목표 작성 전'}
+            </p>
+          </div>
         </div>,
         document.body,
       )}

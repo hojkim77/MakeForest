@@ -47,4 +47,7 @@ export const API_PATHS = {
   POINTS_ME: () => '/api/points/me',
   // SSE user stream
   SSE_USER_STREAM: () => '/api/sse/user-stream',
+  // Guide
+  GUIDE_TOUR_COMPLETE: () => '/api/guide/tour/complete',
+  GUIDE_DAILY_DISMISS: () => '/api/guide/daily/dismiss',
 } as const;

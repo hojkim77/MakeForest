@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@makeforest/db';
 import { broadcastToRegion, broadcastUsersOverlay } from './sse';
-import { calcPersonalStage, getKstDateString } from './water.logic';
+import { calcPersonalStage, minutesUntilNextStage, getKstDateString } from './water.logic';
 import { regionOf, WaterBody, WaterMeQuery } from '@makeforest/types';
 import { redis, RedisKeys, getSession, setSession } from '@makeforest/redis';
 import { getDongFullName } from '../dongCache';
@@ -18,18 +18,19 @@ waterRouter.post('/', async (req: Request, res: Response) => {
     const dongName = await getDongFullName(dongCode);
     const regionCode = dongName ? regionOf(dongCode, dongName) : dongCode.substring(0, 5);
 
-    // 물주기 기록 + UserCreature + FocusSession 업데이트 (트랜잭션)
-    const [, userCreature, newWaterCount] = await prisma.$transaction(async (tx) => {
-      // Row-level lock: prevents concurrent requests from all passing the waterCount < 12 check
-      const rows = await tx.$queryRaw<Array<{ waterCount: number; status: string }>>`
-        SELECT "waterCount", status FROM "FocusSession"
+    const [, userCreature, newWaterCount, focusLengthMin, segmentCount] = await prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<Array<{ waterCount: number; status: string; focusLengthMin: number | null; segmentCount: number | null }>>`
+        SELECT "waterCount", status, "focusLengthMin", "segmentCount" FROM "FocusSession"
         WHERE "userId" = ${userId} AND "date" = ${today}
         FOR UPDATE
       `;
       const locked = rows[0] ?? null;
 
-      if ((locked?.waterCount ?? 0) >= 12) {
-        throw Object.assign(new Error('daily limit'), { code: 'DAILY_LIMIT' });
+      const fLen = locked?.focusLengthMin ?? 30;
+      const segs = locked?.segmentCount ?? 12;
+
+      if ((locked?.waterCount ?? 0) >= segs) {
+        throw Object.assign(new Error('daily limit'), { code: 'DAILY_WATER_LIMIT' });
       }
 
       const newCount = (locked?.waterCount ?? 0) + 1;
@@ -40,13 +41,24 @@ waterRouter.post('/', async (req: Request, res: Response) => {
       });
 
       const existing = await tx.userCreature.findUnique({ where: { userId } });
-      const lifetimeCount = (existing?.totalWaterCount ?? 0) + 1;
-      const newStage = calcPersonalStage(lifetimeCount);
+      const prevFocusMinutes = existing?.totalFocusMinutes ?? (existing ? (existing.totalWaterCount * 30) : 0);
+      const newTotalFocusMinutes = prevFocusMinutes + fLen;
+      const newTotalWaterCount = Math.floor(newTotalFocusMinutes / 30);
+      const newStage = calcPersonalStage(newTotalFocusMinutes);
 
       const updated = await tx.userCreature.upsert({
         where: { userId },
-        update: { totalWaterCount: lifetimeCount, stage: newStage },
-        create: { userId, totalWaterCount: lifetimeCount, stage: newStage },
+        update: {
+          totalFocusMinutes: newTotalFocusMinutes,
+          totalWaterCount: newTotalWaterCount,
+          stage: newStage,
+        },
+        create: {
+          userId,
+          totalFocusMinutes: newTotalFocusMinutes,
+          totalWaterCount: newTotalWaterCount,
+          stage: newStage,
+        },
       });
 
       await tx.user.update({
@@ -58,7 +70,7 @@ waterRouter.post('/', async (req: Request, res: Response) => {
         where: { userId_date: { userId, date: today } },
         update: {
           waterCount: newCount,
-          totalElapsedSec: newCount * 1800,
+          totalElapsedSec: newCount * fLen * 60,
           ...statusReset,
         },
         create: {
@@ -66,15 +78,14 @@ waterRouter.post('/', async (req: Request, res: Response) => {
           dongCode,
           date: today,
           waterCount: 1,
-          totalElapsedSec: 1800,
+          totalElapsedSec: fLen * 60,
           status: 'IDLE',
         },
       });
 
-      return [log, updated, newCount];
+      return [log, updated, newCount, fLen, segs];
     });
 
-    // Redis 캐시 waterCount/creatureStage 업데이트 + collection increment + SSE broadcast
     void (async () => {
       try {
         const userSessionId = await redis.get(RedisKeys.userSession(userId));
@@ -84,6 +95,7 @@ waterRouter.post('/', async (req: Request, res: Response) => {
             await setSession(userSessionId, {
               ...cached,
               totalWaterCount: userCreature.totalWaterCount,
+              totalFocusMinutes: userCreature.totalFocusMinutes,
               todayWaterCount: newWaterCount,
               creatureStage: userCreature.stage,
               status: 'IDLE',
@@ -103,11 +115,18 @@ waterRouter.post('/', async (req: Request, res: Response) => {
 
     return res.json({
       myWaterCount: newWaterCount,
-      userCreature: { stage: userCreature.stage, totalWaterCount: userCreature.totalWaterCount },
+      segmentCount,
+      focusLengthMin,
+      userCreature: {
+        stage: userCreature.stage,
+        totalWaterCount: userCreature.totalWaterCount,
+        totalFocusMinutes: userCreature.totalFocusMinutes,
+        minutesUntilNextStage: minutesUntilNextStage(userCreature.totalFocusMinutes),
+      },
     });
   } catch (err) {
-    if (err instanceof Error && (err as Error & { code?: string }).code === 'DAILY_LIMIT') {
-      return res.status(409).json({ error: '오늘 물주기 횟수를 모두 사용했습니다.' });
+    if (err instanceof Error && (err as Error & { code?: string }).code === 'DAILY_WATER_LIMIT') {
+      return res.status(409).json({ error: '오늘 물주기 횟수를 모두 사용했습니다.', code: 'DAILY_WATER_LIMIT' });
     }
     console.error('[water] POST error:', err);
     return res.status(500).json({ error: 'Internal server error' });
@@ -122,9 +141,15 @@ waterRouter.get('/me', async (req: Request, res: Response) => {
 
     const session = await prisma.focusSession.findUnique({
       where: { userId_date: { userId, date: today } },
+      select: { waterCount: true, focusLengthMin: true, segmentCount: true },
     });
 
-    return res.json({ waterCount: session?.waterCount ?? 0, date: today });
+    return res.json({
+      waterCount: session?.waterCount ?? 0,
+      date: today,
+      focusLengthMin: session?.focusLengthMin ?? 30,
+      segmentCount: session?.segmentCount ?? 12,
+    });
   } catch (err) {
     console.error('[water] GET /me error:', err);
     return res.status(500).json({ error: 'Internal server error' });

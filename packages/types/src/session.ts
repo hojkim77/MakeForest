@@ -48,8 +48,12 @@ export interface ActiveSessionCache {
   nickname: string;
   pixelX: number;
   pixelY: number;
-  totalWaterCount: number;  // 생애 누적
-  todayWaterCount: number;  // 오늘 물주기 횟수
+  totalWaterCount: number;   // derived: floor(totalFocusMinutes/30)
+  totalFocusMinutes: number; // canonical growth unit
+  todayWaterCount: number;   // 오늘 물주기 횟수
   creatureStage: number;
   todosPublic: boolean;
+  focusLengthMin: number;    // 오늘 집중 시간 설정 (분)
+  segmentCount: number;      // 오늘 반복 횟수 설정
+  todayGoal: string | null;  // 오늘의 목표 (공개)
 }

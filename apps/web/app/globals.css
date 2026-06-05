@@ -90,6 +90,15 @@
     animation: water-flow 2s linear infinite;
   }
 
+  /* Bubble bounce animation (setup stages only) */
+  @keyframes bubble-bounce {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-5px); }
+  }
+  .animate-bubble-bounce {
+    animation: bubble-bounce 2.5s ease-in-out infinite;
+  }
+
   /* Dot blink animation */
   @keyframes dot-blink {
     0%, 20%  { opacity: 0.2; }

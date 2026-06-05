@@ -1,19 +1,29 @@
 import { calcPersonalStage, getKstDateString, checkDailyCapExceeded } from '../water.logic';
 
-describe('calcPersonalStage', () => {
-  // PERSONAL_STAGE_THRESHOLDS = [0, 12, 36, 72, 132, 216, 336, 504, 744, 1080] — 10단계
-  it('0회 → stage 0', () => expect(calcPersonalStage(0)).toBe(0));
-  it('11회 → stage 0 (임계값 미달)', () => expect(calcPersonalStage(11)).toBe(0));
-  it('12회 → stage 1 (정확히 임계값)', () => expect(calcPersonalStage(12)).toBe(1));
-  it('36회 → stage 2 (정확히 임계값)', () => expect(calcPersonalStage(36)).toBe(2));
-  it('72회 → stage 3 (정확히 임계값)', () => expect(calcPersonalStage(72)).toBe(3));
-  it('132회 → stage 4 (정확히 임계값)', () => expect(calcPersonalStage(132)).toBe(4));
-  it('216회 → stage 5 (정확히 임계값)', () => expect(calcPersonalStage(216)).toBe(5));
-  it('336회 → stage 6 (정확히 임계값)', () => expect(calcPersonalStage(336)).toBe(6));
-  it('504회 → stage 7 (정확히 임계값)', () => expect(calcPersonalStage(504)).toBe(7));
-  it('744회 → stage 8 (정확히 임계값)', () => expect(calcPersonalStage(744)).toBe(8));
-  it('1080회 → stage 9 (최고 단계)', () => expect(calcPersonalStage(1080)).toBe(9));
-  it('9999회 → stage 9 (상한 클램프)', () => expect(calcPersonalStage(9999)).toBe(9));
+// calcPersonalStage now uses minute-based thresholds via growth.constants.ts.
+// Minute thresholds: [0, 360, 1080, 2160, 3960, 6480, 10080, 15120, 22320, 32400]
+// These are identical to legacy water thresholds × 30 for 30-min users.
+
+describe('calcPersonalStage — minute-based thresholds', () => {
+  it('0분 → stage 0', () => expect(calcPersonalStage(0)).toBe(0));
+  it('359분 → stage 0 (임계값 미달)', () => expect(calcPersonalStage(359)).toBe(0));
+  it('360분 → stage 1 (정확히 임계값; 30min×12회)', () => expect(calcPersonalStage(360)).toBe(1));
+  it('1080분 → stage 2', () => expect(calcPersonalStage(1080)).toBe(2));
+  it('2160분 → stage 3', () => expect(calcPersonalStage(2160)).toBe(3));
+  it('3960분 → stage 4', () => expect(calcPersonalStage(3960)).toBe(4));
+  it('6480분 → stage 5', () => expect(calcPersonalStage(6480)).toBe(5));
+  it('10080분 → stage 6', () => expect(calcPersonalStage(10080)).toBe(6));
+  it('15120분 → stage 7', () => expect(calcPersonalStage(15120)).toBe(7));
+  it('22320분 → stage 8', () => expect(calcPersonalStage(22320)).toBe(8));
+  it('32400분 → stage 9 (최고 단계)', () => expect(calcPersonalStage(32400)).toBe(9));
+  it('99999분 → stage 9 (상한 클램프)', () => expect(calcPersonalStage(99999)).toBe(9));
+});
+
+describe('calcPersonalStage — 30min 레거시 유저 동일 단계 보장', () => {
+  // legacy thresholds × 30: [0,12,36,72,132,216,336,504,744,1080] → ×30 minutes
+  it('12 waters (360분) → stage 1 (동일)', () => expect(calcPersonalStage(12 * 30)).toBe(1));
+  it('36 waters (1080분) → stage 2 (동일)', () => expect(calcPersonalStage(36 * 30)).toBe(2));
+  it('1080 waters (32400분) → stage 9 (동일)', () => expect(calcPersonalStage(1080 * 30)).toBe(9));
 });
 
 describe('getKstDateString — KST 자정 경계', () => {
@@ -30,7 +40,9 @@ describe('getKstDateString — KST 자정 경계', () => {
   });
 });
 
-describe('checkDailyCapExceeded — 하루 6시간(21600초) 총량', () => {
-  it('21599초 → 미초과 (1초 부족)', () => expect(checkDailyCapExceeded(21599)).toBe(false));
-  it('21600초 → 초과 (정확히 6시간)', () => expect(checkDailyCapExceeded(21600)).toBe(true));
+describe('checkDailyCapExceeded — 사용자별 총량', () => {
+  it('30min×12 = 21600초: 21599초 → 미초과', () => expect(checkDailyCapExceeded(21599, 21600)).toBe(false));
+  it('30min×12 = 21600초: 21600초 → 초과', () => expect(checkDailyCapExceeded(21600, 21600)).toBe(true));
+  it('50min×10 = 30000초: 29999초 → 미초과', () => expect(checkDailyCapExceeded(29999, 30000)).toBe(false));
+  it('50min×10 = 30000초: 30000초 → 초과', () => expect(checkDailyCapExceeded(30000, 30000)).toBe(true));
 });

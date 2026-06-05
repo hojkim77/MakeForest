@@ -95,6 +95,7 @@ communityRouter.get('/feed', async (req: Request, res: Response) => {
 
       return {
         id: post.id,
+        goal: post.goal ?? null,
         createdAt: post.createdAt.toISOString(),
         dongName: post.dongName ?? null,
         user: { nickname: post.user.nickname, dongCode: post.user.dongCode },
