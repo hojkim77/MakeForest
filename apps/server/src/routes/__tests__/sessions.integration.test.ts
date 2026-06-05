@@ -1,6 +1,6 @@
 import supertest from 'supertest';
 import { app } from '../../app';
-import { truncateAll, getTestPrisma } from '../../__tests__/helpers/testDb';
+import { truncateAll } from '../../__tests__/helpers/testDb';
 import { makeUser } from '../../__tests__/helpers/factories';
 import { internalAuthHeader } from '../../__tests__/helpers/auth';
 
