@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useGuideStateQuery } from '@/shared/hooks/queries/useGuideStateQuery';
+import { useGuideTourCompleteMutation } from '@/shared/hooks/mutations/useGuideTourCompleteMutation';
+import { useGuideDailyDismissMutation } from '@/shared/hooks/mutations/useGuideDailyDismissMutation';
 import { FullTourOverlay } from './FullTourOverlay';
 import { DailyGuideBubbles } from './DailyGuideBubbles';
 import type { FullTourStepIdType, DailyGuideStepIdType, GuideStateResType } from '@makeforest/types';
@@ -13,6 +15,8 @@ export function GuideController() {
   const loading = isPending;
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const tourCompleteMutation = useGuideTourCompleteMutation();
+  const dailyDismissMutation = useGuideDailyDismissMutation();
 
   // Delay mount to avoid SSR flash — show after fetch completes
   useEffect(() => {
@@ -21,31 +25,15 @@ export function GuideController() {
     return () => clearTimeout(t);
   }, [loading]);
 
-  const handleTourDone = useCallback(async (outcome: 'completed' | 'skipped') => {
+  const handleTourDone = useCallback((outcome: 'completed' | 'skipped') => {
     setDismissed(true);
-    try {
-      await fetch('/api/guide/tour/complete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ outcome }),
-      });
-    } catch {
-      // silent — guide simply won't re-appear next visit
-    }
-  }, []);
+    tourCompleteMutation.mutate({ outcome });
+  }, [tourCompleteMutation]);
 
-  const handleDailyDone = useCallback(async (outcome: 'completed' | 'skipped') => {
+  const handleDailyDone = useCallback((outcome: 'completed' | 'skipped') => {
     setDismissed(true);
-    try {
-      await fetch('/api/guide/daily/dismiss', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ outcome }),
-      });
-    } catch {
-      // silent
-    }
-  }, []);
+    dailyDismissMutation.mutate({ outcome });
+  }, [dailyDismissMutation]);
 
   if (!visible || dismissed || !data || data.kind === 'none') return null;
 

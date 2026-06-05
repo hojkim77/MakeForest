@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useKstDateStore } from '@/shared/store/kstDateStore';
-import { useTimerStore } from '@/shared/store/timerStore';
+import { useSessionDraftStore } from '@/shared/store/sessionDraftStore';
 import { useTodoStore } from '@/shared/store/todoStore';
 
 export function useMidnightReset() {
@@ -14,7 +14,7 @@ export function useMidnightReset() {
       isFirstRender.current = false;
       return;
     }
-    useTimerStore.setState({ sessionId: null, startedAt: null, status: 'idle', cycleCount: 0 });
+    useSessionDraftStore.getState().reset();
     useTodoStore.getState().init([]);
   }, [kstDate]);
 }

@@ -29,6 +29,8 @@ export const api = {
     apiFetch<T>(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, ...(body !== undefined && { body: JSON.stringify(body) }) }),
   patch: <T>(url: string, body?: unknown) =>
     apiFetch<T>(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, ...(body !== undefined && { body: JSON.stringify(body) }) }),
+  put: <T>(url: string, body?: unknown) =>
+    apiFetch<T>(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, ...(body !== undefined && { body: JSON.stringify(body) }) }),
   delete: <T>(url: string) =>
     apiFetch<T>(url, { method: 'DELETE' }),
 };

@@ -14,7 +14,7 @@ export async function Panel() {
 
   return (
     <div className="bg-surface-container md:border-r border-outline-variant flex flex-col h-full overflow-y-auto">
-      <div className="flex flex-col gap-xl p-lg flex-1">
+      <div className="flex flex-col gap-lg p-lg flex-1">
         <PeekingBanner myRegionCode={myRegionCode} />
         <SloganSection myRegionCode={myRegionCode} />
         <Suspense fallback={isLoggedIn ? <PanelMainContentsSkeleton /> : null}>

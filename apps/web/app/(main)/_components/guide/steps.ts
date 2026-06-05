@@ -68,13 +68,13 @@ export function buildDailyStepConfig(
       };
     }
     case 'daily.creatureProgress': {
-      const { stage, watersUntilNextStage } = payload.creature;
+      const { stage, minutesUntilNextStage } = payload.creature;
       return {
         targetSelector: '[data-guide="creature.stage"]',
         title: '생명체 성장',
         description:
-          watersUntilNextStage !== null
-            ? `현재 Lv.${stage + 1}이에요. ${watersUntilNextStage}번 더 물을 주면 다음 단계로 진화해요!`
+          minutesUntilNextStage !== null
+            ? `현재 Lv.${stage + 1}이에요. 집중 ${minutesUntilNextStage}분 더 하면 다음 단계로 진화해요!`
             : `최고 단계에 도달했어요! 세계수로 완전히 성장했어요.`,
       };
     }
