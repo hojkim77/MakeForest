@@ -49,7 +49,7 @@ export function TodoCardContent() {
       {/* 할일 목록 */}
       <div className="flex flex-col divide-y divide-outline-variant max-h-48 overflow-y-auto">
         {todos.length === 0 && (
-          <p className="px-md py-sm font-mono text-label text-outline">
+          <p className="px-md py-sm font-mono text-label text-on-surface-variant">
             할 일을 추가해보세요
           </p>
         )}
@@ -62,7 +62,7 @@ export function TodoCardContent() {
             >
               {t.done ? '✓' : '○'}
             </button>
-            <span className={`font-mono text-label flex-1 ${t.done ? 'line-through text-outline' : 'text-on-surface'}`}>
+            <span className={`font-mono text-label flex-1 ${t.done ? 'line-through text-on-surface-variant' : 'text-on-surface'}`}>
               {t.text}
             </span>
             <Button
@@ -79,7 +79,7 @@ export function TodoCardContent() {
       </div>
 
       {/* 입력 */}
-      <div className="flex gap-xs px-md py-sm border-t border-outline-variant">
+      <div className="flex gap-xs px-md py-sm border-t border-outline">
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -99,9 +99,9 @@ export function TodoCardContent() {
       </div>
 
       {/* 저장 */}
-      <div className="flex items-center justify-between px-md py-sm border-t border-outline-variant">
+      <div className="flex items-center justify-between px-md py-sm border-t border-outline">
         {!sessionId && isDirty && (
-          <span className="font-mono text-label text-outline text-xs">
+          <span className="font-mono text-label text-on-surface-variant text-xs">
             세션 시작 후 서버에 저장돼요
           </span>
         )}

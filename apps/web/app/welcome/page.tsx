@@ -8,7 +8,7 @@ export const dynamic = 'force-static';
 
 export default function WelcomePage() {
   return (
-    <div style={{ background: '#FAF9F7' }}>
+    <div className="bg-background">
       <main className="welcome-snap">
         <HeroSection />
         <FeaturesSection />

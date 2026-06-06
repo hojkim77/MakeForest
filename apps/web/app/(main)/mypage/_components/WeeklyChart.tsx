@@ -11,10 +11,10 @@ import {
 } from 'recharts';
 
 const CHART_TOKENS = {
-  axisTick: '#404942', // on-surface-variant
-  axisLine: '#c0c9c0', // outline-variant
-  tooltipBorder: '#c0c9c0', // outline-variant
-  tooltipBackground: '#f2ede5', // surface-container
+  axisTick: '#6E7268', // on-surface-variant
+  axisLine: '#B6AE99', // outline-variant
+  tooltipBorder: '#1B3A26', // outline
+  tooltipBackground: '#EDE8DC', // surface-container
   tooltipCursor: 'rgba(61,122,90,0.08)', // primary-container faded
   barMax: '#226143', // primary
   barMaxStroke: '#0e5134', // on-primary-fixed-variant
@@ -31,7 +31,7 @@ export function WeeklyChart({ weeklyData, weeklyAvg }: Props) {
   const maxWeeklyWater = Math.max(...weeklyData.map(w => w.waterCount), 1);
 
   return (
-    <section className="bg-surface-container p-lg border border-outline-variant">
+    <section className="bg-surface-container p-lg border-2 border-outline shadow-island">
       <div className="flex justify-between items-end mb-6">
         <h2 className="font-h2 text-on-surface flex items-center gap-2">
           <span className="material-symbols-outlined text-primary">analytics</span>
@@ -65,7 +65,7 @@ export function WeeklyChart({ weeklyData, weeklyAvg }: Props) {
             contentStyle={{
               fontFamily: 'IBM Plex Mono',
               fontSize: 12,
-              border: `1px solid ${CHART_TOKENS.tooltipBorder}`,
+              border: `2px solid ${CHART_TOKENS.tooltipBorder}`,
               borderRadius: 0,
               background: CHART_TOKENS.tooltipBackground,
             }}

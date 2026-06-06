@@ -19,10 +19,11 @@ export function CreatureSection({ userId, initialWater }: Props) {
   const goal = useSessionDraftStore((s) => s.goal);
   const setGoal = useSessionDraftStore((s) => s.setGoal);
 
-  const { data: todayState } = useTodaySessionQuery({ userId, initialData: undefined });
+  const { data: todayState, isLoading: sessionLoading } = useTodaySessionQuery({ userId, initialData: undefined });
   const sessionStatus = todayState?.sessionStatus ?? 'NONE';
   const isSession = sessionStatus !== 'NONE';
-  const bounce = !isSession;
+  const locked = isSession || sessionLoading;
+  const bounce = !isSession && !sessionLoading;
 
   const bubbleGoal = isSession ? (todayState?.todayGoal ?? goal) : goal;
 
@@ -34,13 +35,13 @@ export function CreatureSection({ userId, initialWater }: Props) {
     <div className="flex flex-col items-center gap-xs pt-sm pb-lg">
       <PixelBubble
         value={bubbleGoal}
-        locked={isSession}
+        locked={locked}
         bounce={bounce}
         onSubmit={handleBubbleSubmit}
       />
       <Card variant="high" border data-guide="creature.stage" className="relative flex flex-col items-center justify-center image-pixelated">
         <CreatureSprite stage={stage} size={128} />
-        <span className="mt-xs font-mono text-label text-outline uppercase tracking-wider">
+        <span className="mt-xs font-mono text-label text-on-surface-variant uppercase tracking-wider">
           {STAGE_LABELS[stage]} · Lv.{stage + 1}
         </span>
       </Card>

@@ -5,8 +5,8 @@ import { Icon } from '@/shared/components/ui/Icon';
 import { PokeButton } from './PokeButton';
 
 const STATUS_LABEL: Record<FriendListItemType['status'], { label: string; color: string }> = {
-  RUNNING: { label: 'RUNNING', color: 'text-green-500' },
-  IDLE: { label: 'IDLE', color: 'text-yellow-500' },
+  RUNNING: { label: 'RUNNING', color: 'text-primary' },
+  IDLE: { label: 'IDLE', color: 'text-on-surface' },
   OFFLINE: { label: 'OFFLINE', color: 'text-on-surface-variant' },
 };
 

@@ -85,7 +85,7 @@ export function CommunityFeedSection() {
       />
 
       {!loading && posts.length === 0 && (
-        <p className="font-mono text-label text-outline">
+        <p className="font-mono text-label text-on-surface-variant">
           {selectedRegion ? '해당 지역의 집중 기록이 없어요.' : '집중 기록이 없어요.'}
         </p>
       )}
@@ -114,7 +114,7 @@ export function CommunityFeedSection() {
       )}
 
       {loading && posts.length === 0 && (
-        <p className="font-mono text-label text-outline">불러오는 중...</p>
+        <p className="font-mono text-label text-on-surface-variant">불러오는 중...</p>
       )}
     </section>
   );

@@ -47,13 +47,12 @@ export function PixelBubble({ value, locked, onSubmit, isPending, bounce }: Pixe
       <div className="flex flex-col items-center gap-xs mb-sm">
         <div
           style={{ clipPath: PIX_NOTCH }}
-          className="w-full bg-surface-container-high border-2 border-[#1B3A26] px-md py-sm"
+          className="w-full bg-surface-container-high border-2 border-outline px-md py-sm"
         >
-          <p className="font-mono text-sm text-outline text-center leading-snug line-clamp-2">
+          <p className="font-mono text-sm text-on-surface-variant text-center leading-snug line-clamp-2">
             {value ?? '오늘의 목표 작성 전'}
           </p>
         </div>
-        {/* pixel tail */}
         <PixelTail />
       </div>
     );
@@ -65,10 +64,10 @@ export function PixelBubble({ value, locked, onSubmit, isPending, bounce }: Pixe
       <div className={`flex flex-col items-center gap-xs mb-sm${bounce ? ' animate-bubble-bounce' : ''}`}>
         <div
           style={{ clipPath: PIX_NOTCH }}
-          className="w-full bg-[#FBF7EC] border-2 border-[#1B3A26] px-md py-sm cursor-pointer hover:opacity-90 transition-opacity"
+          className="w-full bg-surface border-2 border-outline px-md py-sm cursor-pointer hover:opacity-90 transition-opacity"
           onClick={() => !locked && setEditing(true)}
         >
-          <p className="font-mono text-sm text-[#1B3A26] text-center leading-snug line-clamp-2">
+          <p className="font-mono text-sm text-outline text-center leading-snug line-clamp-2">
             {value}
           </p>
         </div>
@@ -82,7 +81,7 @@ export function PixelBubble({ value, locked, onSubmit, isPending, bounce }: Pixe
     <div className={`flex flex-col items-center gap-xs mb-sm${bounce ? ' animate-bubble-bounce' : ''}`}>
       <div
         style={{ clipPath: PIX_NOTCH }}
-        className="w-full bg-[#FBF7EC] border-2 border-[#1B3A26] px-md pt-sm pb-xs"
+        className="w-full bg-surface border-2 border-outline px-md pt-sm pb-xs"
       >
         <textarea
           ref={textareaRef}
@@ -100,19 +99,19 @@ export function PixelBubble({ value, locked, onSubmit, isPending, bounce }: Pixe
           placeholder="오늘의 목표를 입력하세요 (최대 50자)"
           maxLength={60}
           rows={2}
-          className="w-full resize-none bg-transparent outline-none font-mono text-sm text-[#1B3A26] placeholder-[#9AA295] leading-snug"
+          className="w-full resize-none bg-transparent outline-none font-mono text-sm text-outline placeholder:text-on-surface-variant leading-snug"
           autoFocus
         />
         <div className="flex items-center justify-between mt-xs">
           {error ? (
-            <span className="text-[10px] text-red-500 font-mono">{error}</span>
+            <span className="text-[10px] text-error font-mono">{error}</span>
           ) : (
-            <span className="text-[10px] text-[#9AA295] font-mono">{trimmed.length}/50</span>
+            <span className="text-[10px] text-on-surface-variant font-mono">{trimmed.length}/50</span>
           )}
           <button
             onClick={() => void handleSubmit()}
             disabled={isPending || trimmed.length === 0}
-            className="font-mono text-[11px] font-bold text-[#1B3A26] border border-[#1B3A26] px-xs py-[2px] disabled:opacity-40 hover:bg-[#1B3A26] hover:text-[#FBF7EC] transition-colors"
+            className="font-mono text-[11px] font-bold text-outline border-2 border-outline px-xs py-[2px] disabled:opacity-40 hover:bg-outline hover:text-surface transition-colors"
           >
             {isPending ? '저장중' : '확인'}
           </button>
@@ -126,9 +125,9 @@ export function PixelBubble({ value, locked, onSubmit, isPending, bounce }: Pixe
 function PixelTail() {
   return (
     <div className="flex flex-col items-center" style={{ marginTop: -2 }}>
-      <div style={{ width: 10, height: 4, background: '#1B3A26' }} />
-      <div style={{ width: 6, height: 4, background: '#1B3A26' }} />
-      <div style={{ width: 3, height: 4, background: '#1B3A26' }} />
+      <div className="bg-outline" style={{ width: 10, height: 4 }} />
+      <div className="bg-outline" style={{ width: 6, height: 4 }} />
+      <div className="bg-outline" style={{ width: 3, height: 4 }} />
     </div>
   );
 }

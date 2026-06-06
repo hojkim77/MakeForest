@@ -10,12 +10,12 @@ const config: Config = {
   darkMode: 'class',
   theme: {
     extend: {
-      // Material Design 3 color tokens
+      // Material Design 3 color tokens (island pixel-art palette)
       colors: {
         primary: '#226143',
         'on-primary': '#ffffff',
         'primary-container': '#3d7a5a',
-        'on-primary-container': '#c7ffdc',
+        'on-primary-container': '#ffffff',
         'primary-fixed': '#b0f1ca',
         'primary-fixed-dim': '#95d4af',
         'on-primary-fixed': '#002112',
@@ -24,7 +24,7 @@ const config: Config = {
         secondary: '#3e674d',
         'on-secondary': '#ffffff',
         'secondary-container': '#bdebca',
-        'on-secondary-container': '#426b51',
+        'on-secondary-container': '#264f37',
         'secondary-fixed': '#c0edcc',
         'secondary-fixed-dim': '#a4d1b1',
         'on-secondary-fixed': '#002110',
@@ -41,24 +41,24 @@ const config: Config = {
         'on-error': '#ffffff',
         'error-container': '#ffdad6',
         'on-error-container': '#93000a',
-        background: '#fdf9f1',
-        'on-background': '#1c1c17',
-        surface: '#fdf9f1',
-        'on-surface': '#1c1c17',
-        'surface-variant': '#e6e2da',
-        'on-surface-variant': '#404942',
+        background: '#FBF7EC',
+        'on-background': '#2A2D26',
+        surface: '#FBF7EC',
+        'on-surface': '#2A2D26',
+        'surface-variant': '#D8D2C6',
+        'on-surface-variant': '#6E7268',
         'surface-container-lowest': '#ffffff',
-        'surface-container-low': '#f7f3eb',
-        'surface-container': '#f2ede5',
-        'surface-container-high': '#ece8e0',
-        'surface-container-highest': '#e6e2da',
-        'surface-dim': '#dddad2',
-        'surface-bright': '#fdf9f1',
+        'surface-container-low': '#F2EDE4',
+        'surface-container': '#EDE8DC',
+        'surface-container-high': '#E3DDD1',
+        'surface-container-highest': '#D8D2C6',
+        'surface-dim': '#C8C2B6',
+        'surface-bright': '#FBF7EC',
         'surface-tint': '#2c6a4b',
-        'inverse-surface': '#31302b',
-        'inverse-on-surface': '#f4f0e8',
-        outline: '#707972',
-        'outline-variant': '#c0c9c0',
+        'inverse-surface': '#1B3A26',
+        'inverse-on-surface': '#F2EDE4',
+        outline: '#1B3A26',
+        'outline-variant': '#B6AE99',
         'border-subtle': 'var(--color-border-subtle)',
         'kakao-bg': 'var(--color-kakao-bg)',
         'kakao-fg': 'var(--color-kakao-fg)',
@@ -78,11 +78,11 @@ const config: Config = {
         sans: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       fontSize: {
-        display: ['24px', { lineHeight: '1.2', letterSpacing: '-0.02em', fontWeight: '600' }],
-        headline: ['18px', { lineHeight: '1.4', letterSpacing: '-0.01em', fontWeight: '600' }],
+        display: ['24px', { lineHeight: '1.2', letterSpacing: '-0.02em', fontWeight: '800' }],
+        headline: ['18px', { lineHeight: '1.4', letterSpacing: '-0.01em', fontWeight: '800' }],
         'body-md': ['14px', { lineHeight: '1.5', letterSpacing: '0', fontWeight: '400' }],
         'body-lg': ['16px', { lineHeight: '1.6', letterSpacing: '0', fontWeight: '400' }],
-        label: ['12px', { lineHeight: '1', letterSpacing: '0.05em', fontWeight: '500' }],
+        label: ['12px', { lineHeight: '1', letterSpacing: '0.05em', fontWeight: '600' }],
         'pixel-stat': ['14px', { lineHeight: '1', letterSpacing: '0', fontWeight: '700' }],
       },
 
@@ -122,12 +122,18 @@ const config: Config = {
         tooltip: '9999',
       },
 
+      // Pixel-art box shadows
+      boxShadow: {
+        island: '3px 3px 0 rgba(27, 58, 38, 0.28)',
+        'island-lg': '4px 4px 0 rgba(27, 58, 38, 0.22)',
+      },
+
       // Sharp pixel-art radius scale
       borderRadius: {
-        DEFAULT: '0.125rem',  // 2px
-        lg: '0.25rem',        // 4px
-        xl: '0.5rem',         // 8px
-        full: '0.75rem',      // 12px
+        DEFAULT: '0',
+        lg: '0',
+        xl: '0',
+        full: '9999px',
       },
     },
   },

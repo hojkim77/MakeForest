@@ -14,7 +14,7 @@ export function PeekingBanner({ myRegionCode }: { myRegionCode: string | null })
     <button
       data-guide="panel.peek"
       onClick={() => focusRegion(myRegionCode)}
-      className="flex items-center gap-sm p-sm bg-primary-fixed text-on-primary-fixed font-mono text-label uppercase tracking-wider w-full border border-primary active:translate-y-px transition-none"
+      className="flex items-center gap-sm p-sm bg-primary-fixed text-on-primary-fixed font-mono text-label uppercase tracking-wider w-full border-2 border-primary shadow-island active:shadow-none active:translate-y-px active:translate-x-px transition-none"
     >
       <Icon name="arrow_back" size={16} />
       내 동네로 돌아가기

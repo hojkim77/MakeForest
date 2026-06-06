@@ -26,7 +26,7 @@ export function FriendsWidget() {
   const points = pointsData?.balance ?? 0;
 
   return (
-    <div className="fixed bottom-16 right-4 z-50 w-64 bg-surface border border-outline-variant shadow-lg">
+    <div className="fixed bottom-16 right-4 z-50 w-64 bg-surface border-2 border-outline shadow-island">
       {/* Header */}
       <button
         onClick={() => setIsOpen((v) => !v)}
@@ -34,13 +34,13 @@ export function FriendsWidget() {
         aria-expanded={isOpen}
       >
         <div className="flex items-center gap-2">
-          <Icon name="group" size={18} className="text-primary-container" />
+          <Icon name="group" size={18} className="text-primary" />
           <span className="font-mono text-label text-on-surface">
             친구 {friendsData ? `(${friendsData.friends.length})` : ''}
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="font-mono text-[11px] text-primary-container">{points}pt</span>
+          <span className="font-mono text-[11px] text-primary">{points}pt</span>
           <Icon
             name={isOpen ? 'expand_more' : 'expand_less'}
             size={18}
@@ -60,7 +60,7 @@ export function FriendsWidget() {
               className={[
                 'flex-1 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-none',
                 view === 'list'
-                  ? 'text-primary-container border-b-2 border-primary-container'
+                  ? 'text-primary border-b-2 border-primary'
                   : 'text-on-surface-variant hover:bg-surface-container-high',
               ].join(' ')}
             >
@@ -71,7 +71,7 @@ export function FriendsWidget() {
               className={[
                 'flex-1 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-none',
                 view === 'add'
-                  ? 'text-primary-container border-b-2 border-primary-container'
+                  ? 'text-primary border-b-2 border-primary'
                   : 'text-on-surface-variant hover:bg-surface-container-high',
               ].join(' ')}
             >

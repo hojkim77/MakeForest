@@ -41,7 +41,7 @@ export function RegionAccordion({ selectedRegionKey, onSelect, onReset }: Props)
       </div>
 
       {open && (
-        <div className="absolute top-full left-0 z-10 w-48 max-h-[200px] overflow-y-auto border border-outline-variant bg-surface-container">
+        <div className="absolute top-full left-0 z-10 w-48 max-h-[200px] overflow-y-auto border-2 border-outline shadow-island bg-surface">
           {regions.map((r) => (
             <Button
               key={r.regionKey}
@@ -62,7 +62,7 @@ export function RegionAccordion({ selectedRegionKey, onSelect, onReset }: Props)
             </Button>
           ))}
           {regions.length === 0 && (
-            <p className="px-sm py-xs font-mono text-label text-outline">불러오는 중...</p>
+            <p className="px-sm py-xs font-mono text-label text-on-surface-variant">불러오는 중...</p>
           )}
         </div>
       )}

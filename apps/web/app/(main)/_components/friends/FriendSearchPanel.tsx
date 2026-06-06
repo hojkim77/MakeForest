@@ -65,7 +65,7 @@ export function FriendSearchPanel({ userId }: FriendSearchPanelProps) {
                   <span className="ml-2 font-mono text-[11px] text-on-surface-variant">받은 요청</span>
                 )}
                 {user.relation === 'FRIENDS' && (
-                  <span className="ml-2 font-mono text-[11px] text-primary-container">친구</span>
+                  <span className="ml-2 font-mono text-[11px] text-primary">친구</span>
                 )}
                 {user.relation === 'SELF' && (
                   <span className="ml-2 font-mono text-[11px] text-on-surface-variant">나</span>

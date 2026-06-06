@@ -60,7 +60,7 @@ export function SetupTimer({
   }
 
   return (
-    <div className="flex flex-col gap-md border-t border-outline-variant pt-md">
+    <div className="flex flex-col gap-md border-t border-outline pt-md">
       {/* wheel row */}
       <div className="flex gap-sm" style={{ height: 220 }}>
         <WheelPicker
@@ -83,17 +83,17 @@ export function SetupTimer({
           {Array.from({ length: Math.min(safeSegmentCount, 24) }, (_, i) => (
             <div
               key={i}
-              className="rounded-full bg-[#226143]"
+              className="rounded-full bg-primary"
               style={{ width: 8, height: 8, opacity: 0.8 }}
             />
           ))}
           {safeSegmentCount > 24 && (
-            <span className="font-mono text-[10px] text-outline self-center ml-xs">
+            <span className="font-mono text-[10px] text-on-surface-variant self-center ml-xs">
               +{safeSegmentCount - 24}
             </span>
           )}
         </div>
-        <p className="font-mono text-[11px] text-outline text-center">
+        <p className="font-mono text-[11px] text-on-surface-variant text-center">
           총 {capLabel} 집중 · {safeSegmentCount}회 반복
         </p>
       </div>

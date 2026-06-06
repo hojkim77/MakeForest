@@ -10,6 +10,6 @@ export async function WeeklyChartSection({ userId }: { userId: string }) {
 
 export function WeeklyChartSkeleton() {
   return (
-    <div className="h-64 bg-surface-container border border-outline-variant animate-pulse" />
+    <div className="h-64 bg-surface-container border-2 border-outline animate-pulse" />
   );
 }

@@ -13,7 +13,7 @@ export async function Panel() {
   const myDongCode = session?.user?.dongCode ?? null;
 
   return (
-    <div className="bg-surface-container md:border-r border-outline-variant flex flex-col h-full overflow-y-auto">
+    <div className="bg-surface-container md:border-r border-outline flex flex-col h-full overflow-y-auto">
       <div className="flex flex-col gap-lg p-lg flex-1">
         <PeekingBanner myRegionCode={myRegionCode} />
         <SloganSection myRegionCode={myRegionCode} />
@@ -33,14 +33,14 @@ function PanelMainContentsSkeleton() {
     <>
       {/* CreatureSection */}
       <div className="flex flex-col items-center gap-md py-lg">
-        <div className="flex flex-col items-center justify-center bg-surface-container-high border border-outline-variant p-md gap-xs">
+        <div className="flex flex-col items-center justify-center bg-surface-container-high border-2 border-outline p-md gap-xs">
           <div className="w-32 h-32 bg-surface-variant animate-pulse" />
           <div className="h-3 w-20 mt-xs bg-surface-variant animate-pulse" />
         </div>
       </div>
 
       {/* NeighborhoodStats */}
-      <div className="flex flex-col gap-sm p-md bg-surface-container-low border border-outline-variant">
+      <div className="flex flex-col gap-sm p-md bg-surface-container-low border-2 border-outline">
         <div className="h-3 w-32 bg-surface-variant animate-pulse" />
         <div className="flex justify-between items-center">
           <div className="h-3 w-24 bg-surface-variant animate-pulse" />
@@ -50,7 +50,7 @@ function PanelMainContentsSkeleton() {
       </div>
 
       {/* TimerWaterSection */}
-      <div className="flex flex-col gap-sm border-t border-outline-variant pt-md">
+      <div className="flex flex-col gap-sm border-t border-outline pt-md">
         <div className="flex gap-px w-full h-3">
           {Array.from({ length: 12 }, (_, i) => (
             <div key={i} className="flex-1 bg-surface-variant" />

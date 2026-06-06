@@ -110,7 +110,7 @@ export default function OnboardingPage() {
   return (
     <main className="bg-background text-on-surface min-h-screen flex flex-col">
       {/* Top bar */}
-      <header className="fixed top-0 left-0 w-full z-50 bg-[#F5F3EF] border-b border-[#E8E4DC] flex justify-between items-center px-md h-14">
+      <header className="fixed top-0 left-0 w-full z-50 bg-background border-b border-outline flex justify-between items-center px-md h-14">
         <div className="flex items-center gap-sm">
           {(step === 'search' || step === 'detect') && (
             <Button
@@ -123,7 +123,7 @@ export default function OnboardingPage() {
           )}
           <span className="font-mono text-pixel-stat text-primary uppercase">Pixel Forest</span>
         </div>
-        <span className="font-mono text-label text-outline">
+        <span className="font-mono text-label text-on-surface-variant">
           {step === 'nickname' ? '닉네임 설정' : '동네 설정'}
         </span>
       </header>
@@ -135,7 +135,7 @@ export default function OnboardingPage() {
             <span className="material-symbols-outlined text-primary text-[48px] animate-spin">
               sync
             </span>
-            <p className="font-mono text-label text-outline uppercase">설정 저장 중…</p>
+            <p className="font-mono text-label text-on-surface-variant uppercase">설정 저장 중…</p>
           </div>
         ) : step === 'nickname' ? (
           <NicknameStep

@@ -6,8 +6,7 @@ import { getKstDateString } from '../routes/water.logic';
 import { calcPersonalStage } from '../routes/growth.constants';
 
 export function registerCronJobs(): void {
-  // 매일 자정 (KST = UTC+9, 즉 UTC 15:00)
-  cron.schedule('0 15 * * *', async () => {
+  cron.schedule('0 0 * * *', async () => {
     console.log('[cron] 자정 배치 시작');
     try {
       await runMidnightBatch();
@@ -15,7 +14,7 @@ export function registerCronJobs(): void {
     } catch (err) {
       console.error('[cron] 자정 배치 오류:', err);
     }
-  });
+  }, { timezone: 'Asia/Seoul' });
 
   console.log('[cron] 자정 배치 등록 완료');
 }

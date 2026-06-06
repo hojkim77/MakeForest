@@ -29,10 +29,10 @@ type LinkElementProps = BaseProps &
 export type ButtonProps = ButtonElementProps | LinkElementProps;
 
 const variantClasses: Record<Variant, string> = {
-  primary: 'bg-primary text-on-primary border border-primary hover:bg-primary/90',
-  secondary: 'bg-surface-container text-on-surface border border-outline-variant hover:bg-surface-container-high',
-  ghost: 'bg-transparent text-on-surface-variant hover:bg-surface-container border border-transparent',
-  danger: 'bg-error text-on-error border border-error hover:bg-error/90',
+  primary: 'bg-primary text-on-primary border-2 border-outline shadow-island hover:bg-primary/90 active:shadow-none active:translate-y-px active:translate-x-px',
+  secondary: 'bg-surface-container text-on-surface border-2 border-outline shadow-island hover:bg-surface-container-high active:shadow-none active:translate-y-px active:translate-x-px',
+  ghost: 'bg-transparent text-on-surface-variant hover:bg-surface-container border-2 border-transparent',
+  danger: 'bg-error text-on-error border-2 border-error shadow-island hover:bg-error/90 active:shadow-none active:translate-y-px active:translate-x-px',
 };
 
 const sizeClasses: Record<Size, string> = {
@@ -44,7 +44,7 @@ const sizeClasses: Record<Size, string> = {
 const iconSizeMap: Record<Size, number> = { sm: 14, md: 16, lg: 18 };
 
 const baseClasses =
-  'inline-flex items-center justify-center gap-xs font-mono rounded transition-none active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed';
+  'inline-flex items-center justify-center gap-xs font-mono transition-none disabled:opacity-40 disabled:cursor-not-allowed';
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   function Button(props, ref) {

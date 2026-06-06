@@ -9,13 +9,13 @@ export function RankingRow({ rank, name, water, isHighlighted = false }: Ranking
   return (
     <div
       className={[
-        'flex items-center gap-sm px-sm py-xs border font-mono text-label',
+        'flex items-center gap-sm px-sm py-xs border-2 font-mono text-label',
         isHighlighted
-          ? 'bg-primary-container border-primary'
-          : 'bg-surface-container border-outline-variant',
+          ? 'bg-primary-container border-primary shadow-island'
+          : 'bg-surface-container border-outline',
       ].join(' ')}
     >
-      <span className={`w-5 text-center shrink-0 ${rank <= 3 ? 'text-primary' : 'text-outline'}`}>
+      <span className={`w-5 text-center shrink-0 ${rank <= 3 ? 'text-primary' : 'text-on-surface-variant'}`}>
         {rank}
       </span>
       <span className="flex-1 truncate text-on-surface">{name}</span>
