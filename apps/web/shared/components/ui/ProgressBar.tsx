@@ -33,7 +33,7 @@ export function ProgressBar({
       aria-valuemin={0}
       aria-valuemax={100}
       aria-label={ariaLabel}
-      className={cn('w-full overflow-hidden rounded bg-surface-variant', sizeClasses[size], className)}
+      className={cn('w-full overflow-hidden bg-surface-container-high', sizeClasses[size], className)}
     >
       <div
         style={{ width: `${clamped}%` }}

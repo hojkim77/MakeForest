@@ -11,8 +11,8 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   function Input({ label, leadingIcon, error, className, ...rest }, ref) {
     const borderClass = error
-      ? 'border border-error focus:border-error'
-      : 'border border-outline-variant focus:border-primary';
+      ? 'border-2 border-error shadow-island focus:border-error'
+      : 'border-2 border-outline shadow-island focus:border-primary';
 
     const paddingClass = leadingIcon ? 'pr-md pl-xl' : 'px-md';
 
@@ -20,7 +20,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       <input
         ref={ref}
         className={cn(
-          'w-full bg-surface py-sm font-mono text-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none rounded disabled:opacity-40 disabled:cursor-not-allowed',
+          'w-full bg-surface py-sm font-mono text-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed',
           borderClass,
           paddingClass,
           className,

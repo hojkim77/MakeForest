@@ -28,7 +28,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <LogoutCleanup />
       {children}
-      {process.env.NODE_ENV === 'development' && <ReactQueryDevtools />}
+      {/* {process.env.NODE_ENV === 'development' && <ReactQueryDevtools />} */}
     </QueryClientProvider>
   );
 }

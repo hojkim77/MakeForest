@@ -31,10 +31,9 @@ export function Card({
   return (
     <div
       className={cn(
-        'rounded',
         variantClasses[variant],
         paddingClasses[padding],
-        border && 'border border-outline-variant',
+        border && 'border-2 border-outline shadow-island',
         className,
       )}
       {...rest}
