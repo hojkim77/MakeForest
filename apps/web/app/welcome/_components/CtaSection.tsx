@@ -6,7 +6,7 @@ export function CtaSection() {
       <div className="container mx-auto px-6 max-w-5xl text-center">
         <div className="max-w-2xl mx-auto space-y-6">
           <div className="inline-flex flex-col items-center gap-3">
-            <div className="w-14 h-14 bg-primary-fixed border border-[#E8E4DC] flex items-center justify-center">
+            <div className="w-14 h-14 bg-primary-fixed border-2 border-outline flex items-center justify-center">
               <span className="material-symbols-outlined text-primary">park</span>
             </div>
             <h2 className="font-mono text-5xl text-on-surface tracking-tighter leading-tight">
@@ -21,13 +21,13 @@ export function CtaSection() {
           <div className="pt-4 flex flex-col items-center gap-4">
             <Link
               href="/"
-              className="bg-primary text-on-primary font-mono text-xl px-12 py-5 border border-primary hover:bg-secondary transition-none shadow-[4px_4px_0_rgba(0,0,0,0.1)] inline-block"
+              className="bg-primary text-on-primary font-mono text-xl px-12 py-5 border-2 border-outline shadow-island hover:bg-primary/90 active:shadow-none active:translate-y-px active:translate-x-px transition-none inline-block"
             >
               [지금 숲 키우기 →]
             </Link>
             <Link
               href="/"
-              className="font-mono text-xs text-outline hover:text-primary underline decoration-dotted underline-offset-4"
+              className="font-mono text-xs text-on-surface-variant hover:text-primary underline decoration-dotted underline-offset-4"
             >
               로그인 없이 지도 둘러보기
             </Link>
@@ -36,7 +36,7 @@ export function CtaSection() {
       </div>
 
       <footer className="absolute bottom-8 left-0 right-0 text-center">
-        <span className="font-mono text-xs text-outline uppercase tracking-widest">
+        <span className="font-mono text-xs text-on-surface-variant uppercase tracking-widest">
           © 2026 MAKEFOREST
         </span>
       </footer>

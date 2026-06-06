@@ -38,7 +38,7 @@ export function LocationSearchStep({ onSelect }: LocationSearchStepProps) {
         <h1 className="font-mono text-display text-on-surface mb-md">
           활동할 동네를 입력해 주세요.
         </h1>
-        <p className="font-sans text-body-md text-outline mb-xl">
+        <p className="font-sans text-body-md text-on-surface-variant mb-xl">
           근처 이웃들과 함께 작은 숲을 가꿔보세요.
         </p>
 
@@ -55,9 +55,9 @@ export function LocationSearchStep({ onSelect }: LocationSearchStepProps) {
       </div>
 
       {/* Results panel */}
-      <div className="w-full max-w-2xl bg-surface-container-low border border-border-subtle overflow-hidden">
-        <div className="px-md py-sm border-b border-border-subtle bg-surface-container-high flex justify-between items-center">
-          <span className="font-mono text-label text-outline uppercase">Search Results</span>
+      <div className="w-full max-w-2xl bg-surface border-2 border-outline shadow-island overflow-hidden">
+        <div className="px-md py-sm border-b border-outline bg-surface-container flex justify-between items-center">
+          <span className="font-mono text-label text-on-surface-variant uppercase">Search Results</span>
           {query && !loading && (
             <span className="font-mono text-label text-primary">
               {results.length} Areas Found
@@ -66,7 +66,7 @@ export function LocationSearchStep({ onSelect }: LocationSearchStepProps) {
         </div>
 
         {results.length > 0 && (
-          <div className="divide-y divide-border-subtle">
+          <div className="divide-y divide-outline-variant">
             {results.map((dong) => {
               const isSelected = selected?.code === dong.code;
               return (
@@ -75,14 +75,14 @@ export function LocationSearchStep({ onSelect }: LocationSearchStepProps) {
                   onClick={() => setSelected(dong)}
                   className={[
                     'w-full flex items-center justify-between p-md group cursor-pointer transition-colors duration-0',
-                    isSelected ? 'bg-primary-container/20' : 'hover:bg-border-subtle',
+                    isSelected ? 'bg-primary-container/20' : 'hover:bg-surface-container-high',
                   ].join(' ')}
                 >
                   <div className="flex items-center gap-md">
                     <span
                       className={[
                         'material-symbols-outlined',
-                        isSelected ? 'text-primary-container' : 'text-outline group-hover:text-primary',
+                        isSelected ? 'text-primary-container' : 'text-on-surface-variant group-hover:text-primary',
                       ].join(' ')}
                       style={isSelected ? { fontVariationSettings: "'FILL' 1" } : undefined}
                     >
@@ -101,14 +101,14 @@ export function LocationSearchStep({ onSelect }: LocationSearchStepProps) {
                         {isSelected && (
                           <Badge variant="primary" size="sm">SELECTED</Badge>
                         )}
-                        <span className="font-mono text-label text-outline">{dong.sigunguCode}</span>
+                        <span className="font-mono text-label text-on-surface-variant">{dong.sigunguCode}</span>
                       </div>
                     </div>
                   </div>
                   <span
                     className={[
                       'material-symbols-outlined',
-                      isSelected ? 'text-primary-container' : 'text-outline group-hover:text-primary',
+                      isSelected ? 'text-primary-container' : 'text-on-surface-variant group-hover:text-primary',
                     ].join(' ')}
                   >
                     chevron_right
@@ -120,10 +120,10 @@ export function LocationSearchStep({ onSelect }: LocationSearchStepProps) {
         )}
 
         {/* Empty / hint state */}
-        <div className="p-xl text-center border-t border-border-subtle">
+        <div className="p-xl text-center border-t border-outline">
           <div className="flex flex-col items-center gap-sm">
             <span className="material-symbols-outlined text-outline-variant text-4xl">forest</span>
-            <p className="font-sans text-body-md text-outline">
+            <p className="font-sans text-body-md text-on-surface-variant">
               {!query
                 ? '동 이름을 입력해 주세요.'
                 : results.length === 0 && !loading

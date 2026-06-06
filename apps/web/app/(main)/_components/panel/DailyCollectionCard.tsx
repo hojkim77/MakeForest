@@ -58,7 +58,7 @@ function ActiveState({
           >
             {currentCount} / {targetCount}
           </span>
-          <span className="font-mono text-label text-outline">달성까지 {remaining}개</span>
+          <span className="font-mono text-label text-on-surface-variant">달성까지 {remaining}개</span>
         </div>
       </div>
     </div>
@@ -73,7 +73,7 @@ function CompletedState({ creatureType, count }: { creatureType: string; count: 
       <span className="font-mono text-label text-on-surface-variant">
         {creatureType} · {count}개 달성
       </span>
-      <span className="font-mono text-label text-outline">내일은 어떤 생명체일까요?</span>
+      <span className="font-mono text-label text-on-surface-variant">내일은 어떤 생명체일까요?</span>
     </div>
   );
 }

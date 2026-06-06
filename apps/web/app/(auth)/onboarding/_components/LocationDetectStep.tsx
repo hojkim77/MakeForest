@@ -20,7 +20,7 @@ export function LocationDetectStep({
     <div className="w-full flex flex-col items-center text-center gap-xl">
       {/* Pixel pin icon */}
       <div className="relative w-24 h-24 flex items-center justify-center">
-        <div className="absolute inset-0 pixel-grid opacity-30 border border-outline-variant rounded-full" />
+        <div className="absolute inset-0 pixel-grid opacity-30 border-2 border-outline rounded-full" />
         <div className="relative flex flex-col items-center">
           <div
             className={[
@@ -65,7 +65,7 @@ export function LocationDetectStep({
               {detectedDong.name}
             </h2>
           </div>
-          <div className="h-20 w-full bg-surface border border-border-subtle relative overflow-hidden flex items-center justify-center">
+          <div className="h-20 w-full bg-surface border-2 border-outline relative overflow-hidden flex items-center justify-center">
             <div className="absolute inset-0 pixel-grid opacity-40" />
             <span className="relative z-10 material-symbols-outlined text-primary text-[36px]"
               style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -80,7 +80,7 @@ export function LocationDetectStep({
         <Card variant="low" border padding="lg" className="w-full max-w-md flex flex-col gap-lg animate-pulse">
           <div className="h-4 bg-outline-variant w-24 rounded" />
           <div className="h-8 bg-outline-variant w-48 rounded" />
-          <div className="h-20 bg-surface-container border border-border-subtle" />
+          <div className="h-20 bg-surface-container border-2 border-outline" />
         </Card>
       )}
 

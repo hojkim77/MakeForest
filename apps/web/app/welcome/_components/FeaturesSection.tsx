@@ -2,6 +2,8 @@ import type React from 'react';
 import { CreatureSprite } from '@/shared/components/ui/CreatureSprite';
 import { Icon } from '@/shared/components/ui/Icon';
 
+const HEATMAP_COLORS = ['#bbf7d0', '#4ade80', '#16a34a', '#14532d'];
+
 function MapMiniVisual() {
   const COLS = 5;
   const ROWS = 4;
@@ -17,7 +19,7 @@ function MapMiniVisual() {
             return (
               <div
                 key={col}
-                className={`w-3 h-3 ${isActive ? 'bg-primary animate-pulse' : 'bg-surface-variant'}`}
+                className={`w-3 h-3 ${isActive ? 'bg-primary animate-pulse' : 'bg-surface-container-high'}`}
               />
             );
           })}
@@ -66,7 +68,7 @@ function TimerMiniVisual() {
 
 function ToastMiniVisual() {
   return (
-    <div className="bg-white border border-[#E8E4DC] shadow-[2px_2px_0_rgba(0,0,0,0.06)] px-2.5 py-1.5 flex items-center gap-1.5 w-fit">
+    <div className="bg-surface border-2 border-outline shadow-island px-2.5 py-1.5 flex items-center gap-1.5 w-fit">
       <span className="text-xs">💧</span>
       <span className="font-mono text-[10px] text-on-surface whitespace-nowrap">이웃이 물을 줬어요</span>
     </div>
@@ -86,10 +88,9 @@ function EvolutionMiniVisual() {
 }
 
 function HeatmapMiniVisual() {
-  const colors = ['#bbf7d0', '#4ade80', '#16a34a', '#14532d'];
   return (
     <div className="flex gap-1 items-end">
-      {colors.map((color, i) => (
+      {HEATMAP_COLORS.map((color, i) => (
         <div
           key={i}
           style={{ background: color, width: 12, height: 12 + i * 4 }}
@@ -109,7 +110,7 @@ interface Feature {
 
 function FeatureCard({ feature: f }: { feature: Feature }) {
   return (
-    <div className="bg-white border border-[#E8E4DC] shadow-[2px_2px_0_rgba(0,0,0,0.06)] p-6 flex flex-col gap-4">
+    <div className="bg-surface border-2 border-outline shadow-island p-6 flex flex-col gap-4">
       {/* Mini visual */}
       <div className="h-14 flex items-center">{f.visual}</div>
 
@@ -176,14 +177,14 @@ const FEATURES: Feature[] = [
 
 export function FeaturesSection() {
   return (
-    <section id="features" style={{ background: '#FAF9F7' }}>
+    <section id="features" className="bg-background">
       <div className="absolute inset-0 pixel-bg pointer-events-none" />
 
       <div className="absolute inset-0 flex flex-col justify-center px-6 py-16">
         <div className="container mx-auto max-w-5xl w-full flex flex-col gap-6">
           {/* Header row: label + tagline side by side */}
           <div className="flex items-start gap-6">
-            <h2 className="font-mono text-xl tracking-tighter px-2 py-1 border border-[#E8E4DC] bg-[rgba(250,249,247,0.9)] text-primary shrink-0">
+            <h2 className="font-mono text-xl tracking-tighter px-2 py-1 border-2 border-outline bg-background/90 text-primary shrink-0">
               WHY PIXELFOREST
             </h2>
             <div>
@@ -207,7 +208,7 @@ export function FeaturesSection() {
 
       {/* Swipe hint */}
       <div className="absolute bottom-8 left-0 right-0 flex justify-center z-30 pointer-events-none">
-        <span className="font-mono text-s" style={{ color: '#226143', opacity: 0.5 }}>
+        <span className="font-mono text-s text-primary opacity-50">
           swipe or use arrow keys ↓
         </span>
       </div>

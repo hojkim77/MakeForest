@@ -12,7 +12,7 @@ interface WheelPickerProps {
 }
 
 const WP_ACTIVE = '#1B3A26';
-const WP_IDLE = '#9AA295';
+const WP_IDLE = '#6E7268';
 const WP_BAND = '#226143';
 
 export function WheelPicker({

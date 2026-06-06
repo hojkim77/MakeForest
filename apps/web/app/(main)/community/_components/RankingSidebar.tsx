@@ -25,7 +25,7 @@ export function RankingSidebar({ initialRanking, fetchedAt }: Props) {
   return (
     <aside className="flex flex-col gap-md sticky top-[var(--topbar-h)] h-[calc(100dvh-var(--topbar-h)-4rem)] overflow-y-auto">
       <h2 className="font-mono text-pixel-stat text-on-surface uppercase tracking-tighter">
-        지역 랭킹 <span className="text-outline normal-case">({fetchedAt} 기준)</span>
+        지역 랭킹 <span className="text-on-surface-variant normal-case">({fetchedAt} 기준)</span>
       </h2>
 
       {/* Tabs */}
@@ -44,10 +44,10 @@ export function RankingSidebar({ initialRanking, fetchedAt }: Props) {
       {/* Rankings */}
       <div className="flex flex-col gap-xs">
         {isFetching && rankings.length === 0 && (
-          <p className="font-mono text-label text-outline">불러오는 중...</p>
+          <p className="font-mono text-label text-on-surface-variant">불러오는 중...</p>
         )}
         {rankings.length === 0 && !isFetching && (
-          <p className="font-mono text-label text-outline">데이터가 없어요.</p>
+          <p className="font-mono text-label text-on-surface-variant">데이터가 없어요.</p>
         )}
         {rankings.map((r) => (
           <RankingRow

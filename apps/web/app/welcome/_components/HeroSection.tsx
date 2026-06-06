@@ -45,7 +45,7 @@ export function HeroSection() {
           <div className="pt-2 flex flex-col gap-2">
             <Link
               href="/"
-              className="bg-primary-container text-on-primary-container font-mono px-12 py-4 inline-block text-center border border-primary-container w-fit shadow-[4px_4px_0_rgba(0,0,0,0.1)]"
+              className="bg-primary-container text-on-primary-container font-mono px-12 py-4 inline-block text-center border-2 border-outline shadow-island w-fit"
             >
               [숲 키우러 가기 →]
             </Link>
@@ -54,7 +54,7 @@ export function HeroSection() {
 
         {/* Right */}
         <div className="w-full md:w-1/2 flex justify-center">
-          <div className="relative w-full h-full border border-border-subtle overflow-hidden">
+          <div className="relative w-full h-full border-2 border-outline overflow-hidden">
             <SeoulMap />
           </div>
         </div>

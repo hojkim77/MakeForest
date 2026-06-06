@@ -140,7 +140,7 @@ export function TimerWaterSection({ userId, initialTodayState }: Props) {
   const buttonDisabled = isDailyDone || (sessionStatus === 'RUNNING' && !isComplete) || (isComplete && isWatering);
 
   return (
-    <div data-guide="timer.start" className="flex flex-col gap-sm border-t border-outline-variant pt-md">
+    <div data-guide="timer.start" className="flex flex-col gap-sm border-t border-outline pt-md">
       {/* dynamic segment gauge */}
       <div className="flex gap-px w-full h-3">
         {Array.from({ length: segmentCount }, (_, i) => {

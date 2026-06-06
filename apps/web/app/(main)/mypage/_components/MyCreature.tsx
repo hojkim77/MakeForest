@@ -11,14 +11,14 @@ export async function MyCreature({ userId }: { userId: string }) {
   const waterCount = userCreature?.totalWaterCount ?? 0;
 
   return (
-    <section className="bg-surface-container p-lg border border-outline-variant">
+    <section className="bg-surface-container p-lg border-2 border-outline shadow-island">
       <h2 className="font-h2 text-on-surface mb-6 flex items-center gap-2">
         <span className="material-symbols-outlined text-primary">forest</span>
         MY CREATURE
       </h2>
 
       <div className="flex flex-col md:flex-row items-center gap-8">
-        <div className="bg-primary-container border-2 border-primary-container p-6 flex items-center justify-center">
+        <div className="bg-primary-container border-2 border-outline p-6 flex items-center justify-center">
           <CreatureSprite stage={stage} size={96} />
         </div>
 
@@ -55,6 +55,6 @@ export async function MyCreature({ userId }: { userId: string }) {
 
 export function MyCreatureSkeleton() {
   return (
-    <div className="h-48 bg-surface-container border border-outline-variant animate-pulse" />
+    <div className="h-48 bg-surface-container border-2 border-outline shadow-island animate-pulse" />
   );
 }

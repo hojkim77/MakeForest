@@ -15,7 +15,7 @@ export function NeighborhoodStats({ userId, initialWater }: Props) {
 
   return (
     <Card variant="low" border data-guide="panel.myNeighborhood" className="flex flex-col gap-sm">
-      <span className="font-mono text-label text-outline uppercase tracking-tighter">
+      <span className="font-mono text-label text-on-surface-variant uppercase tracking-tighter">
         Current Neighborhood Status
       </span>
 

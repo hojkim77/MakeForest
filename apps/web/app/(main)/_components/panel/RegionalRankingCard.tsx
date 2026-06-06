@@ -20,7 +20,7 @@ export function RegionalRankingCard({ myRegionKey, initialRanking }: Props) {
         {myEntry ? (
           <span className="font-mono text-label text-primary">{myEntry.regionName} {myEntry.rank}위</span>
         ) : (
-          myRegionKey && <span className="font-mono text-label text-outline">순위권 밖</span>
+          myRegionKey && <span className="font-mono text-label text-on-surface-variant">순위권 밖</span>
         )}
       </div>
 
@@ -35,7 +35,7 @@ export function RegionalRankingCard({ myRegionKey, initialRanking }: Props) {
           />
         ))}
         {rankings.length === 0 && (
-          <p className="font-mono text-label text-outline">데이터가 없어요.</p>
+          <p className="font-mono text-label text-on-surface-variant">데이터가 없어요.</p>
         )}
       </div>
     </div>

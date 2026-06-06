@@ -62,15 +62,15 @@ export function CommentSection({ postId, initialCount, isLoggedIn }: Props) {
       </button>
 
       {open && (
-        <div className="flex flex-col gap-sm pl-sm border-l border-outline-variant">
+        <div className="flex flex-col gap-sm pl-sm border-l border-outline">
           {isFetching && comments.length === 0 && (
-            <p className="font-mono text-label text-outline">불러오는 중...</p>
+            <p className="font-mono text-label text-on-surface-variant">불러오는 중...</p>
           )}
           {comments.map((c) => (
             <div key={c.id} className="flex flex-col gap-xs">
               <div className="flex items-center gap-sm">
                 <span className="font-mono text-label text-primary shrink-0">{c.user.nickname}</span>
-                <span className="font-mono text-label text-outline">{formatCommentTime(c.createdAt)}</span>
+                <span className="font-mono text-label text-on-surface-variant">{formatCommentTime(c.createdAt)}</span>
                 {c.isMyComment && (
                   <Button
                     variant="ghost"

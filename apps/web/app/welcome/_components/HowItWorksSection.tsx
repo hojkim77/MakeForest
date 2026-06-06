@@ -6,6 +6,30 @@ import { CreatureSprite } from '@/shared/components/ui/CreatureSprite';
 const TOTAL_STEPS = 6;
 const CREATURE_STAGES = [0, 2, 6, 9] as const;
 
+const PALETTE = {
+  dark: {
+    bg: '#1B3A26',
+    bgSemi: 'rgba(27,58,38,0.9)',
+    accent: '#C5F0D5',
+    muted: '#B6AE99',
+    main: '#EDE8DC',
+    borderSubtle: 'rgba(182,174,153,0.2)',
+    borderAccent: 'rgba(197,240,213,0.2)',
+    infoCardBg: 'rgba(255,255,255,0.05)',
+    dotInactive: '#6E7268',
+  },
+  light: {
+    bg: '#FBF7EC',
+    bgSemi: 'rgba(251,247,236,0.9)',
+    accent: '#226143',
+    muted: '#6E7268',
+    main: '#2A2D26',
+    borderSubtle: '#B6AE99',
+    dotInactive: '#B6AE99',
+  },
+  primary: '#226143',
+};
+
 interface StepMeta {
   stepLabel: string;
   title: string;
@@ -148,6 +172,7 @@ export function HowItWorksSection() {
   const touchStartY = useRef(0);
 
   const isDark = STEPS[step]?.dark ?? false;
+  const P = isDark ? PALETTE.dark : PALETTE.light;
 
   const navigate = useCallback(
     (dir: 1 | -1) => {
@@ -220,7 +245,7 @@ export function HowItWorksSection() {
     <section
       ref={sectionRef}
       id="how"
-      style={{ background: isDark ? '#31302b' : '#FAF9F7', transition: 'background 0s' }}
+      style={{ background: P.bg, transition: 'background 0s' }}
     >
       {!isDark && <div className="absolute inset-0 pixel-bg pointer-events-none" />}
 
@@ -230,9 +255,9 @@ export function HowItWorksSection() {
           <h2
             className="font-mono text-xl tracking-tighter px-2 py-1 border"
             style={{
-              color: isDark ? '#b0f1ca' : '#226143',
-              background: isDark ? 'rgba(49,48,43,0.9)' : 'rgba(250,249,247,0.9)',
-              borderColor: isDark ? 'rgba(176,241,202,0.2)' : '#E8E4DC',
+              color: P.accent,
+              background: P.bgSemi,
+              borderColor: isDark ? PALETTE.dark.borderAccent : PALETTE.light.borderSubtle,
             }}
           >
             HOW IT WORKS
@@ -240,9 +265,9 @@ export function HowItWorksSection() {
           <span
             className="font-mono text-xs px-2 py-1 border"
             style={{
-              color: isDark ? '#c0c9c0' : '#707972',
-              background: isDark ? 'rgba(49,48,43,0.9)' : '#f7f3eb',
-              borderColor: isDark ? 'rgba(192,201,192,0.2)' : '#E8E4DC',
+              color: P.muted,
+              background: P.bgSemi,
+              borderColor: isDark ? PALETTE.dark.borderAccent : PALETTE.light.borderSubtle,
             }}
           >
             {String(step + 1).padStart(2, '0')}/06
@@ -256,7 +281,7 @@ export function HowItWorksSection() {
               className="h-2 transition-all duration-300"
               style={{
                 width: i === step ? 24 : 8,
-                background: i === step ? '#226143' : isDark ? '#404942' : '#c0c9c0',
+                background: i === step ? PALETTE.primary : P.dotInactive,
               }}
             />
           ))}
@@ -274,32 +299,32 @@ export function HowItWorksSection() {
           >
             <span
               className="font-mono text-xs uppercase tracking-widest"
-              style={{ color: isDark ? '#b0f1ca' : '#226143' }}
+              style={{ color: P.accent }}
             >
               {current.stepLabel}
             </span>
             <h3
               className="font-mono text-4xl leading-snug"
-              style={{ color: isDark ? '#f4f0e8' : '#1c1c17' }}
+              style={{ color: P.main }}
             >
               {current.title}
               <br />
-              <span className="text-2xl" style={{ color: isDark ? '#c0c9c0' : '#707972' }}>
+              <span className="text-2xl" style={{ color: P.muted }}>
                 {current.sub}
               </span>
             </h3>
-            <p className="font-sans leading-relaxed max-w-sm" style={{ color: isDark ? '#c0c9c0' : '#404942' }}>
+            <p className="font-sans leading-relaxed max-w-sm" style={{ color: P.muted }}>
               {current.body}
             </p>
 
             {/* Step-specific extras */}
             {step === 0 && (
               <div className="flex items-center gap-4 pt-1">
-                <div className="bg-white border border-[#E8E4DC] px-4 py-3 flex items-center gap-3">
+                <div className="bg-surface border-2 border-outline px-4 py-3 flex items-center gap-3">
                   <div className="spin-slow w-7 h-7 border-2 border-primary-container border-t-primary rounded-full" />
                   <span className="font-mono font-bold text-xl">30:00</span>
                 </div>
-                <div className="bg-primary-fixed border border-[#E8E4DC] px-3 py-1.5 font-mono text-xs text-primary">
+                <div className="bg-primary-container border-2 border-outline px-3 py-1.5 font-mono text-xs text-primary">
                   +1 WATER DROP
                 </div>
               </div>
@@ -311,7 +336,7 @@ export function HowItWorksSection() {
                   <div
                     key={i}
                     className="w-3 h-4 border border-primary/40"
-                    style={{ background: i < step * 3 ? '#226143' : 'transparent' }}
+                    style={{ background: i < step * 3 ? PALETTE.primary : 'transparent' }}
                   />
                 ))}
               </div>
@@ -320,15 +345,15 @@ export function HowItWorksSection() {
             {step === 4 && (
               <div
                 className="border px-4 py-3 font-mono text-xs space-y-2"
-                style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(192,201,192,0.2)' }}
+                style={{ background: PALETTE.dark.infoCardBg, borderColor: PALETTE.dark.borderSubtle }}
               >
                 <div className="flex justify-between">
-                  <span style={{ color: '#c0c9c0' }}>역삼1동 오늘 물주기</span>
-                  <span style={{ color: '#b0f1ca' }} className="font-bold">247회</span>
+                  <span style={{ color: PALETTE.dark.muted }}>역삼1동 오늘 물주기</span>
+                  <span style={{ color: PALETTE.dark.accent }} className="font-bold">247회</span>
                 </div>
                 <div className="flex justify-between">
-                  <span style={{ color: '#c0c9c0' }}>활동 인원</span>
-                  <span style={{ color: '#b0f1ca' }} className="font-bold">38명</span>
+                  <span style={{ color: PALETTE.dark.muted }}>활동 인원</span>
+                  <span style={{ color: PALETTE.dark.accent }} className="font-bold">38명</span>
                 </div>
               </div>
             )}
@@ -336,7 +361,11 @@ export function HowItWorksSection() {
             {step === 5 && (
               <div
                 className="border px-4 py-3 font-mono text-xs"
-                style={{ background: 'rgba(176,241,202,0.08)', borderColor: 'rgba(176,241,202,0.2)', color: '#b0f1ca' }}
+                style={{
+                  background: 'rgba(197,240,213,0.08)',
+                  borderColor: PALETTE.dark.borderAccent,
+                  color: PALETTE.dark.accent,
+                }}
               >
                 ✓ 타이머와 물주기는 내가 등록한 동네에서만 작동해요
               </div>
@@ -352,7 +381,7 @@ export function HowItWorksSection() {
                 className="absolute inset-0 flex items-center justify-center fade-right"
                 style={{ opacity: step < 4 ? 1 : 0, pointerEvents: step < 4 ? 'auto' : 'none' }}
               >
-                <div className="relative w-72 h-72 md:w-96 md:h-96 bg-surface-container border border-[#E8E4DC] p-4 flex items-center justify-center">
+                <div className="relative w-72 h-72 md:w-96 md:h-96 bg-surface border-2 border-outline p-4 flex items-center justify-center">
                   {step === 0 && (
                     <div className="absolute inset-0 flex items-start justify-center pt-6 z-10 pointer-events-none">
                       <span
@@ -376,7 +405,7 @@ export function HowItWorksSection() {
               >
                 <div
                   className="relative w-full h-full border"
-                  style={{ borderColor: 'rgba(192,201,192,0.2)' }}
+                  style={{ borderColor: PALETTE.dark.borderSubtle }}
                 >
                   <PixelMap zoomed={mapZoomed} />
                 </div>
@@ -389,7 +418,7 @@ export function HowItWorksSection() {
 
       {/* Swipe hint */}
       <div className="absolute bottom-8 left-0 right-0 flex justify-center z-30 pointer-events-none">
-        <span className="font-mono text-s" style={{ color: isDark ? '#b0f1ca' : '#226143', opacity: 0.5 }}>
+        <span className="font-mono text-s" style={{ color: P.accent, opacity: 0.5 }}>
           ← swipe or use arrow keys →
         </span>
       </div>

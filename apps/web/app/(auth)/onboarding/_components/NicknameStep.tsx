@@ -28,7 +28,7 @@ export function NicknameStep({ initialNickname, onConfirm }: NicknameStepProps) 
     <div className="w-full flex flex-col items-center text-center gap-xl">
       {/* Icon */}
       <div className="relative w-24 h-24 flex items-center justify-center">
-        <div className="absolute inset-0 pixel-grid opacity-30 border border-outline-variant rounded-full" />
+        <div className="absolute inset-0 pixel-grid opacity-30 border-2 border-outline rounded-full" />
         <div className="relative w-10 h-10 bg-primary border-2 border-on-primary-fixed-variant flex items-center justify-center">
           <span
             className="material-symbols-outlined text-white text-[20px]"
@@ -54,7 +54,7 @@ export function NicknameStep({ initialNickname, onConfirm }: NicknameStepProps) 
         <Card variant="low" border padding="lg" className="flex flex-col gap-sm">
           <div className="flex justify-between items-center">
             <span className="font-mono text-label text-primary uppercase">Nickname</span>
-            <span className={`font-mono text-label ${value.length > MAX ? 'text-error' : 'text-outline'}`}>
+            <span className={`font-mono text-label ${value.length > MAX ? 'text-error' : 'text-on-surface-variant'}`}>
               {value.length} / {MAX}
             </span>
           </div>
