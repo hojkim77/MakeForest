@@ -13,7 +13,6 @@ export function MapOverlay() {
   const { mapMode, focusedRegionCode } = useMapStore();
   const { data: pixelMap } = usePixelMapQuery();
 
-  // 현재 집중 중인 유저 수 — activity stream 기반 (real-time)
   const focusingCount = useMemo(() => {
     if (mapMode !== 'forest' || !focusedRegionCode) return 0;
     let total = 0;
@@ -42,27 +41,36 @@ export function MapOverlay() {
 
   const isForest = mapMode === 'forest';
 
-  return (
-    <>
-      {/* Title card — top right */}
-      <div className="absolute top-6 right-6 z-map-content p-md bg-background border border-outline text-right">
-        <p className="font-mono text-pixel-stat text-primary-container uppercase tracking-wider">
-          {isForest && focusedRegionCode
-            ? regionDisplayName(focusedRegionCode)
-            : 'Pixel Forest'}
-        </p>
-
-        {isForest && focusedRegionCode ? (
-          <div className="mt-xs font-mono text-label text-outline space-y-0.5">
-            <p>집중 중 {focusingCount}명</p>
-            <p>오늘 물주기 {totalWaterCount ?? '…'}회</p>
+  if (isForest && focusedRegionCode) {
+    return (
+      <div className="absolute top-6 right-6 z-map-content bg-surface border-2 border-outline shadow-island-lg px-[20px] py-[14px] text-right min-w-[168px]">
+        <div className="text-[18px] font-black text-outline tracking-tight">
+          {regionDisplayName(focusedRegionCode)}
+        </div>
+        <div className="flex items-center justify-end gap-[6px] mt-[6px]">
+          <span className="animate-fm-blink w-[7px] h-[7px] rounded-full bg-primary flex-shrink-0" />
+          <span className="text-[13px] text-on-surface font-bold">
+            지금 <strong className="text-primary">{focusingCount}명</strong> 집중 중
+          </span>
+        </div>
+        {totalWaterCount !== null && (
+          <div className="text-[12px] text-on-surface-variant mt-[4px]">
+            오늘 물주기 <strong className="text-primary">{totalWaterCount}회</strong>
           </div>
-        ) : (
-          <p className="font-mono text-label text-outline mt-xs">
-            Live Sync: {globalActiveUsers.toLocaleString()} users active
-          </p>
         )}
       </div>
-    </>
+    );
+  }
+
+  // Pixel mode: global stats
+  return (
+    <div className="absolute top-6 right-6 z-map-content p-md bg-surface border-2 border-outline shadow-island text-right">
+      <p className="font-mono text-pixel-stat text-primary uppercase tracking-wider">
+        Pixel Forest
+      </p>
+      <p className="font-mono text-label text-on-surface-variant mt-xs">
+        Live Sync: {globalActiveUsers.toLocaleString()} users active
+      </p>
+    </div>
   );
 }

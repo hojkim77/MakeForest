@@ -1,54 +1,45 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { usePixelMapQuery } from '@/shared/hooks/queries/usePixelMapQuery';
 import { useMapSnapshotQuery } from '@/shared/hooks/queries/useMapSnapshotQuery';
-import { UserOverlay } from './UserOverlay';
-import { CollectionCreatureOverlay } from './CollectionCreatureOverlay';
 import { regionOf } from '@makeforest/types';
-
-const PIXEL_SIZE = 4;
-const SEA_COLOR = '#0e2318';
-const INACTIVE_COLOR = '#707972';
-const BREATHE_STEPS = 24; // 0.5 luma per step — 시각적으로 구분 불가
-
-const FOREST_COLOR_TABLE: readonly (readonly string[])[] = Array.from(
-  { length: 21 },
-  (_, count) => {
-    if (count === 0) return Array<string>(BREATHE_STEPS).fill(INACTIVE_COLOR);
-    return Array.from({ length: BREATHE_STEPS }, (_, step) => {
-      const breathe = step / (BREATHE_STEPS - 1);
-      const t = Math.min(count / 20, 1);
-      const l = 20 + t * 36 + breathe * 12;
-      return `hsl(138,60%,${Math.round(l)}%)`;
-    });
-  },
-);
-
-function forestColor(count: number, breathe: number): string {
-  const ci = Math.min(Math.floor(count), 20);
-  const bi = Math.min(Math.round(breathe * (BREATHE_STEPS - 1)), BREATHE_STEPS - 1);
-  return FOREST_COLOR_TABLE[ci]?.[bi] ?? INACTIVE_COLOR;
-}
+import {
+  getTimeOfDay,
+  TIMES,
+  buildIslandShapeFromCells,
+  buildIslandWorld,
+  bindUsersToFeatures,
+  buildAmbient,
+  worldSize,
+  CELL,
+  PAD_X,
+  PAD_TOP,
+} from './islandUtils';
+import { SkyLayer } from './SkyLayer';
+import { IslandGround } from './IslandGround';
+import { IslandFeatures } from './IslandFeatures';
 
 interface ForestMapProps {
   regionCode: string;
   active: boolean;
-  scale?: number;
 }
 
-export function ForestMap({ regionCode, active, scale = 1 }: ForestMapProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+export function ForestMap({ regionCode, active }: ForestMapProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [islandScale, setIslandScale] = useState(0);
+
   const { data: pixelMap } = usePixelMapQuery();
   const { data: snapshot } = useMapSnapshotQuery();
-  const activity = snapshot?.heatmap ?? {};
   const activeUsers = snapshot?.users ?? [];
 
+  const timeOfDay = useMemo(() => getTimeOfDay(), []);
+  const T = TIMES[timeOfDay];
+
   const visibleCells = useMemo(
-    () =>
-      regionCode
-        ? pixelMap.cells.filter((c) => regionOf(c.code, c.name) === regionCode)
-        : pixelMap.cells,
+    () => regionCode
+      ? pixelMap.cells.filter((c) => regionOf(c.code, c.name) === regionCode)
+      : pixelMap.cells,
     [pixelMap.cells, regionCode],
   );
 
@@ -57,49 +48,113 @@ export function ForestMap({ regionCode, active, scale = 1 }: ForestMapProps) {
     [activeUsers, visibleCells],
   );
 
-  const render = useCallback((timestamp: number) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const breathe = 0.5 + 0.5 * Math.sin(timestamp / 900);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (const cell of visibleCells) {
-      const count = activity[cell.code] ?? 0;
-      ctx.fillStyle = forestColor(count, breathe);
-      ctx.fillRect(cell.x * PIXEL_SIZE, cell.y * PIXEL_SIZE, PIXEL_SIZE - 1, PIXEL_SIZE - 1);
-    }
-  }, [visibleCells, activity]);
+  const shape = useMemo(() => buildIslandShapeFromCells(visibleCells), [visibleCells]);
 
-  const renderRef = useRef(render);
-  useEffect(() => { renderRef.current = render; }, [render]);
+  const density = regionUsers.filter(u => u.sessionStatus === 'RUNNING').length;
 
-  // 활성(forest 모드)일 때만 RAF 루프 실행
-  useEffect(() => {
-    if (!active) return;
-    let id: number;
-    const loop = (ts: number) => {
-      renderRef.current(ts);
-      id = requestAnimationFrame(loop);
+  const world = useMemo(
+    () => buildIslandWorld(regionCode, density, shape, regionUsers.length),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [regionCode, density, shape, regionUsers.length],
+  );
+
+  const features = useMemo(
+    () => bindUsersToFeatures(world.features, regionUsers),
+    [world.features, regionUsers],
+  );
+
+  const ambient = useMemo(() => buildAmbient(), []);
+
+  const { WORLD_W, WORLD_H } = worldSize(shape);
+
+  // Fit island to container
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => {
+      const { width, height } = el.getBoundingClientRect();
+      setIslandScale(Math.min((width - 24) / WORLD_W, (height - 24) / WORLD_H));
     };
-    id = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(id);
-  }, [active]);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [WORLD_W, WORLD_H, active]);
+
+  if (!active) return null;
 
   return (
-    <div className="relative w-full h-full overflow-hidden" style={{ backgroundColor: SEA_COLOR }}>
-      <canvas
-        ref={canvasRef}
-        width={pixelMap.w * PIXEL_SIZE}
-        height={pixelMap.h * PIXEL_SIZE}
-        className="w-full h-full"
-        style={{ imageRendering: 'pixelated' }}
-      />
-      {active && (
-        <UserOverlay users={regionUsers} mapW={pixelMap.w} mapH={pixelMap.h} scale={scale} />
+    <div
+      ref={containerRef}
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        overflow: 'hidden',
+        background: T.sky,
+        transition: 'background 0.6s ease',
+      }}
+    >
+      {/* Mood overlay (sunset / night tint) */}
+      {T.overlay !== 'transparent' && (
+        <div
+          style={{ position: 'absolute', inset: 0, background: T.overlay, pointerEvents: 'none', zIndex: 1 }}
+        />
       )}
-      {active && (
-        <CollectionCreatureOverlay mapW={pixelMap.w} mapH={pixelMap.h} scale={scale} regionCode={regionCode} />
+
+      {/* Sky ambient elements (stars, clouds, sun, birds, moon) */}
+      <div style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none' }}>
+        <SkyLayer T={T} ambient={ambient} />
+      </div>
+
+      {/* Island world (centered, internally scaled) */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2,
+        }}
+      >
+        <div
+          style={{
+            width: WORLD_W,
+            height: WORLD_H,
+            transform: `scale(${islandScale})`,
+            position: 'relative',
+            flexShrink: 0,
+            overflow: 'hidden',
+          }}
+        >
+          <IslandGround shape={shape} T={T} pondCell={world.pondCell} />
+          <IslandFeatures features={features} T={T} wind={true} />
+        </div>
+      </div>
+
+      {/* Fireflies (night, above world) */}
+      {T.night && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none' }}>
+          {ambient.flies.map((fl, i) => (
+            <div
+              key={i}
+              style={{
+                position: 'absolute',
+                top: `${fl.top}%`,
+                left: `${fl.left}%`,
+                width: 5,
+                height: 5,
+                borderRadius: '50%',
+                background: '#FFE89A',
+                boxShadow: '0 0 8px 3px rgba(255,232,154,0.8)',
+                ['--fm-dx' as string]: `${fl.dx}px`,
+                ['--fm-dy' as string]: `${fl.dy}px`,
+                animation: `fm-fly ${fl.dur.toFixed(2)}s ease-in-out ${fl.delay.toFixed(2)}s infinite`,
+              }}
+            />
+          ))}
+        </div>
       )}
     </div>
   );
