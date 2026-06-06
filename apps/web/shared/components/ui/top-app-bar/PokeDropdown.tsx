@@ -19,11 +19,11 @@ function formatRelativeTime(isoString: string): string {
 
 export function PokeDropdown({ data }: PokeDropdownProps) {
   return (
-    <div className="absolute right-0 top-full mt-1 w-72 bg-surface border border-outline-variant z-50">
+    <div className="absolute right-0 top-full mt-1 w-72 bg-surface border-2 border-outline shadow-island z-50">
       <div className="px-3 py-2 border-b border-outline-variant flex items-center justify-between">
         <span className="font-mono text-label text-on-surface">알림</span>
         {data.unreadCount > 0 && (
-          <span className="font-mono text-[11px] text-primary-container">
+          <span className="font-mono text-[11px] text-primary">
             {data.unreadCount}개 미읽음
           </span>
         )}
@@ -42,7 +42,7 @@ export function PokeDropdown({ data }: PokeDropdownProps) {
                 !item.isRead ? 'bg-surface-container' : '',
               ].join(' ')}
             >
-              <Icon name="touch_app" size={18} className="text-primary-container mt-0.5 flex-shrink-0" />
+              <Icon name="touch_app" size={18} className="text-primary mt-0.5 flex-shrink-0" />
               <div className="flex flex-col min-w-0 flex-1">
                 <span className="font-sans text-label text-on-surface">
                   <span className="font-mono">{item.fromUser.nickname}</span>님이 찔렀어요!
@@ -52,7 +52,7 @@ export function PokeDropdown({ data }: PokeDropdownProps) {
                 </span>
               </div>
               {!item.isRead && (
-                <span className="w-2 h-2 rounded-full bg-primary-container mt-1.5 flex-shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />
               )}
             </li>
           ))}

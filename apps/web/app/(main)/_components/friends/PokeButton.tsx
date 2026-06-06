@@ -69,7 +69,7 @@ export function PokeButton({ targetUserId, myUserId, myPoints, pokeCooldownEndsA
         'p-1 transition-none',
         isDisabled
           ? 'text-on-surface-variant opacity-40 cursor-not-allowed'
-          : 'text-primary-container hover:bg-surface-container-high',
+          : 'text-primary hover:bg-surface-container-high',
       ].join(' ')}
       aria-label="찌르기"
       title={isOnCooldown ? '쿨다운 중' : !hasEnoughPoints ? '포인트 부족' : '찌르기 (-2pt)'}

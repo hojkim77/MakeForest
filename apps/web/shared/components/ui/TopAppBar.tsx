@@ -40,12 +40,12 @@ export function TopAppBar() {
   }, [mobileNavOpen]);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-header bg-surface border-b border-outline pt-[var(--safe-top)]">
+    <header className="fixed top-0 left-0 right-0 z-header bg-surface border-b-2 border-outline pt-[var(--safe-top)]">
       <div className="flex justify-between items-center w-full px-lg py-sm">
         {/* Logo */}
         <Link
           href="/"
-          className="font-mono text-headline text-primary-container tracking-tighter uppercase"
+          className="font-mono text-headline text-primary tracking-tighter uppercase"
         >
           PixelForest
         </Link>
@@ -63,7 +63,7 @@ export function TopAppBar() {
                 className={[
                   'font-mono text-base font-bold uppercase tracking-wider py-1 transition-none',
                   isActive
-                    ? 'text-primary-container border-b-2 border-primary-container'
+                    ? 'text-primary border-b-2 border-primary'
                     : 'text-on-surface-variant hover:text-on-surface',
                 ].join(' ')}
               >
@@ -127,7 +127,7 @@ export function TopAppBar() {
         </div>
       </div>
       {mobileNavOpen && (
-        <div ref={mobileNavRef} className="md:hidden absolute top-full left-0 right-0 bg-surface border-b border-outline z-50 flex flex-col">
+        <div ref={mobileNavRef} className="md:hidden absolute top-full left-0 right-0 bg-surface border-b-2 border-outline z-50 flex flex-col">
           {NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href;
             const guideId = 'guideId' in item ? item.guideId : undefined;
@@ -139,7 +139,7 @@ export function TopAppBar() {
                 onClick={() => setMobileNavOpen(false)}
                 className={[
                   'px-lg py-sm font-mono text-label border-b border-outline last:border-0',
-                  isActive ? 'text-primary-container bg-surface-container' : 'text-on-surface hover:bg-surface-container-high',
+                  isActive ? 'text-primary bg-surface-container' : 'text-on-surface hover:bg-surface-container-high',
                 ].join(' ')}
               >
                 {item.label}

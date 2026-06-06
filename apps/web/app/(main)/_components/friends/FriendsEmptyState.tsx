@@ -13,7 +13,7 @@ export function FriendsEmptyState({ onAddFriends }: FriendsEmptyStateProps) {
       <p className="font-sans text-label text-on-surface-variant">아직 친구가 없어요</p>
       <button
         onClick={onAddFriends}
-        className="font-mono text-label text-primary-container hover:underline"
+        className="font-mono text-label text-primary hover:underline"
       >
         친구 추가하기
       </button>
