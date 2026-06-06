@@ -176,7 +176,8 @@ export function buildIslandShapeFromCells(cells: DongPixel[]): IslandShape {
   if (dilationR > 0) {
     const original = [...landSet];
     for (const key of original) {
-      const [kr, kc] = key.split(',').map(Number);
+      const parts = key.split(',').map(Number);
+      const kr = parts[0]!, kc = parts[1]!;
       for (let dr = -dilationR; dr <= dilationR; dr++) {
         for (let dc = -dilationR; dc <= dilationR; dc++) {
           const nr = kr + dr, nc = kc + dc;

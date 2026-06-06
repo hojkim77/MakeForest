@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { makeQueryClient } from '@/shared/lib/queryClient';
 
 function LogoutCleanup() {

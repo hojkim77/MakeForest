@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { usePixelMapQuery } from '@/shared/hooks/queries/usePixelMapQuery';
 import { useMapSnapshotQuery } from '@/shared/hooks/queries/useMapSnapshotQuery';
 import { regionOf } from '@makeforest/types';
@@ -12,9 +12,6 @@ import {
   bindUsersToFeatures,
   buildAmbient,
   worldSize,
-  CELL,
-  PAD_X,
-  PAD_TOP,
 } from './islandUtils';
 import { SkyLayer } from './SkyLayer';
 import { IslandGround } from './IslandGround';
