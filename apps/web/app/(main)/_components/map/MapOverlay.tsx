@@ -43,12 +43,11 @@ export function MapOverlay() {
 
   if (isForest && focusedRegionCode) {
     return (
-      <div className="absolute top-6 right-6 z-map-content bg-surface border-2 border-outline shadow-island-lg px-[20px] py-[14px] text-right min-w-[168px]">
+      <div className="absolute top-6 right-6 z-map-content bg-surface border-2 border-outline shadow-island-lg px-[20px] py-[14px] text-right">
         <div className="text-[18px] font-black text-outline tracking-tight">
           {regionDisplayName(focusedRegionCode)}
         </div>
         <div className="flex items-center justify-end gap-[6px] mt-[6px]">
-          <span className="animate-fm-blink w-[7px] h-[7px] rounded-full bg-primary flex-shrink-0" />
           <span className="text-[13px] text-on-surface font-bold">
             지금 <strong className="text-primary">{focusingCount}명</strong> 집중 중
           </span>
@@ -64,12 +63,8 @@ export function MapOverlay() {
 
   // Pixel mode: global stats
   return (
-    <div className="absolute top-6 right-6 z-map-content bg-surface border-2 border-outline shadow-island-lg px-[20px] py-[14px] text-right min-w-[168px]">
-      <div className="text-[18px] font-black text-outline tracking-tight">
-        Pixel Forest
-      </div>
-      <div className="flex items-center justify-end gap-[6px] mt-[6px]">
-        <span className="animate-fm-blink w-[7px] h-[7px] rounded-full bg-primary flex-shrink-0" />
+    <div className="absolute top-6 right-6 z-map-content bg-surface border-2 border-outline shadow-island-lg px-[20px] py-[14px] text-right">
+      <div className="flex items-center justify-end gap-[6px]">
         <span className="text-[13px] text-on-surface font-bold">
           지금 <strong className="text-primary">{globalActiveUsers.toLocaleString()}명</strong> 집중 중
         </span>

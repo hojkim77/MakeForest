@@ -113,13 +113,13 @@ describe('heatmap:update 이벤트', () => {
 });
 
 describe('session:toast 이벤트', () => {
-  it('toast 표시 + collection 캐시 업데이트', async () => {
+  it('toast 표시 + mission 캐시 업데이트', async () => {
     jest.useRealTimers();
     const { toast } = await import('@/shared/lib/toast');
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const kstDate = '2026-05-25';
     const regionCode = '11';
-    queryClient.setQueryData(['collection', 'today', regionCode, kstDate], {
+    queryClient.setQueryData(['mission', 'today', regionCode, kstDate], {
       creatureType: 'MUSHROOM', currentCount: 38, targetCount: 50, isCompleted: false,
     });
 
@@ -129,12 +129,12 @@ describe('session:toast 이벤트', () => {
       MockEventSource.latestRegion()!.triggerEvent('session:toast', {
         dongCode: '1111010100',
         nickname: '김OO',
-        collectionProgress: { creatureType: 'MUSHROOM', currentCount: 39, targetCount: 50, isCompleted: false },
+        missionProgress: { creatureType: 'MUSHROOM', currentCount: 39, targetCount: 50, isCompleted: false },
       });
     });
 
     expect(toast.info).toHaveBeenCalledWith(expect.stringContaining('김OO'));
-    const cached = queryClient.getQueryData(['collection', 'today', regionCode, kstDate]) as { currentCount: number };
+    const cached = queryClient.getQueryData(['mission', 'today', regionCode, kstDate]) as { currentCount: number };
     expect(cached.currentCount).toBe(39);
     jest.useFakeTimers();
   });

@@ -42,7 +42,6 @@ export function TimerSettingSection({ userId, initialTodayState }: Props) {
     if (!isLoggedIn || !userId) return;
     try {
       const data = await createSessionMutate({
-        todos: [],
         userId,
         kstDate,
         todayGoal: goal.trim(),

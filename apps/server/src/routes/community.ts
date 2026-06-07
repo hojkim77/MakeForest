@@ -53,19 +53,32 @@ communityRouter.get('/feed', async (req: Request, res: Response) => {
 
     // For water sort: sort in memory by session waterCount
     const sessionIds = items.map((p) => p.sessionId);
-    const [sessions, creatures] = await Promise.all([
+    const userIds = items.map((p) => p.userId);
+    const dates = [...new Set(items.map((p) => p.date))];
+    const [sessions, creatures, todos] = await Promise.all([
       prisma.focusSession.findMany({
         where: { id: { in: sessionIds } },
-        select: { id: true, waterCount: true, totalElapsedSec: true, todos: true },
+        select: { id: true, waterCount: true, totalElapsedSec: true },
       }),
       prisma.userCreature.findMany({
-        where: { userId: { in: items.map((p) => p.userId) } },
+        where: { userId: { in: userIds } },
         select: { userId: true, stage: true },
+      }),
+      prisma.todo.findMany({
+        where: { userId: { in: userIds }, date: { in: dates } },
+        select: { userId: true, date: true, text: true, done: true },
+        orderBy: { createdAt: 'asc' },
       }),
     ]);
 
     const sessionMap = new Map(sessions.map((s) => [s.id, s]));
     const creatureMap = new Map(creatures.map((c) => [c.userId, c]));
+    // todos keyed by "userId:date"
+    const todoMap = new Map<string, { text: string; done: boolean }[]>();
+    for (const t of todos) {
+      const key = `${t.userId}:${t.date}`;
+      (todoMap.get(key) ?? todoMap.set(key, []).get(key)!).push({ text: t.text, done: t.done });
+    }
 
     let sortedItems = items;
     if (effectiveSort === 'water') {
@@ -81,6 +94,7 @@ communityRouter.get('/feed', async (req: Request, res: Response) => {
     const data = sortedItems.map((post) => {
       const session = sessionMap.get(post.sessionId);
       const creature = creatureMap.get(post.userId);
+      const postTodos = todoMap.get(`${post.userId}:${post.date}`) ?? [];
 
       const reactionCounts: Record<string, number> = {};
       for (const r of post.reactions) {
@@ -103,7 +117,7 @@ communityRouter.get('/feed', async (req: Request, res: Response) => {
           ? {
               waterCount: session.waterCount,
               totalElapsedSec: session.totalElapsedSec,
-              todos: session.todos,
+              todos: postTodos,
               todosPublic: post.user.todosPublic,
             }
           : null,

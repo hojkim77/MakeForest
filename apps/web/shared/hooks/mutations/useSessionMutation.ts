@@ -1,13 +1,12 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { CreateSessionResType, TodayStateResType, Todo } from '@makeforest/types';
+import type { CreateSessionResType, TodayStateResType } from '@makeforest/types';
 import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
 import { qk } from '@/shared/lib/queryKeys';
 
 interface CreateSessionVars {
-  todos: Todo[];
   userId: string;
   kstDate: string;
   todayGoal: string;
@@ -26,10 +25,10 @@ export function useCreateSessionMutation() {
   const queryClient = useQueryClient();
 
   return useMutation<CreateSessionResType, Error, CreateSessionVars, { previousSession: unknown; previousTodayState: unknown }>({
-    mutationFn: ({ todos, todayGoal, focusLengthMin, segmentCount }) =>
-      api.post<CreateSessionResType>(API_PATHS.SESSIONS(), { todos: todos ?? [], todayGoal, focusLengthMin, segmentCount }),
+    mutationFn: ({ todayGoal, focusLengthMin, segmentCount }) =>
+      api.post<CreateSessionResType>(API_PATHS.SESSIONS(), { todayGoal, focusLengthMin, segmentCount }),
 
-    onMutate: async ({ userId, kstDate }) => {
+    onMutate: async ({ userId, kstDate, todayGoal }) => {
       const sessionKey = qk.sessions.today(userId, kstDate);
       const todayStateKey = qk.sessions.todayState(userId, kstDate);
       await Promise.all([
@@ -39,7 +38,7 @@ export function useCreateSessionMutation() {
       const previousSession = queryClient.getQueryData(sessionKey);
       const previousTodayState = queryClient.getQueryData(todayStateKey);
       queryClient.setQueryData<TodayStateResType>(todayStateKey, (old) =>
-        old ? { ...old, sessionStatus: 'RUNNING', startedAt: new Date().toISOString() } : old,
+        old ? { ...old, sessionStatus: 'RUNNING', startedAt: new Date().toISOString(), todayGoal } : old,
       );
       return { previousSession, previousTodayState };
     },

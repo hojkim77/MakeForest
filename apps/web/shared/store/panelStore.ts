@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 
-type PanelTab = 'collection' | 'ranking' | null;
+type PanelTab = 'mission' | 'ranking' | null;
 
 interface PanelState {
   activeTab: PanelTab;
-  toggleTab: (tab: 'collection' | 'ranking') => void;
+  toggleTab: (tab: 'mission' | 'ranking') => void;
 }
 
 export const usePanelStore = create<PanelState>((set) => ({

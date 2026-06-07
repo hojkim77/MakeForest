@@ -2,46 +2,42 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { useTodoStore, selectIsDirty } from '@/shared/store';
-import { useTodaySessionQuery } from '@/shared/hooks/queries/useTodaySessionQuery';
-import { api } from '@/shared/lib/api';
-import { API_PATHS } from '@/shared/lib/apiPaths';
 import { toast } from '@/shared/lib/toast';
 import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
+import { useTodosQuery } from '@/shared/hooks/queries/useTodosQuery';
+import { useCreateTodoMutation, useUpdateTodoMutation, useDeleteTodoMutation } from '@/shared/hooks/mutations/useTodosMutation';
 
 export function TodoCardContent() {
-  const { todos, addTodo, toggleTodo, removeTodo, markSaved } = useTodoStore();
-  const isDirty = useTodoStore(selectIsDirty);
-
   const { data: authSession } = useSession();
   const userId = authSession?.user?.id ?? null;
-  const { data: todayState } = useTodaySessionQuery({ userId });
-  const sessionId = todayState?.sessionId ?? null;
+
+  const { data: todos = [] } = useTodosQuery({ userId });
+  const createMutation = useCreateTodoMutation(userId);
+  const updateMutation = useUpdateTodoMutation(userId);
+  const deleteMutation = useDeleteTodoMutation(userId);
 
   const [input, setInput] = useState('');
-  const [saving, setSaving] = useState(false);
 
   function handleAdd() {
     const text = input.trim();
-    if (!text) return;
-    addTodo(text);
+    if (!text || !userId) return;
+    createMutation.mutate({ text }, {
+      onError: () => toast.error('추가에 실패했어요. 다시 시도해주세요.'),
+    });
     setInput('');
   }
 
-  async function handleSave() {
-    if (!isDirty || saving) return;
-    setSaving(true);
-    try {
-      if (sessionId) {
-        await api.patch(API_PATHS.SESSION_TODOS(sessionId), { todos });
-      }
-      markSaved();
-    } catch {
-      toast.error('저장에 실패했어요. 다시 시도해주세요.');
-    } finally {
-      setSaving(false);
-    }
+  function handleToggle(id: string, done: boolean) {
+    updateMutation.mutate({ id, done: !done }, {
+      onError: () => toast.error('저장에 실패했어요. 다시 시도해주세요.'),
+    });
+  }
+
+  function handleDelete(id: string) {
+    deleteMutation.mutate({ id }, {
+      onError: () => toast.error('삭제에 실패했어요. 다시 시도해주세요.'),
+    });
   }
 
   return (
@@ -57,7 +53,7 @@ export function TodoCardContent() {
           <div key={t.id} className="flex items-center gap-sm px-md py-xs">
             <button
               type="button"
-              onClick={() => toggleTodo(t.id)}
+              onClick={() => handleToggle(t.id, t.done)}
               className="font-mono text-label text-on-surface-variant shrink-0 w-4 text-center"
             >
               {t.done ? '✓' : '○'}
@@ -69,7 +65,7 @@ export function TodoCardContent() {
               variant="ghost"
               size="sm"
               type="button"
-              onClick={() => removeTodo(t.id)}
+              onClick={() => handleDelete(t.id)}
               className="shrink-0"
             >
               삭제
@@ -92,28 +88,9 @@ export function TodoCardContent() {
           size="sm"
           type="button"
           onClick={handleAdd}
-          disabled={!input.trim()}
+          disabled={!input.trim() || createMutation.isPending}
         >
           추가
-        </Button>
-      </div>
-
-      {/* 저장 */}
-      <div className="flex items-center justify-between px-md py-sm border-t border-outline">
-        {!sessionId && isDirty && (
-          <span className="font-mono text-label text-on-surface-variant text-xs">
-            세션 시작 후 서버에 저장돼요
-          </span>
-        )}
-        <Button
-          type="button"
-          loading={saving}
-          disabled={!isDirty || saving}
-          size="sm"
-          className="ml-auto"
-          onClick={() => void handleSave()}
-        >
-          저장
         </Button>
       </div>
     </>

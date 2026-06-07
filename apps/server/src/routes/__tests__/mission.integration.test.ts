@@ -8,9 +8,9 @@ beforeEach(async () => {
   await truncateAll();
 });
 
-describe('GET /collection/today', () => {
+describe('GET /mission/today', () => {
   it('처음 조회 시 lazy 생성 → 200', async () => {
-    const res = await api.get('/collection/today?regionCode=11680').expect(200);
+    const res = await api.get('/mission/today?regionCode=11680').expect(200);
     expect(res.body.targetCount).toBeGreaterThan(0);
     expect(res.body.currentCount).toBe(0);
     expect(res.body.isCompleted).toBe(false);
@@ -18,21 +18,21 @@ describe('GET /collection/today', () => {
   });
 
   it('같은 regionCode 재조회 → 동일한 creatureType 반환 (idempotent)', async () => {
-    const r1 = await api.get('/collection/today?regionCode=11680').expect(200);
-    const r2 = await api.get('/collection/today?regionCode=11680').expect(200);
+    const r1 = await api.get('/mission/today?regionCode=11680').expect(200);
+    const r2 = await api.get('/mission/today?regionCode=11680').expect(200);
     expect(r1.body.creatureType).toBe(r2.body.creatureType);
   });
 });
 
-describe('GET /collection/completed', () => {
-  it('완료된 컬렉션 없으면 빈 배열', async () => {
-    const res = await api.get('/collection/completed?regionCode=11680').expect(200);
+describe('GET /mission/completed', () => {
+  it('완료된 미션 없으면 빈 배열', async () => {
+    const res = await api.get('/mission/completed?regionCode=11680').expect(200);
     expect(res.body).toEqual([]);
   });
 
-  it('완료된 컬렉션 있으면 포함', async () => {
+  it('완료된 미션 있으면 포함', async () => {
     const prisma = getTestPrisma();
-    await prisma.dailyCollection.create({
+    await prisma.dailyMission.create({
       data: {
         regionCode: '11680',
         date: '2024-01-01',
@@ -43,7 +43,7 @@ describe('GET /collection/completed', () => {
         completedAt: new Date('2024-01-01'),
       },
     });
-    const res = await api.get('/collection/completed?regionCode=11680').expect(200);
+    const res = await api.get('/mission/completed?regionCode=11680').expect(200);
     expect(res.body).toHaveLength(1);
     expect(res.body[0].creatureType).toBe('MUSHROOM');
   });
