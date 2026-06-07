@@ -62,7 +62,7 @@ guideRouter.get('/state', async (req: Request, res: Response) => {
     const yesterdayKst = getKstDateStringWithOffset(-1);
     const dongCode = user.dongCode;
 
-    const [sessions, creature, todaySession, yesterdayCollection] = await Promise.all([
+    const [sessions, creature, todaySession, yesterdayMission] = await Promise.all([
       prisma.focusSession.findMany({
         where: { userId },
         select: { date: true, waterCount: true },
@@ -76,7 +76,7 @@ guideRouter.get('/state', async (req: Request, res: Response) => {
         select: { waterCount: true },
       }),
       user.regionCode
-        ? prisma.dailyCollection.findUnique({
+        ? prisma.dailyMission.findUnique({
             where: { regionCode_date: { regionCode: user.regionCode, date: yesterdayKst } },
             select: { isCompleted: true },
           })
@@ -117,7 +117,7 @@ guideRouter.get('/state', async (req: Request, res: Response) => {
         },
         neighborhood: {
           dongCode,
-          missionCompleted: yesterdayCollection?.isCompleted ?? false,
+          missionCompleted: yesterdayMission?.isCompleted ?? false,
         },
       },
     });

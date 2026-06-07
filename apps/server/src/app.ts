@@ -8,13 +8,14 @@ import { waterRouter } from './routes/water';
 import { creatureRouter } from './routes/creature';
 import { statsRouter } from './routes/stats';
 import { userRouter } from './routes/user';
-import { collectionRouter } from './routes/collection';
+import { missionRouter } from './routes/mission';
 import { communityRouter } from './routes/community';
 import { rankingRouter } from './routes/ranking';
 import { guideRouter } from './routes/guide';
 import { friendsRouter } from './routes/friends';
 import { pokesRouter } from './routes/pokes';
 import { pointsRouter } from './routes/points';
+import { todosRouter } from './routes/todos';
 import { requireInternalAuth } from './middleware/auth';
 import { testRouter } from './routes/test';
 
@@ -31,11 +32,12 @@ app.use('/creature', creatureRouter);
 // Public: stats (read-only)
 app.use('/stats', statsRouter);
 app.use('/user', userRouter);
-app.use('/collection', collectionRouter);
+app.use('/mission', missionRouter);
 app.use('/community', communityRouter);
 app.use('/ranking', rankingRouter);
 
 // Internal: require Next.js-issued secret on mutating routes
+app.use('/todos', requireInternalAuth, todosRouter);
 app.use('/sessions', requireInternalAuth, sessionsRouter);
 app.use('/water', requireInternalAuth, waterRouter);
 app.use('/guide', requireInternalAuth, guideRouter);

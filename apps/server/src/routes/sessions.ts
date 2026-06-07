@@ -4,8 +4,8 @@ import type { FocusSession } from '@makeforest/db';
 import { redis, RedisKeys, SESSION_TTL_SECONDS, setSession, getSession, addActiveDong, getDongActiveCount, addDailyOverlaySession } from '@makeforest/redis';
 import { broadcastHeatmap, broadcastToRegion, broadcastUsersOverlay, broadcastToUser } from './sse';
 import { getKstDateString } from './water.logic';
-import { regionOf, CreateSessionBody, UpdateTodosBody, UpdateSessionBody, GetSessionQuery } from '@makeforest/types';
-import { incrementCollection } from './collection';
+import { regionOf, CreateSessionBody, UpdateSessionBody, GetSessionQuery } from '@makeforest/types';
+import { incrementMission, applyMissionBonus } from './mission';
 import { getDongCoords, getDongFullName, getDongShortName } from '../dongCache';
 import { buildTodayState } from './sessions.logic';
 
@@ -15,12 +15,11 @@ interface SyncParams {
   session: FocusSession;
   userId: string;
   dongCode: string;
-  todos: unknown[];
   isNewSession: boolean;
   today: string;
 }
 
-async function syncAndBroadcast({ session, userId, dongCode, todos, isNewSession, today }: SyncParams) {
+async function syncAndBroadcast({ session, userId, dongCode, isNewSession, today }: SyncParams) {
   try {
     const cached = await getSession(session.id);
     if (cached) {
@@ -51,7 +50,6 @@ async function syncAndBroadcast({ session, userId, dongCode, todos, isNewSession
         userId,
         dongCode,
         startedAt: session.startedAt.toISOString(),
-        todos: todos as never,
         status: 'RUNNING',
         nickname: user?.nickname ?? '누군가',
         pixelX,
@@ -104,14 +102,22 @@ async function syncAndBroadcast({ session, userId, dongCode, todos, isNewSession
       const regionCode = dongFullName ? regionOf(dongCode, dongFullName) : dongCode.substring(0, 5);
       const nickname = cachedSession?.nickname ?? '누군가';
       const dongName = await getDongShortName(dongCode);
-      const [collectionProgress] = await Promise.all([
-        incrementCollection(regionCode, today),
+      const [missionResult] = await Promise.all([
+        incrementMission(regionCode, today),
         prisma.communityPost.create({ data: { userId, sessionId: session.id, date: today, dongName, regionCode, goal: session.todayGoal ?? null } }),
       ]);
+      const { justCompleted, ...missionProgress } = missionResult;
       broadcastToRegion(regionCode, {
         type: 'session:toast',
-        data: { dongCode, nickname, collectionProgress },
+        data: { dongCode, nickname, missionProgress },
       });
+      if (justCompleted) {
+        const rewardedUserIds = await applyMissionBonus(regionCode, today);
+        broadcastToRegion(regionCode, {
+          type: 'mission:complete',
+          data: { rewardedUserIds, bonusMinutes: 60 },
+        });
+      }
     }
   } catch (err) {
     console.error('[sessions] Redis/SSE sync error:', err);
@@ -155,7 +161,7 @@ sessionsRouter.get('/today', async (req: Request, res: Response) => {
 // POST /sessions — 세션 시작 또는 재개 (하루 1개 upsert)
 sessionsRouter.post('/', async (req: Request, res: Response) => {
   try {
-    const { dongCode, todos, userId, todayGoal: rawGoal, focusLengthMin: rawFLen, segmentCount: rawSegs } = CreateSessionBody.parse(req.body);
+    const { dongCode, userId, todayGoal: rawGoal, focusLengthMin: rawFLen, segmentCount: rawSegs } = CreateSessionBody.parse(req.body);
 
     const today = getKstDateString();
 
@@ -212,7 +218,6 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
           startedAt: now,
           status: 'RUNNING',
           dongCode,
-          todos: todos as unknown as never,
         },
         create: {
           userId,
@@ -223,7 +228,6 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
           segmentCount: rawSegs,
           startedAt: now,
           status: 'RUNNING',
-          todos: todos as unknown as never,
         },
       });
 
@@ -251,7 +255,7 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
     };
 
     // Redis 캐싱 + SSE 브로드캐스트
-    void syncAndBroadcast({ session: session.session, userId, dongCode, todos, isNewSession, today });
+    void syncAndBroadcast({ session: session.session, userId, dongCode, isNewSession, today });
 
     return res.json(result);
   } catch (err) {
@@ -277,30 +281,6 @@ sessionsRouter.post('/', async (req: Request, res: Response) => {
       }
     }
     console.error('[sessions] POST error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// PATCH /sessions/:id/todos — 할일 목록 업데이트
-sessionsRouter.patch('/:id/todos', async (req: Request, res: Response) => {
-  try {
-    const id = String(req.params['id']);
-    const { todos } = UpdateTodosBody.parse(req.body);
-
-    await prisma.focusSession.update({
-      where: { id },
-      data: { todos: todos as unknown as never },
-    });
-
-    // Redis 캐시 갱신
-    const cached = await getSession(id);
-    if (cached) {
-      await setSession(id, { ...cached, todos: todos as never });
-    }
-
-    return res.json({ ok: true });
-  } catch (err) {
-    console.error('[sessions] PATCH /todos error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

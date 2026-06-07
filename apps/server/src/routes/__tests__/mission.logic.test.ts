@@ -1,12 +1,12 @@
-import { calcCollectionTarget, pickDailyCreature, COLLECTION_CREATURES } from '../collection.logic';
+import { calcMissionTarget, pickDailyCreature, MISSION_CREATURES } from '../mission.logic';
 
-describe('calcCollectionTarget — 활성 유저 수 기반 목표량 (세션 기준, 절반)', () => {
-  it('0명 → 최소값 4', () => expect(calcCollectionTarget(0)).toBe(4));
-  it('1명 → max(4, round(3)) = 4 (최소값 유지)', () => expect(calcCollectionTarget(1)).toBe(4));
-  it('2명 → max(4, round(6)) = 6', () => expect(calcCollectionTarget(2)).toBe(6));
-  it('5명 → max(4, round(15)) = 15', () => expect(calcCollectionTarget(5)).toBe(15));
-  it('15명 → max(4, round(45)) = 45', () => expect(calcCollectionTarget(15)).toBe(45));
-  it('50명 → max(4, round(150)) = 150', () => expect(calcCollectionTarget(50)).toBe(150));
+describe('calcMissionTarget — 활성 유저 수 기반 목표량 (세션 기준, 절반)', () => {
+  it('0명 → 최소값 4', () => expect(calcMissionTarget(0)).toBe(4));
+  it('1명 → max(4, round(3)) = 4 (최소값 유지)', () => expect(calcMissionTarget(1)).toBe(4));
+  it('2명 → max(4, round(6)) = 6', () => expect(calcMissionTarget(2)).toBe(6));
+  it('5명 → max(4, round(15)) = 15', () => expect(calcMissionTarget(5)).toBe(15));
+  it('15명 → max(4, round(45)) = 45', () => expect(calcMissionTarget(15)).toBe(45));
+  it('50명 → max(4, round(150)) = 150', () => expect(calcMissionTarget(50)).toBe(150));
 });
 
 describe('pickDailyCreature — 지역코드+날짜 기반 결정론적 생명체 선택', () => {
@@ -17,7 +17,7 @@ describe('pickDailyCreature — 지역코드+날짜 기반 결정론적 생명�
 
   it('반환값이 유효한 생명체 타입', () => {
     const result = pickDailyCreature('11', '2025-05-16');
-    expect(COLLECTION_CREATURES).toContain(result);
+    expect(MISSION_CREATURES).toContain(result);
   });
 
   it('서로 다른 지역코드가 서로 다른 생명체를 반환할 수 있음', () => {
