@@ -106,6 +106,6 @@ describe('PanelSideTabs — 드로어 내용', () => {
       />,
       { wrapper },
     );
-    expect(screen.queryByText(/오늘의 공통 미션/)).not.toBeVisible();
+    expect(screen.queryByText(/오늘의 공통 미션/)).not.toBeInTheDocument();
   });
 });
