@@ -1,25 +1,27 @@
 'use client';
 
-import { useTodoStore, selectIsDirty } from '@/shared/store';
+import { useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useTodosQuery } from '@/shared/hooks/queries/useTodosQuery';
 import { TodoCardContent } from './TodoCard';
 import { TabButton } from './TabButton';
 import { TabPopup } from './TabPopup';
 
 export function TodoTab() {
-  const todoOpen = useTodoStore((s) => s.open);
-  const setTodoOpen = useTodoStore((s) => s.setOpen);
-  const isTodoDirty = useTodoStore(selectIsDirty);
-  const todoCount = useTodoStore((s) => s.todos.length);
+  const [open, setOpen] = useState(false);
+  const { data: authSession } = useSession();
+  const userId = authSession?.user?.id ?? null;
+  const { data: todos = [] } = useTodosQuery({ userId });
 
   return (
     <div className="relative mt-auto">
       <TabButton
         label="오늘 할일"
-        active={todoOpen}
-        onClick={() => setTodoOpen(!todoOpen)}
-        {...(isTodoDirty ? { badge: '●' } : todoCount > 0 ? { badge: String(todoCount) } : {})}
+        active={open}
+        onClick={() => setOpen(!open)}
+        {...(todos.length > 0 ? { badge: String(todos.length) } : {})}
       />
-      {todoOpen && (
+      {open && (
         <TabPopup anchor="bottom">
           <TodoCardContent />
         </TabPopup>

@@ -3,7 +3,6 @@
 import { useEffect, useRef } from 'react';
 import { useKstDateStore } from '@/shared/store/kstDateStore';
 import { useSessionDraftStore } from '@/shared/store/sessionDraftStore';
-import { useTodoStore } from '@/shared/store/todoStore';
 
 export function useMidnightReset() {
   const kstDate = useKstDateStore((s) => s.kstDate);
@@ -15,6 +14,5 @@ export function useMidnightReset() {
       return;
     }
     useSessionDraftStore.getState().reset();
-    useTodoStore.getState().init([]);
   }, [kstDate]);
 }

@@ -101,7 +101,6 @@ export function TimerWaterSection({ userId, initialTodayState }: Props) {
     const todayGoal = todayState?.todayGoal ?? '';
     try {
       const data = await createSessionMutate({
-        todos: [],
         userId,
         kstDate,
         todayGoal,

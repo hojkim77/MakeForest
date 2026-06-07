@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '동네 설정이 필요합니다.' }, { status: 400 });
   }
 
-  const body = await req.json() as { todos: unknown[]; todayGoal: string; focusLengthMin: number; segmentCount: number };
+  const body = await req.json() as { todayGoal: string; focusLengthMin: number; segmentCount: number };
 
   const res = await fetch(`${SERVER_URL}/sessions`, {
     method: 'POST',

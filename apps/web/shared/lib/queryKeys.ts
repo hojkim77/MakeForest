@@ -10,9 +10,9 @@ export const qk = {
     today: (userId: string, kstDate: string) => ['sessions', 'today', userId, kstDate] as const,
     todayState: (userId: string, kstDate: string) => ['sessions', 'todayState', userId, kstDate] as const,
   },
-  collection: {
-    today: (regionCode: string, kstDate: string) => ['collection', 'today', regionCode, kstDate] as const,
-    completed: (regionCode: string) => ['collection', 'completed', regionCode] as const,
+  mission: {
+    today: (regionCode: string, kstDate: string) => ['mission', 'today', regionCode, kstDate] as const,
+    completed: (regionCode: string) => ['mission', 'completed', regionCode] as const,
   },
   community: {
     feedBase: () => ['community', 'feed'] as const,
@@ -39,5 +39,8 @@ export const qk = {
   },
   points: {
     me: (userId: string) => ['points', 'me', userId] as const,
+  },
+  todos: {
+    byDate: (userId: string, date: string) => ['todos', userId, date] as const,
   },
 } as const;
