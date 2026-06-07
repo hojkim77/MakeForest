@@ -3,15 +3,10 @@ import { TodoSchema } from '../session';
 
 export const CreateSessionBody = z.object({
   dongCode: z.string(),
-  todos: z.array(TodoSchema),
   userId: z.string(),
   todayGoal: z.string(),
   focusLengthMin: z.number().int(),
   segmentCount: z.number().int(),
-});
-
-export const UpdateTodosBody = z.object({
-  todos: z.array(TodoSchema),
 });
 
 export const UpdateSessionBody = z.object({
@@ -42,16 +37,36 @@ export const TodayStateRes = z.object({
   waterCount: z.number(),
 });
 
+// Todo 관련 스키마
+export const CreateTodoBody = z.object({
+  userId: z.string(),
+  date: z.string(),
+  text: z.string().min(1).max(200),
+});
+
+export const UpdateTodoBody = z.object({
+  text: z.string().min(1).max(200).optional(),
+  done: z.boolean().optional(),
+});
+
+export const TodoQuery = z.object({
+  userId: z.string(),
+  date: z.string(),
+});
+
 export type CreateSessionBodyType = z.infer<typeof CreateSessionBody>;
-export type UpdateTodosBodyType = z.infer<typeof UpdateTodosBody>;
 export type UpdateSessionBodyType = z.infer<typeof UpdateSessionBody>;
 export type GetSessionQueryType = z.infer<typeof GetSessionQuery>;
 export type CreateSessionResType = z.infer<typeof CreateSessionRes>;
 export type TodayStateResType = z.infer<typeof TodayStateRes>;
+export type CreateTodoBodyType = z.infer<typeof CreateTodoBody>;
+export type UpdateTodoBodyType = z.infer<typeof UpdateTodoBody>;
+export type TodoQueryType = z.infer<typeof TodoQuery>;
+
+export { TodoSchema };
 
 export interface TodaySession {
   id: string;
   startedAt: string;
   status: string;
-  todos: { id: string; text: string; done: boolean }[];
 }

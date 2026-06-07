@@ -27,13 +27,11 @@ export interface FocusSession {
   startedAt: Date;
   totalElapsedSec: number;
   waterCount: number;
-  todos: Todo[];
   status: SessionStatus;
 }
 
 export interface CreateSessionInput {
   dongCode: string;
-  todos: Todo[];
 }
 
 // complete: 30분 사이클 완료 / abandon: 자정 배치 등 강제 종료
@@ -43,7 +41,6 @@ export interface ActiveSessionCache {
   userId: string;
   dongCode: string;
   startedAt: string;
-  todos: Todo[];
   status: SessionStatus | 'IDLE';
   nickname: string;
   pixelX: number;

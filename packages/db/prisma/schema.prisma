@@ -25,6 +25,7 @@ model User {
   lastSegmentCount    Int?
 
   sessions           FocusSession[]
+  todos              Todo[]
   wateringLogs       WateringLog[]
   pushSubscriptions  PushSubscription[]
   userCreatures      UserCreature[]
@@ -52,7 +53,6 @@ model FocusSession {
   createdAt       DateTime      @default(now())
   totalElapsedSec Int           @default(0) // 완료된 사이클 누적 집중 시간 (waterCount * focusLengthMin * 60)
   waterCount      Int           @default(0) // 오늘 물주기 횟수 (최대 segmentCount)
-  todos           Json          @default("[]")
   status          SessionStatus @default(RUNNING)
 
   focusLengthMin  Int?
@@ -66,6 +66,20 @@ model FocusSession {
   @@index([dongCode])
   @@index([date])
   @@index([status])
+}
+
+// 유저별 날짜별 메모 (세션과 독립적, date 기준 일별 초기화)
+model Todo {
+  id        String   @id @default(uuid())
+  userId    String
+  date      String   // KST "YYYY-MM-DD"
+  text      String
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
 }
 
 model Dong {
@@ -120,12 +134,12 @@ model PushSubscription {
   @@index([userId])
 }
 
-// 지역 공동 채집 미션 — lazy 생성, 세션 시작으로 currentCount 증가
-model DailyCollection {
+// 지역 공통 미션 — lazy 생성, 세션 시작으로 currentCount 증가, 달성 시 활성 유저 60분 집중 보너스 지급
+model DailyMission {
   id           String    @id @default(uuid())
   regionCode   String
   date         String    // KST "YYYY-MM-DD"
-  creatureType String    // CREATURE_TYPES 14종 중 1종
+  creatureType String    // 내부 배정용 (UI 미표시)
   targetCount  Int       // 활성 유저 수 기반 목표 (max(4, round(activeUsers * 3)))
   currentCount Int       @default(0)
   isCompleted  Boolean   @default(false)

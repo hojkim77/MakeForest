@@ -1,5 +1,5 @@
 // SSE 이벤트 타입 (Express → Client)
-export type SSEEventType = 'dong:users' | 'heatmap:update' | 'water:toast' | 'session:toast' | 'users:overlay' | 'ping' | 'poke:received' | 'friend:request:incoming' | 'friend:accepted' | 'friend:status:changed';
+export type SSEEventType = 'dong:users' | 'heatmap:update' | 'water:toast' | 'session:toast' | 'users:overlay' | 'ping' | 'poke:received' | 'friend:request:incoming' | 'friend:accepted' | 'friend:status:changed' | 'mission:complete';
 
 export interface ActiveUser {
   nickname: string;
@@ -15,7 +15,7 @@ export interface HeatmapUpdatePayload {
   [dongCode: string]: number;
 }
 
-export interface CollectionProgress {
+export interface MissionProgress {
   creatureType: string;
   currentCount: number;
   targetCount: number;
@@ -30,7 +30,7 @@ export interface WaterToastPayload {
 export interface SessionToastPayload {
   dongCode: string;
   nickname: string;
-  collectionProgress?: CollectionProgress;
+  missionProgress?: MissionProgress;
 }
 
 export interface MapUser {
@@ -75,6 +75,11 @@ export interface FriendStatusChangedPayload {
   status: 'RUNNING' | 'IDLE' | 'OFFLINE';
 }
 
+export interface MissionCompletePayload {
+  rewardedUserIds: string[];
+  bonusMinutes: number;
+}
+
 export type SSEPayload =
   | DongUsersPayload
   | HeatmapUpdatePayload
@@ -84,7 +89,8 @@ export type SSEPayload =
   | PokeReceivedSSEPayload
   | FriendRequestIncomingSSEPayload
   | FriendAcceptedSSEPayload
-  | FriendStatusChangedPayload;
+  | FriendStatusChangedPayload
+  | MissionCompletePayload;
 
 export interface SSEEvent {
   type: SSEEventType;

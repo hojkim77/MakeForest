@@ -8,7 +8,7 @@ export const RedisKeys = {
   heatmapSigungu: (sigunguCode: string) => `heatmap:sigungu:${sigunguCode}`,
   heatmapDong: () => `heatmap:dong`,
   overlayDailySessions: (date: string) => `overlay:sessions:${date}`,
-  collection: (dongCode: string, date: string) => `collection:${dongCode}:${date}`,
+  mission: (regionCode: string, date: string) => `mission:${regionCode}:${date}`,
   userSession: (userId: string) => `user:${userId}:session`,
 } as const;
 

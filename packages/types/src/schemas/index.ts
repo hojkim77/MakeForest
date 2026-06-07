@@ -6,7 +6,7 @@ export * from './map.schema';
 export * from './creature.schema';
 export * from './community.schema';
 export * from './ranking.schema';
-export * from './collection.schema';
+export * from './mission.schema';
 export * from './guide.schema';
 export * from './friend.schema';
 export * from './poke.schema';
