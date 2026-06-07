@@ -1,7 +1,7 @@
 import { api } from '@/shared/lib/api';
 import { API_PATHS } from '@/shared/lib/apiPaths';
-import type { CollectionProgress, RegionRankingResponse } from '@makeforest/types';
-import { CollectionTab } from './CollectionTab';
+import type { MissionProgress, RegionRankingResponse } from '@makeforest/types';
+import { MissionTab } from './MissionTab';
 import { RankingTab } from './RankingTab';
 import { TodoTab } from './TodoTab';
 
@@ -12,9 +12,9 @@ interface Props {
 }
 
 export async function PanelSideTabs({ myDongCode, myRegionCode, isLoggedIn }: Props) {
-  const [initialCollection, rankingData] = await Promise.all([
+  const [initialMission, rankingData] = await Promise.all([
     myRegionCode
-      ? api.get<CollectionProgress>(API_PATHS.SERVER_COLLECTION_TODAY(myRegionCode)).catch(() => null)
+      ? api.get<MissionProgress>(API_PATHS.SERVER_MISSION_TODAY(myRegionCode)).catch(() => null)
       : Promise.resolve(null),
     api
       .get<RegionRankingResponse>(API_PATHS.SERVER_RANKING_REGION('today', myDongCode ?? undefined))
@@ -32,10 +32,10 @@ export async function PanelSideTabs({ myDongCode, myRegionCode, isLoggedIn }: Pr
       ].join(' ')}
       style={{ top: 'calc(var(--topbar-h) + var(--safe-top))' }}
     >
-      <CollectionTab
+      <MissionTab
         dongCode={myDongCode}
         regionCode={myRegionCode}
-        initialCollection={initialCollection}
+        initialMission={initialMission}
       />
       <RankingTab
         myRegionKey={rankingData.myRegionKey ?? null}

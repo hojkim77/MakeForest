@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { CollectionTab } from '../CollectionTab';
+import { MissionTab } from '../MissionTab';
 import { RankingTab } from '../RankingTab';
 import { usePanelStore } from '@/shared/store';
 import { MockEventSource, installMockEventSource } from '@/test/MockEventSource';
@@ -24,13 +24,12 @@ function wrapper({ children }: { children: React.ReactNode }) {
   );
 }
 
-function makeCollection(overrides = {}) {
+function makeMission(overrides = {}) {
   return {
     creatureType: 'MUSHROOM',
     targetCount: 50,
     currentCount: 20,
     isCompleted: false,
-    topContributors: [],
     ...overrides,
   };
 }
@@ -44,7 +43,7 @@ describe('PanelSideTabs — 탭 버튼 렌더링', () => {
   it('공통 미션과 지역 랭킹 탭 버튼이 렌더링된다', () => {
     render(
       <>
-        <CollectionTab dongCode={null} regionCode={null} initialCollection={null} />
+        <MissionTab dongCode={null} regionCode={null} initialMission={null} />
         <RankingTab myRegionKey={null} initialRanking={defaultRanking} />
       </>,
       { wrapper },
@@ -57,24 +56,24 @@ describe('PanelSideTabs — 탭 버튼 렌더링', () => {
 describe('PanelSideTabs — 드로어 토글', () => {
   it('공통 미션 탭 클릭 시 활성화된다', () => {
     render(
-      <CollectionTab
+      <MissionTab
         dongCode="1111010100"
         regionCode="11"
-        initialCollection={makeCollection()}
+        initialMission={makeMission()}
       />,
       { wrapper },
     );
     fireEvent.click(screen.getByRole('button', { name: /공통 미션/i }));
-    expect(usePanelStore.getState().activeTab).toBe('collection');
+    expect(usePanelStore.getState().activeTab).toBe('mission');
   });
 
   it('탭 재클릭 시 닫힌다', () => {
-    usePanelStore.setState({ activeTab: 'collection' });
+    usePanelStore.setState({ activeTab: 'mission' });
     render(
-      <CollectionTab
+      <MissionTab
         dongCode="1111010100"
         regionCode="11"
-        initialCollection={makeCollection()}
+        initialMission={makeMission()}
       />,
       { wrapper },
     );
@@ -85,28 +84,28 @@ describe('PanelSideTabs — 드로어 토글', () => {
 
 describe('PanelSideTabs — 드로어 내용', () => {
   it('공통 미션 탭 열림 시 미션 내용이 표시된다', () => {
-    usePanelStore.setState({ activeTab: 'collection' });
+    usePanelStore.setState({ activeTab: 'mission' });
     render(
-      <CollectionTab
+      <MissionTab
         dongCode="1111010100"
         regionCode="11"
-        initialCollection={makeCollection()}
+        initialMission={makeMission()}
       />,
       { wrapper },
     );
-    expect(screen.getByText('MUSHROOM')).toBeInTheDocument();
+    expect(screen.getByText(/오늘의 공통 미션/)).toBeInTheDocument();
   });
 
   it('탭 닫힘 시 내용이 숨겨진다', () => {
     usePanelStore.setState({ activeTab: null });
     render(
-      <CollectionTab
+      <MissionTab
         dongCode="1111010100"
         regionCode="11"
-        initialCollection={makeCollection()}
+        initialMission={makeMission()}
       />,
       { wrapper },
     );
-    expect(screen.queryByText('MUSHROOM')).not.toBeVisible();
+    expect(screen.queryByText(/오늘의 공통 미션/)).not.toBeVisible();
   });
 });

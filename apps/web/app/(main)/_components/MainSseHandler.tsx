@@ -2,7 +2,7 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
-import type { CollectionProgress, SessionToastPayload, MapUser, PokeReceivedSSEPayload, FriendStatusChangedPayload, FriendListItemType } from '@makeforest/types';
+import type { MissionProgress, SessionToastPayload, MapUser, PokeReceivedSSEPayload, FriendStatusChangedPayload, FriendListItemType, MissionCompletePayload } from '@makeforest/types';
 import { useMapStore } from '@/shared/store';
 import { useSseEvent } from '@/shared/hooks/useSseEvent';
 import { toast } from '@/shared/lib/toast';
@@ -51,11 +51,20 @@ export function MainSseHandler() {
   useSseEvent(regionUrl, 'session:toast', (raw) => {
     const payload = JSON.parse(raw) as SessionToastPayload;
     toast.info(`🌿 ${payload.nickname}님이 오늘의 미션에 참여했어요!`);
-    if (!regionCode || !payload.collectionProgress) return;
-    queryClient.setQueryData<CollectionProgress>(
-      qk.collection.today(regionCode, kstDate),
-      (prev) => (prev ? { ...prev, ...payload.collectionProgress! } : prev),
+    if (!regionCode || !payload.missionProgress) return;
+    queryClient.setQueryData<MissionProgress>(
+      qk.mission.today(regionCode, kstDate),
+      (prev) => (prev ? { ...prev, ...payload.missionProgress! } : prev),
     );
+  });
+
+  useSseEvent(regionUrl, 'mission:complete', (raw) => {
+    const payload = JSON.parse(raw) as MissionCompletePayload;
+    if (payload.rewardedUserIds.includes(userId ?? '')) {
+      toast.success('🎉 공통 미션 달성! 60분 집중 보너스가 지급됐어요');
+    } else {
+      toast.info('🌿 공통 미션이 달성됐어요!');
+    }
   });
 
   useSseEvent(userStreamUrl, 'poke:received', (raw) => {
