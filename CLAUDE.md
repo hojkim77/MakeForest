@@ -10,17 +10,15 @@ packages/redis — Redis client & utilities
 packages/types — Shared type definitions
 ```
 
-## Domain CLAUDE.md Paths
+## Where things live
 
 | Area | File |
 |---|---|
-| Layout, auth UI, onboarding | `apps/web/CLAUDE.md` |
-| Left panel (my neighborhood / peeking) | `apps/web/app/(main)/_components/panel/CLAUDE.md` |
-| Map (pixel mode / forest mode) | `apps/web/app/(main)/_components/map/CLAUDE.md` |
-| Timer / watering API | `apps/server/CLAUDE.md` |
-| Midnight batch / fossil / forest accumulation | `apps/server/src/cron/CLAUDE.md` |
-| DB schema / data model | `packages/db/CLAUDE.md` |
-| Redis real-time state | `packages/redis/CLAUDE.md` |
+| Product behavior (mechanics, business rules, glossary, status) | `docs/PRODUCT.md` |
+| Web frontend conventions | `apps/web/CLAUDE.md` |
+| Backend API / SSE / cron conventions | `apps/server/CLAUDE.md` |
+| Shared db / redis / types conventions | `packages/CLAUDE.md` |
+| CLAUDE.md authoring policy | `docs/CLAUDE_MD_POLICY.md` |
 
 ## Core Rules
 
@@ -76,3 +74,13 @@ For multi-step tasks, state a brief plan before starting:
 - **Daily reset = KST 00:00**
 - **Real-time targets**: heatmap, water toast, XP bar, creature evolution stage → SSE
 - **Unauthenticated users**: map browsing only — no timer/watering; show login prompt inside panel (no popup)
+
+### CLAUDE.md authoring rule
+
+There are exactly three domain CLAUDE.md files (`apps/web`, `apps/server`, `packages`), plus this root file. Each domain file is a **signpost** with two sections: Composition (what this domain is made of) and Core Rules (conventions and consistent decisions). 70 lines or fewer.
+
+Product behavior — mechanics, business rules, glossary, feature status — lives in [`docs/PRODUCT.md`](docs/PRODUCT.md), not in CLAUDE.md.
+
+**Not allowed in CLAUDE.md**: component / function / variable names, CSS values, field names, hardcoded constants. Those live in code, type definitions, skills, and ADRs.
+
+Full policy: [`docs/CLAUDE_MD_POLICY.md`](docs/CLAUDE_MD_POLICY.md)
