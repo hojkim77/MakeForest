@@ -12,7 +12,7 @@ interface FeedFilters {
   regionKey: string;
 }
 
-export function useCommunityFeedQuery(filters: FeedFilters) {
+export function useCommunityFeedQuery(filters: FeedFilters, initialData?: CommunityFeedResponse) {
   return useInfiniteQuery<CommunityFeedResponse, Error, CommunityFeedResponse, ReturnType<typeof qk.community.feed>, string | null>({
     queryKey: qk.community.feed(filters),
     queryFn: ({ pageParam }) => {
@@ -27,5 +27,12 @@ export function useCommunityFeedQuery(filters: FeedFilters) {
       items: data.pages.flatMap((p) => p.items),
       nextCursor: data.pages[data.pages.length - 1]?.nextCursor ?? null,
     }),
+    staleTime: 60_000,
+    ...(initialData !== undefined
+      ? {
+          initialData: { pages: [initialData], pageParams: [null] },
+          initialDataUpdatedAt: Date.now(),
+        }
+      : {}),
   });
 }

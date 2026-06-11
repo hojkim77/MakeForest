@@ -18,5 +18,6 @@ export function useTodosQuery({ userId }: Options) {
     queryKey: userId ? qk.todos.byDate(userId, kstDate) : (['todos', 'disabled'] as const),
     queryFn: () => api.get<Todo[]>(`${API_PATHS.TODOS()}?date=${encodeURIComponent(kstDate)}`),
     enabled: !!userId,
+    staleTime: Infinity,
   });
 }

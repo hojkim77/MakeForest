@@ -62,6 +62,10 @@ export function useWaterMutation() {
       void queryClient.invalidateQueries({ queryKey: qk.water.me(userId, kstDate) });
       void queryClient.invalidateQueries({ queryKey: qk.points.me(userId) });
       void queryClient.invalidateQueries({ queryKey: qk.sessions.todayState(userId, kstDate) });
+      void queryClient.invalidateQueries({ queryKey: qk.user.me(userId) });
+      void queryClient.invalidateQueries({ queryKey: qk.stats.focus(userId) });
+      void queryClient.invalidateQueries({ queryKey: ['stats', 'rank', userId] });
+      void queryClient.invalidateQueries({ queryKey: qk.stats.weekly(userId) });
     },
   });
 }

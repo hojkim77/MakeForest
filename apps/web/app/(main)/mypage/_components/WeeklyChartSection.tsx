@@ -1,10 +1,16 @@
+'use client';
+
+import { useWeeklyStatsQuery } from '@/shared/hooks/queries/useWeeklyStatsQuery';
 import { WeeklyChartLazy } from './WeeklyChartLazy';
-import { api } from '@/shared/lib/api';
-import { API_PATHS } from '@/shared/lib/apiPaths';
 import type { WeeklyStatsResType } from '@makeforest/types';
 
-export async function WeeklyChartSection({ userId }: { userId: string }) {
-  const data = await api.get<WeeklyStatsResType>(API_PATHS.SERVER_STATS_WEEKLY(userId), { next: { revalidate: 3600 } });
+interface Props {
+  userId: string;
+  initialData: WeeklyStatsResType;
+}
+
+export function WeeklyChartSection({ userId, initialData }: Props) {
+  const { data = initialData } = useWeeklyStatsQuery({ userId, initialData });
   return <WeeklyChartLazy weeklyData={data.weeklyData} weeklyAvg={data.weeklyAvg} />;
 }
 

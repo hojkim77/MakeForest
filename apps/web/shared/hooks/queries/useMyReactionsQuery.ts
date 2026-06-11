@@ -15,5 +15,6 @@ export function useMyReactionsQuery(postIds: string[], enabled: boolean) {
       );
     },
     enabled: enabled && postIds.length > 0,
+    staleTime: 60_000,
   });
 }
