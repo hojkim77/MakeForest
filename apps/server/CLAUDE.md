@@ -1,55 +1,33 @@
-# Server — Timer & Watering API (E)
+# Server — Express API & SSE
 
-## API 타입 규칙
+## Composition
 
-- 모든 라우트 요청/응답 타입은 `packages/types/src/schemas/` 에 Zod 스키마로 정의
-- 라우트 핸들러에서 `req.body as { ... }` 캐스팅 금지 — 반드시 `Schema.parse(req.body)` 사용
-- 유효성 검증 실패 시 ZodError가 throw되면 `apps/server/src/index.ts`의 에러 미들웨어가 자동으로 400 응답 처리
-- 새 엔드포인트 추가 시: `packages/types/src/schemas/<domain>.schema.ts` 에 스키마 정의 → `schemas/index.ts` 에 re-export → 라우트에서 import
+- **`src/routes/`** — REST + SSE handlers grouped by resource. Most groups follow the pair `<name>.ts` (HTTP layer) + `<name>.logic.ts` (pure business logic), so logic is unit-testable without Express. Simple routes may keep logic inline.
+- **Server-only domain logic** (evolution thresholds, per-user stage math) lives next to the routes that own it, not in `packages/types`.
+- **SSE broadcasters** for region / user / activity targets live in a single module under `src/routes/`. Routes call them after a successful mutation.
+- **`src/cron/`** — the KST midnight batch: auto-water → ABANDON active sessions → clear active-state cache keys.
+- **`src/middleware/`** — internal auth middleware.
+- **In-memory cache** for administrative district names + coordinates (24h TTL).
+- **`src/index.ts`, `src/app.ts`** — bootstrap, `ZodError → 400` middleware, cron registration.
+- **`src/__tests__/`, per-route `__tests__/`** — integration tests against a real DB; logic tests against the `.logic.ts` files.
 
-## Auth (A)
+## Core Rules
 
-- Kakao / Google social login only
-- After token issuance, check whether the user has set a neighborhood — redirect to onboarding if not
+- **Zod is mandatory.** Every request body and query is validated through a Zod schema; never use type assertions. The bootstrap middleware converts `ZodError` to 400; do not catch it locally.
+- **Time is server-authoritative.** Elapsed time accumulates on the server. Clients never decide.
+- **KST handling.** Use the project's KST date helper for `date` columns. UTC conversion uses the KST offset, never UTC midnight (which is off by 9 hours).
+- **Per-user dynamic timer settings.** Read the user's session row for timer length and segment count; fall back to the documented defaults only when the column is NULL. The historical defaults are not a system invariant.
+- **One active session per user.** Creating a new session immediately ABANDONs any active session, clears the user's session cache, and removes them from the regional active-user set.
+- **Watering + creature writes are transactional.** Always wrapped in a single transaction.
+- **Redis is a cache; DB is the truth.** On any consistency doubt, re-read from Prisma. TTL and key policy live in the redis package; the midnight batch purges active-state keys.
+- **SSE for real-time.** Routes call broadcasters directly after a successful mutation. No polling. Broadcasts are fire-and-forget — a broadcast failure must not block the response.
+- **Route / logic split.** `<name>.ts` is HTTP (parse, route, status code, broadcast). `<name>.logic.ts` is pure functions returning data or throwing typed errors. Unit-test the logic file; integration-test the route file.
+- **Auth boundary.** Express is not directly exposed to clients — all requests are proxied through Next.js API routes. Express validates the internal secret header on every request. Users without a registered neighborhood code cannot mutate.
+- **Pessimistic locking on critical mutations.** Use row-level locking inside a transaction for session, watering, and friendship operations to prevent races.
+- **Midnight batch (cron).** Registered in the Seoul timezone regardless of host TZ. Only active sessions are reconciled; paused sessions are left for the client to resolve on next session start.
 
-## Timer (E)
+## References
 
-- Elapsed time is **server-authoritative** (client time is never trusted)
-- Start time recorded on server; end time recorded on stop; elapsed time accumulated server-side
-- **One RUNNING session per user** — `POST /sessions` immediately ABBANDONs any existing RUNNING/PAUSED session + clears Redis (dongActive, regionActive)
-- Day boundary = KST 00:00 — sessions crossing midnight are split across the previous and next day
-- Daily maximum: 6 hours (21600 seconds) — enforced server-side as a hard cap
-
-## Watering API (E)
-
-- **Pomodoro style**: 1 water per 30 minutes of focus (max 12/day)
-- Water button activation condition: `RUNNING` state OR (`PAUSED` && `autoPaused`) + `elapsedSec >= 1800` (frontend guard)
-- Successful water deducts 30 minutes from the timer (frontend: `resetWaterProgress()` — `elapsedSec - 1800`)
-- Only manual button presses count — no automatic watering; midnight auto-watering is handled by cron
-- **6-hour daily cap (21600s)** — `checkDailyCapExceeded` server validation, returns 409 if exceeded
-- **12-water daily limit** — `DailySession.waterCount >= 12` returns 409
-- Each water updates the user's `UserCreature` evolution stage (response includes `userCreature: { stage, waterCount }`)
-- On success: broadcasts `water:toast` SSE to the whole neighborhood + immediately re-broadcasts `users:overlay`
-- Response format: `{ myWaterCount: number, userCreature: { stage: number, totalWaterCount: number } }`
-  - `myWaterCount`: waters given today (1–12, based on DailySession)
-  - `userCreature.totalWaterCount`: **lifetime** cumulative water count (used to compute stage)
-  - `userCreature.stage`: current stage (0–9) based on cumulative totalWaterCount
-- UI: 6-hour range split into 12 segments (30 min each); `growthPercent` = progress toward next creature stage (based on `totalWaterCount`)
-
-## Mypage Stats API (H)
-
-Stats are split across 3 endpoints:
-
-### `GET /stats/focus?userId=`
-- `totalFocusSec`: total cumulative focus time (sum of all DailySession.elapsedSec)
-- `currentStreak`: consecutive contribution days (days with ≥1 water, counted backwards from today or yesterday)
-- `maxStreak`: all-time longest consecutive streak
-
-### `GET /stats/weekly?userId=`
-- `weeklyData`: last 4 weeks of water totals `[{ week: 1–4, waterCount: number }]` (week 1 = oldest)
-- `weeklyAvg`: 4-week average water count (rounded to integer)
-
-### `GET /stats/rank?userId=&dongCode=`
-- `neighborhoodRank`: user's cumulative water rank within their neighborhood (1-based)
-- `neighborhoodTotal`: total user count in the neighborhood
-- If `dongCode` is omitted: returns `{ neighborhoodRank: 0, neighborhoodTotal: 0 }`
+- Product reference: `docs/PRODUCT.md`
+- Response schemas (Zod) and SSE event payload types: `packages/types/src/`
+- Authoring policy: `docs/CLAUDE_MD_POLICY.md`
