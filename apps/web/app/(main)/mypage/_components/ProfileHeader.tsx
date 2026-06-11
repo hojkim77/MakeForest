@@ -13,7 +13,7 @@ function formatJoinDate(iso: string): string {
 }
 
 export async function ProfileHeader({ userId }: { userId: string }) {
-  const user = await api.get<UserMeResType>(API_PATHS.SERVER_USER_ME(userId), { next: { revalidate: 3600 } });
+  const user = await api.get<UserMeResType>(API_PATHS.SERVER_USER_ME(userId), { next: { tags: ['user-profile', `user-profile-${userId}`], revalidate: 3600 } });
 
   return (
     <section className="bg-surface-container p-lg border-2 border-outline shadow-island">

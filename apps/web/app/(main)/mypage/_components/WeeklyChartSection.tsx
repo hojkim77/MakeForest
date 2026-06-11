@@ -4,7 +4,7 @@ import { API_PATHS } from '@/shared/lib/apiPaths';
 import type { WeeklyStatsResType } from '@makeforest/types';
 
 export async function WeeklyChartSection({ userId }: { userId: string }) {
-  const data = await api.get<WeeklyStatsResType>(API_PATHS.SERVER_STATS_WEEKLY(userId), { next: { revalidate: 3600 } });
+  const data = await api.get<WeeklyStatsResType>(API_PATHS.SERVER_STATS_WEEKLY(userId), { next: { tags: ['user-stats', `user-stats-${userId}`], revalidate: 3600 } });
   return <WeeklyChartLazy weeklyData={data.weeklyData} weeklyAvg={data.weeklyAvg} />;
 }
 

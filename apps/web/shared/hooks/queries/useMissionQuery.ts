@@ -26,6 +26,7 @@ export function useMissionQuery({ regionCode, initialData }: Options) {
         ? api.get<MissionProgress>(API_PATHS.SERVER_MISSION_TODAY(regionCode))
         : Promise.resolve(null),
     enabled: !!regionCode,
+    staleTime: Infinity,
     ...(regionCode && initialData !== undefined && initialData !== null
       ? { initialData, initialDataUpdatedAt: Date.now() }
       : {}),

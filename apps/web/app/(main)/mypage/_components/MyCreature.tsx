@@ -5,7 +5,7 @@ import { API_PATHS } from '@/shared/lib/apiPaths';
 import type { UserMeResType } from '@makeforest/types';
 
 export async function MyCreature({ userId }: { userId: string }) {
-  const { userCreature } = await api.get<UserMeResType>(API_PATHS.SERVER_USER_ME(userId), { next: { revalidate: 3600 } });
+  const { userCreature } = await api.get<UserMeResType>(API_PATHS.SERVER_USER_ME(userId), { next: { tags: ['user-profile', `user-profile-${userId}`], revalidate: 3600 } });
 
   const stage = (userCreature?.stage ?? 0) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
   const waterCount = userCreature?.totalWaterCount ?? 0;

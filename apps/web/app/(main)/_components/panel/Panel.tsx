@@ -21,9 +21,27 @@ export async function Panel() {
           <PanelMainContents userId={userId} isLoggedIn={isLoggedIn} myRegionCode={myRegionCode} />
         </Suspense>
       </div>
-      <Suspense fallback={null}>
+      <Suspense fallback={<PanelSideTabsSkeleton />}>
         <PanelSideTabs myDongCode={myDongCode} myRegionCode={myRegionCode} isLoggedIn={isLoggedIn} />
       </Suspense>
+    </div>
+  );
+}
+
+function PanelSideTabsSkeleton() {
+  return (
+    <div
+      className={[
+        'flex flex-col fixed z-side-tabs pt-lg pb-lg',
+        'right-0 left-auto',
+        'h-[calc(100dvh-var(--topbar-h)-var(--safe-top)-var(--tabbar-h)-var(--safe-bottom))]',
+        'md:right-auto md:left-[var(--panel-w)]',
+        'md:h-[calc(100dvh-var(--topbar-h)-var(--safe-top))]',
+      ].join(' ')}
+      style={{ top: 'calc(var(--topbar-h) + var(--safe-top))' }}
+    >
+      <div className="h-9 w-9 bg-surface-container-high border-2 border-outline animate-pulse" />
+      <div className="mt-xs h-9 w-9 bg-surface-container-high border-2 border-outline animate-pulse" />
     </div>
   );
 }

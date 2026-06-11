@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useCommunityFeedQuery } from '@/shared/hooks/queries/useCommunityFeedQuery';
 import { useMyReactionsQuery } from '@/shared/hooks/queries/useMyReactionsQuery';
-import type { Period } from '@makeforest/types';
+import type { CommunityFeedResponse, Period } from '@makeforest/types';
 import { TabButton } from '@/app/(main)/_components/panel/TabButton';
-import { Button } from '@/shared/components/ui/Button';
 import { PostCard } from './PostCard';
 import { RegionAccordion } from './RegionAccordion';
 type Sort = 'recent' | 'popular' | 'water';
@@ -23,12 +22,21 @@ const SORT_OPTIONS: { key: Sort; label: string }[] = [
   { key: 'water', label: '물주기 많은 순' },
 ];
 
-export function CommunityFeedSection() {
+const DEFAULT_PERIOD: Period = 'all';
+const DEFAULT_SORT: Sort = 'recent';
+
+interface Props {
+  initialFeed: CommunityFeedResponse;
+}
+
+export function CommunityFeedSection({ initialFeed }: Props) {
   const { data: session } = useSession();
   const isLoggedIn = !!session?.user?.id;
-  const [period, setPeriod] = useState<Period>('all');
-  const [sort, setSort] = useState<Sort>('recent');
+  const [period, setPeriod] = useState<Period>(DEFAULT_PERIOD);
+  const [sort, setSort] = useState<Sort>(DEFAULT_SORT);
   const [selectedRegion, setSelectedRegion] = useState<{ key: string; name: string } | null>(null);
+  const [filterChanged, setFilterChanged] = useState(false);
+  const isInitialFilter = period === DEFAULT_PERIOD && sort === DEFAULT_SORT && !selectedRegion;
 
   const filters = { period, sort, regionKey: selectedRegion?.key ?? '' };
 
@@ -38,23 +46,49 @@ export function CommunityFeedSection() {
     isFetchingNextPage,
     hasNextPage,
     fetchNextPage,
-  } = useCommunityFeedQuery(filters);
+  } = useCommunityFeedQuery(filters, isInitialFilter ? initialFeed : undefined);
 
   const posts = data?.items ?? [];
   const postIds = posts.map((p) => p.id);
 
   const { data: myReactions = {} } = useMyReactionsQuery(postIds, isLoggedIn);
 
-  const handlePeriodChange = useCallback((next: Period) => setPeriod(next), []);
-  const handleSortChange = useCallback((next: Sort) => setSort(next), []);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage && sort === 'recent') {
+          void fetchNextPage();
+        }
+      },
+      { rootMargin: '200px' },
+    );
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, sort]);
+
+  const handlePeriodChange = useCallback((next: Period) => {
+    setPeriod(next);
+    setFilterChanged(true);
+  }, []);
+  const handleSortChange = useCallback((next: Sort) => {
+    setSort(next);
+    setFilterChanged(true);
+  }, []);
 
   const handleRegionSelect = useCallback((regionKey: string, regionName: string) => {
     setSelectedRegion({ key: regionKey, name: regionName });
+    setFilterChanged(true);
   }, []);
 
-  const handleRegionReset = useCallback(() => setSelectedRegion(null), []);
+  const handleRegionReset = useCallback(() => {
+    setSelectedRegion(null);
+    setFilterChanged(true);
+  }, []);
 
-  const loading = isPending;
+  const showSkeleton = filterChanged && isPending;
 
   return (
     <section className="flex flex-col gap-md">
@@ -84,13 +118,21 @@ export function CommunityFeedSection() {
         onReset={handleRegionReset}
       />
 
-      {!loading && posts.length === 0 && (
+      {showSkeleton && (
+        <div className="flex flex-col gap-md">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-40 bg-surface-container border-2 border-outline animate-pulse" />
+          ))}
+        </div>
+      )}
+
+      {!showSkeleton && !isPending && posts.length === 0 && (
         <p className="font-mono text-label text-on-surface-variant">
           {selectedRegion ? '해당 지역의 집중 기록이 없어요.' : '집중 기록이 없어요.'}
         </p>
       )}
 
-      {posts.map((post) => (
+      {!showSkeleton && posts.map((post) => (
         <PostCard
           key={post.id}
           post={post}
@@ -100,21 +142,12 @@ export function CommunityFeedSection() {
         />
       ))}
 
-      {sort === 'recent' && hasNextPage && (
-        <Button
-          variant="ghost"
-          type="button"
-          loading={isFetchingNextPage}
-          disabled={isFetchingNextPage}
-          className="py-sm"
-          onClick={() => void fetchNextPage()}
-        >
-          더 보기
-        </Button>
+      {sort === 'recent' && (
+        <div ref={sentinelRef} className="h-px" aria-hidden />
       )}
 
-      {loading && posts.length === 0 && (
-        <p className="font-mono text-label text-on-surface-variant">불러오는 중...</p>
+      {isFetchingNextPage && (
+        <div className="h-24 bg-surface-container border-2 border-outline animate-pulse" />
       )}
     </section>
   );

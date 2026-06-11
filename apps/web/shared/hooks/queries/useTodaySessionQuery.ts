@@ -19,6 +19,7 @@ export function useTodaySessionQuery({ userId, initialData }: Options) {
     queryKey: userId ? qk.sessions.todayState(userId, kstDate) : (['sessions', 'todayState', 'disabled'] as const),
     queryFn: () => api.get<TodayStateResType>(API_PATHS.SERVER_SESSION_TODAY(userId!)),
     enabled: !!userId,
+    staleTime: Infinity,
     ...(userId && initialData !== undefined
       ? { initialData, initialDataUpdatedAt: Date.now() }
       : {}),

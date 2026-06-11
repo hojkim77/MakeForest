@@ -49,6 +49,7 @@ export function useWaterQuery({ userId, initialData }: Options) {
     queryKey: userId ? qk.water.me(userId, kstDate) : (['water', 'disabled'] as const),
     queryFn: (): Promise<WaterMeApiResponse> => api.get<WaterMeApiResponse>(API_PATHS.WATER_ME()),
     enabled: !!userId,
+    staleTime: Infinity,
     ...(initialDataResolved !== undefined
       ? { initialData: initialDataResolved, initialDataUpdatedAt: Date.now() }
       : {}),

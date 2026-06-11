@@ -17,7 +17,7 @@ export async function PanelSideTabs({ myDongCode, myRegionCode, isLoggedIn }: Pr
       ? api.get<MissionProgress>(API_PATHS.SERVER_MISSION_TODAY(myRegionCode)).catch(() => null)
       : Promise.resolve(null),
     api
-      .get<RegionRankingResponse>(API_PATHS.SERVER_RANKING_REGION('today', myDongCode ?? undefined))
+      .get<RegionRankingResponse>(API_PATHS.SERVER_RANKING_REGION('today', myDongCode ?? undefined), { next: { revalidate: 300 } })
       .catch(() => ({ period: 'today' as const, rankings: [], myRegionKey: null })),
   ]);
 
