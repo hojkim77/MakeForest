@@ -1,7 +1,8 @@
+'use client';
+
+import { useUserMeQuery } from '@/shared/hooks/queries/useUserMeQuery';
 import { Icon } from '@/shared/components/ui/Icon';
 import { Badge } from '@/shared/components/ui/Badge';
-import { api } from '@/shared/lib/api';
-import { API_PATHS } from '@/shared/lib/apiPaths';
 import type { UserMeResType } from '@makeforest/types';
 
 function formatJoinDate(iso: string): string {
@@ -12,8 +13,13 @@ function formatJoinDate(iso: string): string {
   });
 }
 
-export async function ProfileHeader({ userId }: { userId: string }) {
-  const user = await api.get<UserMeResType>(API_PATHS.SERVER_USER_ME(userId), { next: { revalidate: 3600 } });
+interface Props {
+  userId: string;
+  initialData: UserMeResType;
+}
+
+export function ProfileHeader({ userId, initialData }: Props) {
+  const { data: user = initialData } = useUserMeQuery({ userId, initialData });
 
   return (
     <section className="bg-surface-container p-lg border-2 border-outline shadow-island">

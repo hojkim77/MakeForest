@@ -43,4 +43,12 @@ export const qk = {
   todos: {
     byDate: (userId: string, date: string) => ['todos', userId, date] as const,
   },
+  user: {
+    me: (userId: string) => ['user', 'me', userId] as const,
+  },
+  stats: {
+    focus: (userId: string) => ['stats', 'focus', userId] as const,
+    rank: (userId: string, dongCode?: string) => ['stats', 'rank', userId, dongCode ?? null] as const,
+    weekly: (userId: string) => ['stats', 'weekly', userId] as const,
+  },
 } as const;

@@ -11,5 +11,6 @@ export function useCommentsQuery(postId: string, enabled: boolean) {
     queryFn: () =>
       fetch(API_PATHS.COMMUNITY_COMMENTS(postId)).then((r) => r.json() as Promise<CommunityComment[]>),
     enabled,
+    staleTime: 30_000,
   });
 }

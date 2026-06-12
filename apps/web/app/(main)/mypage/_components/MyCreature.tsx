@@ -1,14 +1,20 @@
+'use client';
+
+import { useUserMeQuery } from '@/shared/hooks/queries/useUserMeQuery';
 import { CreatureSprite, STAGE_LABELS } from '@/shared/components/ui/CreatureSprite';
 import { Badge } from '@/shared/components/ui/Badge';
-import { api } from '@/shared/lib/api';
-import { API_PATHS } from '@/shared/lib/apiPaths';
 import type { UserMeResType } from '@makeforest/types';
 
-export async function MyCreature({ userId }: { userId: string }) {
-  const { userCreature } = await api.get<UserMeResType>(API_PATHS.SERVER_USER_ME(userId), { next: { revalidate: 3600 } });
+interface Props {
+  userId: string;
+  initialData: UserMeResType;
+}
 
-  const stage = (userCreature?.stage ?? 0) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
-  const waterCount = userCreature?.totalWaterCount ?? 0;
+export function MyCreature({ userId, initialData }: Props) {
+  const { data: userMe = initialData } = useUserMeQuery({ userId, initialData });
+
+  const stage = (userMe.userCreature?.stage ?? 0) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+  const waterCount = userMe.userCreature?.totalWaterCount ?? 0;
 
   return (
     <section className="bg-surface-container p-lg border-2 border-outline shadow-island">

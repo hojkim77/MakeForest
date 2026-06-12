@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { auth } from '@/auth';
 import type { CreateSessionResType } from '@makeforest/types';
 
@@ -28,5 +29,10 @@ export async function POST(req: NextRequest) {
   });
 
   const data = await res.json() as CreateSessionResType;
+
+  if (res.ok && data.isNewSession) {
+    revalidateTag('community-feed');
+  }
+
   return NextResponse.json(data, { status: res.status });
 }

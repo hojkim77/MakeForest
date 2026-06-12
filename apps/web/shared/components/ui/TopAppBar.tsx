@@ -8,9 +8,9 @@ import { Icon } from './Icon';
 import { NotificationBell } from './top-app-bar/NotificationBell';
 
 const NAV_ITEMS = [
-  { label: 'Map', href: '/' },
-  { label: 'Community', href: '/community', guideId: 'community.entry' },
-  { label: 'Dashboard', href: '/mypage', guideId: 'mypage.entry' },
+  { label: 'Map', href: '/', prefetch: false },
+  { label: 'Community', href: '/community', guideId: 'community.entry', prefetch: true },
+  { label: 'Dashboard', href: '/mypage', guideId: 'mypage.entry', prefetch: true },
 ] as const;
 
 export function TopAppBar() {
@@ -59,6 +59,7 @@ export function TopAppBar() {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={item.prefetch}
                 {...(guideId ? { 'data-guide': guideId } : {})}
                 className={[
                   'font-mono text-base font-bold uppercase tracking-wider py-1 transition-none',
@@ -101,6 +102,7 @@ export function TopAppBar() {
                 <div className="absolute right-0 top-full mt-1 w-36 bg-surface border-2 border-outline shadow-island z-50 flex flex-col">
                   <Link
                     href="/mypage"
+                    prefetch
                     onClick={() => setMenuOpen(false)}
                     className="px-md py-sm font-mono text-label text-on-surface hover:bg-surface-container-high"
                   >
@@ -135,6 +137,7 @@ export function TopAppBar() {
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={item.prefetch}
                 {...(guideId ? { 'data-guide': guideId } : {})}
                 onClick={() => setMobileNavOpen(false)}
                 className={[

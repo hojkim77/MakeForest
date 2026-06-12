@@ -1,18 +1,21 @@
+'use client';
+
+import { useFocusStatsQuery } from '@/shared/hooks/queries/useFocusStatsQuery';
+import { useRankStatsQuery } from '@/shared/hooks/queries/useRankStatsQuery';
 import { formatDuration } from '@/shared/utils/format';
 import { Card } from '@/shared/components/ui/Card';
-import { api } from '@/shared/lib/api';
-import { API_PATHS } from '@/shared/lib/apiPaths';
 import type { FocusStatsResType, RankStatsResType } from '@makeforest/types';
 
+interface Props {
+  userId: string;
+  dongCode?: string | undefined;
+  initialFocus: FocusStatsResType;
+  initialRank: RankStatsResType;
+}
 
-export async function StatsGrid({ userId, dongCode }: { userId: string; dongCode?: string | undefined }) {
-  const rankParams = new URLSearchParams({ userId });
-  if (dongCode) rankParams.set('dongCode', dongCode);
-
-  const [focus, rank] = await Promise.all([
-    api.get<FocusStatsResType>(API_PATHS.SERVER_STATS_FOCUS(userId), { next: { revalidate: 3600 } }),
-    api.get<RankStatsResType>(API_PATHS.SERVER_STATS_RANK(rankParams.toString()), { next: { revalidate: 3600 } }),
-  ]);
+export function StatsGrid({ userId, dongCode, initialFocus, initialRank }: Props) {
+  const { data: focus = initialFocus } = useFocusStatsQuery({ userId, initialData: initialFocus });
+  const { data: rank = initialRank } = useRankStatsQuery({ userId, dongCode, initialData: initialRank });
 
   const cards = [
     {
